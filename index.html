@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CNC Monitor — Production Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=DM+Mono:wght@400;500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#09090c;
+  --s1:#111116;
+  --s2:#18181f;
+  --s3:#22222c;
+  --border:#2a2a38;
+  --text:#e8e8f0;
+  --muted:#5a5a78;
+  --dim:#3a3a52;
+  --accent:#f0a500;
+  --accent2:#ff6b35;
+  --green:#00d084;
+  --red:#ff4455;
+  --blue:#4488ff;
+  --purple:#a855f7;
+  --yellow:#f0a500;
+  --font:'Inter',sans-serif;
+  --mono:'DM Mono',monospace;
+  --display:'Rajdhani',sans-serif;
+  --r:10px;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);font-size:13px;overflow:hidden}
+
+/* scrollbar */
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* LAYOUT */
+.shell{display:grid;grid-template-columns:200px 1fr;grid-template-rows:48px 1fr;height:100vh}
+.topbar{grid-column:1/-1;background:var(--s1);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:24px;z-index:10}
+.sidebar{background:var(--s1);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;padding:12px 0}
+.content{overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:16px}
+
+/* TOPBAR */
+.logo{font-family:var(--display);font-size:18px;font-weight:700;letter-spacing:1px;color:var(--accent);margin-right:8px}
+.logo span{color:var(--text);font-weight:400}
+.nav-item{font-size:12.5px;color:var(--muted);cursor:pointer;padding:4px 0;transition:color .15s;position:relative;white-space:nowrap}
+.nav-item:hover{color:var(--text)}
+.nav-item.active{color:var(--accent);font-weight:500}
+.nav-item.active::after{content:'';position:absolute;bottom:-17px;left:0;right:0;height:2px;background:var(--accent)}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:16px}
+.conn-dot{width:7px;height:7px;border-radius:50%;background:var(--green);display:inline-block;margin-right:4px}
+.conn-dot.off{background:var(--red)}
+.conn-label{font-size:11.5px;color:var(--muted)}
+.date-label{font-size:11.5px;color:var(--muted);font-family:var(--mono)}
+.avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#000;cursor:pointer}
+
+/* SIDEBAR */
+.sb-section{padding:4px 14px 2px;font-size:9.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:600;margin-top:8px}
+.sb-item{display:flex;align-items:center;gap:9px;padding:7px 14px;cursor:pointer;font-size:12.5px;color:var(--muted);transition:background .15s,color .15s;border-radius:6px;margin:1px 6px;position:relative}
+.sb-item:hover{background:var(--s2);color:var(--text)}
+.sb-item.active{background:var(--s2);color:var(--text);border-left:2px solid var(--accent);padding-left:12px}
+.sb-icon{font-size:14px;width:16px;text-align:center}
+.sb-badge{margin-left:auto;background:var(--red);border-radius:20px;padding:1px 6px;font-size:9.5px;color:white;font-weight:600}
+.sb-badge.warn{background:var(--yellow);color:#000}
+.sb-badge.ok{background:var(--green);color:#000}
+.machine-status{width:6px;height:6px;border-radius:50%;margin-left:auto;flex-shrink:0}
+.machine-status.running{background:var(--green)}
+.machine-status.down{background:var(--red)}
+.machine-status.idle{background:var(--yellow)}
+
+/* PAGE HEADER */
+.page-header{display:flex;justify-content:space-between;align-items:center}
+.page-title{font-family:var(--display);font-size:22px;font-weight:700;letter-spacing:.5px}
+.page-sub{font-size:11.5px;color:var(--muted);margin-top:2px}
+.header-actions{display:flex;gap:8px}
+.btn{background:var(--s2);border:1px solid var(--border);border-radius:7px;padding:6px 14px;font-size:12px;color:var(--muted);cursor:pointer;font-family:var(--font);transition:all .15s;white-space:nowrap}
+.btn:hover{color:var(--text);border-color:var(--dim)}
+.btn.primary{background:var(--accent);color:#000;border-color:var(--accent);font-weight:600}
+.btn.primary:hover{opacity:.9}
+
+/* KPI ROW */
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.kpi-card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:16px;position:relative;overflow:hidden;cursor:pointer;transition:border-color .2s}
+.kpi-card:hover{border-color:var(--dim)}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--kpi-color,var(--accent))}
+.kpi-label{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;margin-bottom:6px}
+.kpi-value{font-family:var(--display);font-size:32px;font-weight:700;letter-spacing:-.5px;line-height:1;color:var(--kpi-color,var(--text))}
+.kpi-unit{font-size:12px;color:var(--muted);margin-left:2px;font-family:var(--mono)}
+.kpi-trend{font-size:10.5px;margin-top:5px;display:flex;align-items:center;gap:3px}
+.kpi-trend.up{color:var(--green)}
+.kpi-trend.down{color:var(--red)}
+.kpi-trend.neutral{color:var(--muted)}
+.kpi-icon{position:absolute;top:14px;right:14px;font-size:18px;opacity:.25}
+
+/* GRID ROWS */
+.row2{display:grid;grid-template-columns:1.6fr 1fr;gap:12px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.row4{display:grid;grid-template-columns:2fr 1fr;gap:12px}
+
+/* CARDS */
+.card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:16px;overflow:hidden}
+.card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.card-title{font-size:12px;font-weight:600;color:var(--text);text-transform:uppercase;letter-spacing:.06em}
+.card-sub{font-size:10.5px;color:var(--muted);margin-top:2px}
+.card-action{font-size:11px;color:var(--muted);cursor:pointer;background:var(--s2);border:1px solid var(--border);border-radius:5px;padding:3px 8px;font-family:var(--font)}
+.card-action:hover{color:var(--text)}
+
+/* OEE GAUGE */
+.oee-wrap{display:flex;align-items:center;gap:20px;padding:4px 0}
+.oee-gauge{position:relative;width:140px;height:140px;flex-shrink:0}
+.oee-gauge canvas{position:absolute;top:0;left:0}
+.oee-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-48%);text-align:center}
+.oee-big{font-family:var(--display);font-size:28px;font-weight:700;color:var(--text);line-height:1}
+.oee-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.oee-breakdown{flex:1;display:flex;flex-direction:column;gap:10px}
+.oee-row{display:flex;flex-direction:column;gap:4px}
+.oee-row-label{display:flex;justify-content:space-between;font-size:11.5px}
+.oee-row-label span:first-child{color:var(--muted)}
+.oee-row-label span:last-child{font-weight:600;font-family:var(--mono)}
+.oee-bar{height:5px;background:var(--s3);border-radius:3px;overflow:hidden}
+.oee-fill{height:100%;border-radius:3px;transition:width 1s ease}
+
+/* MACHINE TABLE */
+.machine-table{width:100%;border-collapse:collapse}
+.machine-table th{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;padding:0 8px 8px 0;text-align:left;border-bottom:1px solid var(--border)}
+.machine-table td{padding:9px 8px 9px 0;border-bottom:1px solid rgba(42,42,56,.5);font-size:12px;vertical-align:middle}
+.machine-table tr:last-child td{border-bottom:none}
+.machine-table tr:hover td{background:rgba(255,255,255,.015)}
+.status-pill{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;padding:2px 8px;border-radius:20px;font-weight:600}
+.status-pill.running{background:rgba(0,208,132,.12);color:var(--green)}
+.status-pill.down{background:rgba(255,68,85,.12);color:var(--red)}
+.status-pill.idle{background:rgba(240,165,0,.12);color:var(--yellow)}
+.status-pill.maintenance{background:rgba(68,136,255,.12);color:var(--blue)}
+.status-dot{width:5px;height:5px;border-radius:50%;background:currentColor}
+.pct-bar{width:60px;height:4px;background:var(--s3);border-radius:2px;overflow:hidden;display:inline-block;vertical-align:middle;margin-left:6px}
+.pct-fill{height:100%;border-radius:2px}
+
+/* BREAKDOWN TIMELINE */
+.timeline{display:flex;flex-direction:column;gap:10px}
+.tl-item{display:flex;gap:12px;align-items:flex-start}
+.tl-dot{width:8px;height:8px;border-radius:50%;margin-top:4px;flex-shrink:0}
+.tl-dot.critical{background:var(--red)}
+.tl-dot.warning{background:var(--yellow)}
+.tl-dot.resolved{background:var(--green)}
+.tl-content{flex:1}
+.tl-title{font-size:12px;font-weight:500;color:var(--text)}
+.tl-meta{font-size:10.5px;color:var(--muted);margin-top:2px;font-family:var(--mono)}
+.tl-duration{font-size:10.5px;color:var(--muted);background:var(--s2);border:1px solid var(--border);border-radius:4px;padding:1px 6px;white-space:nowrap;margin-left:auto;flex-shrink:0}
+
+/* MINI STATS */
+.mini-stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mini-stat{background:var(--s2);border-radius:8px;padding:12px;border:1px solid var(--border)}
+.mini-stat-val{font-family:var(--display);font-size:22px;font-weight:700;line-height:1}
+.mini-stat-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:3px}
+
+/* BAR CHART */
+.bar-chart{display:flex;align-items:flex-end;gap:6px;height:80px;padding-top:8px}
+.bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
+.bar-body{width:100%;border-radius:3px 3px 0 0;transition:height .6s ease;min-height:3px}
+.bar-label{font-size:9px;color:var(--muted);font-family:var(--mono);white-space:nowrap}
+.bar-val{font-size:9.5px;color:var(--muted);font-family:var(--mono)}
+
+/* PARETO */
+.pareto-row{display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid rgba(42,42,56,.4)}
+.pareto-row:last-child{border:none}
+.pareto-rank{font-size:11px;color:var(--muted);width:16px;text-align:center;font-family:var(--mono)}
+.pareto-name{font-size:12px;flex:1;color:var(--text)}
+.pareto-bar-wrap{width:80px;height:5px;background:var(--s3);border-radius:3px;overflow:hidden}
+.pareto-bar-fill{height:100%;background:var(--accent2);border-radius:3px}
+.pareto-pct{font-size:11px;color:var(--muted);font-family:var(--mono);width:34px;text-align:right}
+.pareto-count{font-size:11px;color:var(--text);font-family:var(--mono);width:24px;text-align:right}
+
+/* TOAST */
+.toast{position:fixed;bottom:20px;right:20px;z-index:999;display:flex;flex-direction:column;gap:6px}
+.toast-item{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:10px 16px;font-size:12.5px;color:var(--text);box-shadow:0 4px 20px rgba(0,0,0,.4);animation:slideIn .3s ease}
+@keyframes slideIn{from{transform:translateX(120%);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.kpi-card,.card{animation:fadeUp .4s ease both}
+.kpi-row .kpi-card:nth-child(1){animation-delay:.04s}
+.kpi-row .kpi-card:nth-child(2){animation-delay:.08s}
+.kpi-row .kpi-card:nth-child(3){animation-delay:.12s}
+.kpi-row .kpi-card:nth-child(4){animation-delay:.16s}
+.kpi-row .kpi-card:nth-child(5){animation-delay:.20s}
+
+/* PULSE */
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.pulse{animation:pulse 2s infinite}
+
+/* IMPORT OVERLAY */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;display:flex;align-items:center;justify-content:center;display:none}
+.overlay.show{display:flex}
+.modal{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:28px;width:480px;max-width:90vw}
+.modal-title{font-family:var(--display);font-size:18px;font-weight:700;margin-bottom:6px}
+.modal-sub{font-size:12px;color:var(--muted);margin-bottom:20px}
+.drop-zone{border:2px dashed var(--border);border-radius:10px;padding:32px;text-align:center;cursor:pointer;transition:border-color .2s}
+.drop-zone:hover{border-color:var(--accent)}
+.drop-zone p{color:var(--muted);font-size:13px;margin-top:8px}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:20px}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="logo">CNC<span>Monitor</span></div>
+    <span class="nav-item active">Dashboard</span>
+    <span class="nav-item">Machines</span>
+    <span class="nav-item">Maintenance</span>
+    <span class="nav-item">Reports</span>
+    <span class="nav-item">Settings</span>
+    <div class="topbar-right">
+      <span><span class="conn-dot" id="connDot"></span><span class="conn-label" id="connLabel">Connecting…</span></span>
+      <span class="date-label" id="clockLabel"></span>
+      <div class="avatar">OP</div>
+    </div>
+  </header>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sb-section">Overview</div>
+    <div class="sb-item active"><span class="sb-icon">📊</span> Dashboard</div>
+    <div class="sb-item"><span class="sb-icon">📋</span> All Machines</div>
+    <div class="sb-item"><span class="sb-icon">⚠️</span> Breakdowns <span class="sb-badge" id="sb-breakdown-count">—</span></div>
+    <div class="sb-item"><span class="sb-icon">🔧</span> Maintenance</div>
+
+    <div class="sb-section">CNC Machines</div>
+    <div id="machine-sidebar">
+      <!-- filled by JS -->
+      <div class="sb-item" style="color:var(--muted);font-size:11px;padding-left:20px">Loading…</div>
+    </div>
+
+    <div class="sb-section">Data</div>
+    <div class="sb-item" onclick="document.getElementById('importOverlay').classList.add('show')">
+      <span class="sb-icon">📥</span> Import Excel
+    </div>
+    <div class="sb-item"><span class="sb-icon">📤</span> Export Report</div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="content">
+
+    <!-- Page header -->
+    <div class="page-header">
+      <div>
+        <div class="page-title">Production Monitoring</div>
+        <div class="page-sub">Real-time CNC machine performance · <span id="lastUpdate">—</span></div>
+      </div>
+      <div class="header-actions">
+        <select class="btn" id="periodSelect" onchange="loadAll()">
+          <option value="today">Today</option>
+          <option value="week">This Week</option>
+          <option value="month">This Month</option>
+        </select>
+        <button class="btn primary" onclick="loadAll()">↻ Refresh</button>
+      </div>
+    </div>
+
+    <!-- KPI CARDS -->
+    <div class="kpi-row">
+      <div class="kpi-card" style="--kpi-color:var(--red)">
+        <div class="kpi-label">Breakdowns</div>
+        <div><span class="kpi-value" id="kpi-breakdowns">—</span><span class="kpi-unit">cases</span></div>
+        <div class="kpi-trend down" id="kpi-breakdowns-trend">— vs yesterday</div>
+        <div class="kpi-icon">⚡</div>
+      </div>
+      <div class="kpi-card" style="--kpi-color:var(--accent2)">
+        <div class="kpi-label">Total Downtime</div>
+        <div><span class="kpi-value" id="kpi-downtime">—</span><span class="kpi-unit">hrs</span></div>
+        <div class="kpi-trend neutral" id="kpi-downtime-trend">— this period</div>
+        <div class="kpi-icon">⏱</div>
+      </div>
+      <div class="kpi-card" style="--kpi-color:var(--blue)">
+        <div class="kpi-label">Availability</div>
+        <div><span class="kpi-value" id="kpi-availability">—</span><span class="kpi-unit">%</span></div>
+        <div class="kpi-trend" id="kpi-availability-trend">— target: 90%</div>
+        <div class="kpi-icon">📡</div>
+      </div>
+      <div class="kpi-card" style="--kpi-color:var(--purple)">
+        <div class="kpi-label">Performance</div>
+        <div><span class="kpi-value" id="kpi-performance">—</span><span class="kpi-unit">%</span></div>
+        <div class="kpi-trend" id="kpi-performance-trend">— target: 95%</div>
+        <div class="kpi-icon">⚙️</div>
+      </div>
+      <div class="kpi-card" style="--kpi-color:var(--green)">
+        <div class="kpi-label">OEE</div>
+        <div><span class="kpi-value" id="kpi-oee">—</span><span class="kpi-unit">%</span></div>
+        <div class="kpi-trend" id="kpi-oee-trend">— world class: 85%</div>
+        <div class="kpi-icon">🏆</div>
+      </div>
+    </div>
+
+    <!-- ROW 2: OEE detail + Machine status table -->
+    <div class="row2">
+
+      <!-- OEE BREAKDOWN -->
+      <div class="card">
+        <div class="card-header">
+          <div><div class="card-title">OEE Breakdown</div><div class="card-sub">Availability × Performance × Quality</div></div>
+          <button class="card-action">Details</button>
+        </div>
+        <div class="oee-wrap">
+          <div class="oee-gauge">
+            <canvas id="oeeCanvas" width="140" height="140"></canvas>
+            <div class="oee-center">
+              <div class="oee-big" id="oeeGaugePct">—</div>
+              <div class="oee-lbl">OEE</div>
+            </div>
+          </div>
+          <div class="oee-breakdown">
+            <div class="oee-row">
+              <div class="oee-row-label">
+                <span>Availability</span>
+                <span style="color:var(--blue)" id="oee-avail-val">—%</span>
+              </div>
+              <div class="oee-bar"><div class="oee-fill" id="oee-avail-bar" style="background:var(--blue);width:0%"></div></div>
+            </div>
+            <div class="oee-row">
+              <div class="oee-row-label">
+                <span>Performance</span>
+                <span style="color:var(--purple)" id="oee-perf-val">—%</span>
+              </div>
+              <div class="oee-bar"><div class="oee-fill" id="oee-perf-bar" style="background:var(--purple);width:0%"></div></div>
+            </div>
+            <div class="oee-row">
+              <div class="oee-row-label">
+                <span>Quality</span>
+                <span style="color:var(--green)" id="oee-qual-val">—%</span>
+              </div>
+              <div class="oee-bar"><div class="oee-fill" id="oee-qual-bar" style="background:var(--green);width:0%"></div></div>
+            </div>
+            <div style="margin-top:6px;padding-top:10px;border-top:1px solid var(--border);display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <div>
+                <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">MTBF</div>
+                <div style="font-family:var(--display);font-size:18px;font-weight:700;color:var(--text)" id="mtbf-val">—</div>
+                <div style="font-size:10px;color:var(--muted)">hrs between failures</div>
+              </div>
+              <div>
+                <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">MTTR</div>
+                <div style="font-family:var(--display);font-size:18px;font-weight:700;color:var(--text)" id="mttr-val">—</div>
+                <div style="font-size:10px;color:var(--muted)">hrs to repair</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DOWNTIME BY DAY BAR CHART -->
+      <div class="card">
+        <div class="card-header">
+          <div><div class="card-title">Downtime per Day</div><div class="card-sub">Hours lost this week</div></div>
+        </div>
+        <div class="bar-chart" id="downtimeChart"></div>
+        <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:9px;color:var(--muted);font-family:var(--mono)" id="downtimeXAxis"></div>
+      </div>
+    </div>
+
+    <!-- ROW 3: Machine table -->
+    <div class="card">
+      <div class="card-header">
+        <div><div class="card-title">Machine Status</div><div class="card-sub" id="machine-count">— machines monitored</div></div>
+        <button class="card-action">View All</button>
+      </div>
+      <table class="machine-table">
+        <thead>
+          <tr>
+            <th>Machine</th>
+            <th>Type</th>
+            <th>Status</th>
+            <th>Availability</th>
+            <th>Breakdowns</th>
+            <th>Downtime (hrs)</th>
+            <th>Last Incident</th>
+          </tr>
+        </thead>
+        <tbody id="machine-tbody">
+          <tr><td colspan="7" style="color:var(--muted);text-align:center;padding:20px">Loading data…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ROW 4: Breakdown log + Pareto -->
+    <div class="row4">
+
+      <!-- RECENT BREAKDOWNS -->
+      <div class="card">
+        <div class="card-header">
+          <div><div class="card-title">Recent Breakdowns</div><div class="card-sub">Latest failure events</div></div>
+          <button class="card-action">All Events</button>
+        </div>
+        <div class="timeline" id="breakdown-timeline">
+          <div style="color:var(--muted);font-size:12px">Loading…</div>
+        </div>
+      </div>
+
+      <!-- PARETO: TOP FAILURE CAUSES -->
+      <div class="card">
+        <div class="card-header">
+          <div><div class="card-title">Top Failure Causes</div><div class="card-sub">Pareto analysis</div></div>
+        </div>
+        <div id="pareto-list">
+          <div style="color:var(--muted);font-size:12px">Loading…</div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- IMPORT OVERLAY -->
+<div class="overlay" id="importOverlay" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="modal">
+    <div class="modal-title">Import Excel Data</div>
+    <div class="modal-sub">Upload your maintenance Excel file. Columns needed: Machine, Date, Start Time, End Time, Failure Cause, Technician</div>
+    <div class="drop-zone" onclick="document.getElementById('fileInput').click()">
+      <div style="font-size:28px">📂</div>
+      <p>Click to select file or drag & drop here</p>
+      <p style="font-size:11px;margin-top:4px">.xlsx or .csv files</p>
+      <input type="file" id="fileInput" accept=".xlsx,.csv" style="display:none" onchange="handleFileImport(this)"/>
+    </div>
+    <div style="margin-top:16px;background:var(--s2);border-radius:8px;padding:12px;font-size:11.5px;color:var(--muted);line-height:1.7">
+      <strong style="color:var(--text)">Required Excel columns:</strong><br>
+      machine_name · machine_type · breakdown_date · start_time · end_time · failure_cause · technician · notes
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="document.getElementById('importOverlay').classList.remove('show')">Cancel</button>
+      <button class="btn primary">Import & Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast" id="toastContainer"></div>
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+/* ── CONFIG ─────────────────────────────────── */
+const API = 'http://localhost:3001/api';
+
+/* ── DEMO DATA (used when backend not connected) ── */
+const DEMO = {
+  kpi: {
+    breakdowns: 14, downtime_hrs: 37.5,
+    availability: 83.2, performance: 91.4,
+    quality: 96.8, oee: 73.5,
+    mtbf: 18.4, mttr: 2.7
+  },
+  machines: [
+    { name:'CNC-01', type:'Turning',   status:'running',     availability:88.4, breakdowns:3, downtime_hrs:8.2,  last_incident:'Spindle overheat' },
+    { name:'CNC-02', type:'Milling',   status:'down',        availability:61.2, breakdowns:5, downtime_hrs:14.6, last_incident:'Tool holder broken' },
+    { name:'CNC-03', type:'Turning',   status:'running',     availability:91.5, breakdowns:1, downtime_hrs:3.1,  last_incident:'Coolant leak' },
+    { name:'CNC-04', type:'Grinding',  status:'idle',        availability:79.8, breakdowns:2, downtime_hrs:7.4,  last_incident:'Belt wear' },
+    { name:'CNC-05', type:'Milling',   status:'maintenance', availability:72.3, breakdowns:3, downtime_hrs:4.2,  last_incident:'Scheduled PM' },
+    { name:'CNC-06', type:'EDM',       status:'running',     availability:95.1, breakdowns:0, downtime_hrs:0.0,  last_incident:'—' },
+  ],
+  breakdowns: [
+    { machine:'CNC-02', cause:'Tool holder broken',  severity:'critical', start:'08:15', duration:'4.5 hrs', date:'Today' },
+    { machine:'CNC-01', cause:'Spindle overheat',    severity:'warning',  start:'06:30', duration:'1.2 hrs', date:'Today' },
+    { machine:'CNC-04', cause:'Belt wear',           severity:'warning',  start:'Yesterday 14:00', duration:'2.0 hrs', date:'Yesterday' },
+    { machine:'CNC-03', cause:'Coolant leak',        severity:'resolved', start:'Yesterday 09:10', duration:'0.8 hrs', date:'Yesterday' },
+    { machine:'CNC-05', cause:'Scheduled PM',        severity:'resolved', start:'Mon 08:00',       duration:'4.2 hrs', date:'Monday' },
+  ],
+  pareto: [
+    { cause:'Tool Wear / Breakage',   count:6, pct:42 },
+    { cause:'Spindle Issues',         count:3, pct:21 },
+    { cause:'Coolant System',         count:2, pct:14 },
+    { cause:'Belt / Drive Failure',   count:2, pct:14 },
+    { cause:'Electrical Fault',       count:1, pct:7  },
+  ],
+  downtime_by_day: [
+    { day:'Mon', hrs:8.2 },
+    { day:'Tue', hrs:4.5 },
+    { day:'Wed', hrs:12.1},
+    { day:'Thu', hrs:3.8 },
+    { day:'Fri', hrs:6.4 },
+    { day:'Sat', hrs:2.5 },
+    { day:'Sun', hrs:0.0 },
+  ]
+};
+
+/* ── WEBSOCKET ──────────────────────────────── */
+let socket = null;
+function initSocket() {
+  try {
+    socket = io(API.replace('/api',''), { timeout:3000 });
+    socket.on('connect', () => setConnected(true));
+    socket.on('disconnect', () => setConnected(false));
+    socket.on('connect_error', () => setConnected(false));
+    socket.on('breakdown:new', (data) => {
+      showToast(`⚠ New breakdown: ${data.machine} — ${data.cause}`, 'red');
+      loadAll();
+    });
+    socket.on('machine:status', () => loadAll());
+  } catch(e) { setConnected(false); }
+}
+
+function setConnected(on) {
+  document.getElementById('connDot').className = 'conn-dot' + (on ? '' : ' off');
+  document.getElementById('connLabel').textContent = on ? 'Live' : 'Demo mode';
+}
+
+/* ── FETCH with demo fallback ───────────────── */
+async function apiFetch(path, demoData) {
+  try {
+    const r = await fetch(API + path, { signal: AbortSignal.timeout(3000) });
+    if (!r.ok) throw new Error();
+    return await r.json();
+  } catch {
+    return demoData;
+  }
+}
+
+/* ── LOAD ALL ───────────────────────────────── */
+async function loadAll() {
+  document.getElementById('lastUpdate').textContent = 'Updating…';
+  const period = document.getElementById('periodSelect').value;
+
+  const [kpi, machines, breakdowns, pareto, downtime] = await Promise.all([
+    apiFetch(`/kpi?period=${period}`,        DEMO.kpi),
+    apiFetch(`/machines?period=${period}`,   DEMO.machines),
+    apiFetch(`/breakdowns?period=${period}`, DEMO.breakdowns),
+    apiFetch(`/pareto?period=${period}`,     DEMO.pareto),
+    apiFetch(`/downtime-by-day?period=${period}`, DEMO.downtime_by_day),
+  ]);
+
+  renderKPIs(kpi);
+  renderOEE(kpi);
+  renderMachineTable(machines);
+  renderMachineSidebar(machines);
+  renderBreakdownTimeline(breakdowns);
+  renderPareto(pareto);
+  renderDowntimeChart(downtime);
+
+  document.getElementById('lastUpdate').textContent =
+    'Updated ' + new Date().toLocaleTimeString();
+}
+
+/* ── RENDER KPIs ────────────────────────────── */
+function renderKPIs(d) {
+  setKPI('kpi-breakdowns', d.breakdowns, 'cases');
+  setKPI('kpi-downtime',   d.downtime_hrs?.toFixed(1), 'hrs');
+  setKPI('kpi-availability', d.availability?.toFixed(1), '%');
+  setKPI('kpi-performance',  d.performance?.toFixed(1), '%');
+  setKPI('kpi-oee',          d.oee?.toFixed(1), '%');
+
+  // trend labels
+  colorTrend('kpi-availability-trend', d.availability, 90,  `${d.availability?.toFixed(1)}% · target 90%`);
+  colorTrend('kpi-performance-trend',  d.performance,  95,  `${d.performance?.toFixed(1)}% · target 95%`);
+  colorTrend('kpi-oee-trend',          d.oee,          85,  `${d.oee?.toFixed(1)}% · world class 85%`);
+  document.getElementById('kpi-downtime-trend').textContent = `${d.downtime_hrs?.toFixed(1)} hrs lost`;
+  document.getElementById('kpi-breakdowns-trend').textContent = `${d.breakdowns} events this period`;
+
+  // sidebar badge
+  document.getElementById('sb-breakdown-count').textContent = d.breakdowns;
+}
+
+function setKPI(id, val, unit) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val ?? '—';
+}
+
+function colorTrend(id, val, target, text) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = text;
+  el.className = 'kpi-trend ' + (val >= target ? 'up' : 'down');
+}
+
+/* ── RENDER OEE GAUGE ───────────────────────── */
+function renderOEE(d) {
+  const avail = d.availability ?? 0;
+  const perf  = d.performance  ?? 0;
+  const qual  = d.quality      ?? 0;
+  const oee   = d.oee          ?? 0;
+
+  document.getElementById('oeeGaugePct').textContent = oee.toFixed(0) + '%';
+  document.getElementById('oee-avail-val').textContent = avail.toFixed(1) + '%';
+  document.getElementById('oee-perf-val').textContent  = perf.toFixed(1)  + '%';
+  document.getElementById('oee-qual-val').textContent  = qual.toFixed(1)  + '%';
+  document.getElementById('oee-avail-bar').style.width = avail + '%';
+  document.getElementById('oee-perf-bar').style.width  = perf  + '%';
+  document.getElementById('oee-qual-bar').style.width  = qual  + '%';
+  document.getElementById('mtbf-val').textContent = (d.mtbf ?? '—') + ' h';
+  document.getElementById('mttr-val').textContent = (d.mttr ?? '—') + ' h';
+
+  drawOEEGauge(oee / 100);
+}
+
+function drawOEEGauge(fraction) {
+  const canvas = document.getElementById('oeeCanvas');
+  const ctx = canvas.getContext('2d');
+  const cx = 70, cy = 75, r = 54;
+  ctx.clearRect(0, 0, 140, 140);
+
+  const start = Math.PI * 0.75;
+  const end   = Math.PI * 2.25;
+  const color = fraction >= .85 ? '#00d084' : fraction >= .65 ? '#f0a500' : '#ff4455';
+
+  // track
+  ctx.beginPath(); ctx.arc(cx, cy, r, start, end);
+  ctx.strokeStyle = 'rgba(255,255,255,.06)'; ctx.lineWidth = 10; ctx.lineCap = 'round'; ctx.stroke();
+
+  // value arc
+  const valEnd = start + fraction * (end - start);
+  ctx.beginPath(); ctx.arc(cx, cy, r, start, valEnd);
+  ctx.strokeStyle = color; ctx.lineWidth = 10; ctx.stroke();
+
+  // tick marks
+  for (let i = 0; i <= 10; i++) {
+    const a = start + (i / 10) * (end - start);
+    const inner = r - 14, outer = r - 8;
+    ctx.beginPath();
+    ctx.moveTo(cx + inner * Math.cos(a), cy + inner * Math.sin(a));
+    ctx.lineTo(cx + outer * Math.cos(a), cy + outer * Math.sin(a));
+    ctx.strokeStyle = 'rgba(255,255,255,.15)'; ctx.lineWidth = 1; ctx.stroke();
+  }
+}
+
+/* ── RENDER MACHINE TABLE ───────────────────── */
+function renderMachineTable(machines) {
+  document.getElementById('machine-count').textContent = `${machines.length} machines monitored`;
+  const tbody = document.getElementById('machine-tbody');
+  if (!machines.length) { tbody.innerHTML = '<tr><td colspan="7" style="color:var(--muted);text-align:center;padding:20px">No data</td></tr>'; return; }
+
+  tbody.innerHTML = machines.map(m => {
+    const avail = m.availability ?? 0;
+    const barColor = avail >= 90 ? 'var(--green)' : avail >= 75 ? 'var(--yellow)' : 'var(--red)';
+    return `
+    <tr>
+      <td><strong>${m.name}</strong></td>
+      <td style="color:var(--muted)">${m.type}</td>
+      <td><span class="status-pill ${m.status}"><span class="status-dot"></span>${m.status}</span></td>
+      <td>
+        <span style="font-family:var(--mono);font-size:12px">${avail.toFixed(1)}%</span>
+        <span class="pct-bar"><span class="pct-fill" style="width:${avail}%;background:${barColor}"></span></span>
+      </td>
+      <td style="font-family:var(--mono);color:${m.breakdowns > 3 ? 'var(--red)' : 'var(--text)'}">${m.breakdowns}</td>
+      <td style="font-family:var(--mono)">${m.downtime_hrs?.toFixed(1)}</td>
+      <td style="color:var(--muted);font-size:11.5px">${m.last_incident}</td>
+    </tr>`;
+  }).join('');
+}
+
+/* ── RENDER SIDEBAR ─────────────────────────── */
+function renderMachineSidebar(machines) {
+  const el = document.getElementById('machine-sidebar');
+  el.innerHTML = machines.map(m => `
+    <div class="sb-item">
+      <span class="sb-icon">⚙</span>
+      ${m.name}
+      <span class="machine-status ${m.status}"></span>
+    </div>`).join('');
+}
+
+/* ── RENDER BREAKDOWN TIMELINE ───────────────── */
+function renderBreakdownTimeline(breakdowns) {
+  const el = document.getElementById('breakdown-timeline');
+  if (!breakdowns.length) { el.innerHTML = '<div style="color:var(--muted);font-size:12px">No breakdown events</div>'; return; }
+  el.innerHTML = breakdowns.map(b => `
+    <div class="tl-item">
+      <div class="tl-dot ${b.severity}"></div>
+      <div class="tl-content">
+        <div class="tl-title">${b.machine} — ${b.cause}</div>
+        <div class="tl-meta">${b.date} · ${b.start}</div>
+      </div>
+      <div class="tl-duration">${b.duration}</div>
+    </div>`).join('');
+}
+
+/* ── RENDER PARETO ──────────────────────────── */
+function renderPareto(pareto) {
+  const el = document.getElementById('pareto-list');
+  const max = Math.max(...pareto.map(p => p.pct));
+  el.innerHTML = pareto.map((p, i) => `
+    <div class="pareto-row">
+      <div class="pareto-rank">${i + 1}</div>
+      <div class="pareto-name">${p.cause}</div>
+      <div class="pareto-bar-wrap"><div class="pareto-bar-fill" style="width:${(p.pct/max)*100}%"></div></div>
+      <div class="pareto-pct">${p.pct}%</div>
+      <div class="pareto-count">${p.count}x</div>
+    </div>`).join('');
+}
+
+/* ── RENDER DOWNTIME BAR CHART ───────────────── */
+function renderDowntimeChart(days) {
+  const el   = document.getElementById('downtimeChart');
+  const xel  = document.getElementById('downtimeXAxis');
+  const maxH = Math.max(...days.map(d => d.hrs), 1);
+
+  el.innerHTML = days.map(d => {
+    const pct = (d.hrs / maxH) * 100;
+    const color = d.hrs > 8 ? 'var(--red)' : d.hrs > 4 ? 'var(--yellow)' : 'var(--blue)';
+    return `
+      <div class="bar-col">
+        <div class="bar-val" style="font-size:8.5px;color:var(--muted)">${d.hrs > 0 ? d.hrs.toFixed(1) : ''}</div>
+        <div class="bar-body" style="height:${Math.max(pct,2)}%;background:${color};width:100%"></div>
+      </div>`;
+  }).join('');
+
+  xel.innerHTML = days.map(d => `<span>${d.day}</span>`).join('');
+}
+
+/* ── CLOCK ──────────────────────────────────── */
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clockLabel').textContent =
+    now.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' }) +
+    ' · ' + now.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' });
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+/* ── TOAST ──────────────────────────────────── */
+function showToast(msg, type='green') {
+  const c = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = 'toast-item';
+  t.style.borderLeft = `3px solid ${type === 'red' ? 'var(--red)' : 'var(--green)'}`;
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+
+/* ── FILE IMPORT ─────────────────────────────── */
+function handleFileImport(input) {
+  const file = input.files[0];
+  if (!file) return;
+  showToast(`📂 "${file.name}" ready — click Import & Save`, 'green');
+}
+
+/* ── INIT ───────────────────────────────────── */
+initSocket();
+loadAll();
+setInterval(loadAll, 30000);
+</script>
+</body>
+</html>

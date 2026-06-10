@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: dashboard-mtn
+    runtime: node
+    plan: free
+    buildCommand: npm install && npx prisma migrate deploy
+    startCommand: npm start
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: NODE_VERSION
+        value: 22

@@ -1,0 +1,35 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Machine {
+  id             Int         @id @default(autoincrement())
+  name           String      @unique
+  type           String
+  status         String      @default("idle") // running | down | idle | maintenance
+  performancePct Float       @default(95)
+  qualityPct     Float       @default(98)
+  plannedHours   Float       @default(16) // planned production hours per day
+  createdAt      DateTime    @default(now())
+  breakdowns     Breakdown[]
+}
+
+model Breakdown {
+  id          Int      @id @default(autoincrement())
+  machineId   Int
+  machine     Machine  @relation(fields: [machineId], references: [id], onDelete: Cascade)
+  cause       String
+  severity    String   @default("warning") // critical | warning | resolved
+  date        DateTime
+  startTime   String?
+  endTime     String?
+  durationHrs Float    @default(0)
+  technician  String?
+  notes       String?
+  createdAt   DateTime @default(now())
+}

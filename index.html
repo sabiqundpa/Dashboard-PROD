@@ -114,6 +114,7 @@ body{min-height:100%;background:var(--bg);color:var(--text);font-family:var(--fo
 .card-sub{font-size:10px;color:var(--muted);margin-top:2px}
 .card-action{font-size:11px;color:var(--muted);cursor:pointer;background:var(--s2);border:1px solid var(--border);border-radius:5px;padding:3px 8px;font-family:var(--font);white-space:nowrap;flex-shrink:0}
 .card-action:hover{color:var(--text)}
+.trend-tab.active{background:var(--accent);color:#000;border-color:var(--accent)}
 
 /* ═══════════════════════════════════════
    OEE GAUGE
@@ -480,8 +481,6 @@ textarea.form-input{resize:vertical;min-height:64px}
   <div class="sb-item" onclick="navigate('maintenance')"><span class="sb-icon">⚠️</span>Breakdowns<span class="sb-badge" id="sb-breakdown-count">—</span></div>
   <div class="sb-item" data-page="maintenance" onclick="navigate('maintenance')"><span class="sb-icon">🔧</span>Maintenance</div>
   <div class="sb-item" data-page="reports" onclick="navigate('reports')"><span class="sb-icon">📈</span>Reports</div>
-  <div class="sb-section">Machines</div>
-  <div id="machine-sidebar"><div class="sb-item loading-pulse" style="color:var(--muted);font-size:11px;padding-left:18px">Loading…</div></div>
   <div class="sb-section">Data</div>
   <div class="sb-item" onclick="openModal('importModal')"><span class="sb-icon">📥</span>Import CSV</div>
   <div class="sb-item" onclick="exportCSV()"><span class="sb-icon">📤</span>Export Report</div>
@@ -568,7 +567,13 @@ textarea.form-input{resize:vertical;min-height:64px}
         </div>
       </div>
       <div class="card">
-        <div class="card-header"><div><div class="card-title">Downtime Trend</div><div class="card-sub">Tekan untuk detail</div></div></div>
+        <div class="card-header"><div><div class="card-title">Downtime Trend</div><div class="card-sub">Tekan untuk detail</div></div>
+          <div class="trend-tabs" style="display:flex;gap:4px">
+            <button class="card-action trend-tab" data-range="today" onclick="setTrendRange('today',this)">Now</button>
+            <button class="card-action trend-tab active" data-range="week" onclick="setTrendRange('week',this)">Weekly</button>
+            <button class="card-action trend-tab" data-range="month" onclick="setTrendRange('month',this)">Monthly</button>
+          </div>
+        </div>
         <div class="trend-wrap"><canvas id="trendCanvas"></canvas><div class="trend-tooltip" id="trendTip"></div></div>
         <div style="display:flex;justify-content:space-between;margin-top:5px;font-size:9px;color:var(--muted);font-family:var(--mono)" id="trendXAxis"></div>
       </div>
@@ -705,8 +710,6 @@ textarea.form-input{resize:vertical;min-height:64px}
     <div class="sb-item" onclick="exportCSV();toggleDrawer()"><span class="sb-icon">📤</span>Export CSV</div>
     <div class="sb-item" onclick="openModal('addBreakdownModal');toggleDrawer()"><span class="sb-icon">➕</span>RMO</div>
     <div class="sb-item" onclick="openModal('addMachineModal');toggleDrawer()"><span class="sb-icon">🏭</span>Tambah Mesin</div>
-    <div class="sb-section">Mesin</div>
-    <div id="drawer-machine-list"></div>
   </div>
 </div>
 
@@ -734,7 +737,7 @@ textarea.form-input{resize:vertical;min-height:64px}
       <button class="modal-close" onclick="closeModal('addBreakdownModal')">×</button>
     </div>
     <div class="form-grid">
-      <div class="form-group"><label class="form-label">Mesin *</label><select class="form-input" id="bd-machine"><option value="">Pilihan…</option></select><div class="form-error" id="err-m"></div></div>
+      <div class="form-group"><label class="form-label">Mesin *</label><input type="text" class="form-input" id="bd-machine" list="bd-machine-list" placeholder="Ketik nama mesin…" autocomplete="off"/><datalist id="bd-machine-list"></datalist><div class="form-error" id="err-m"></div></div>
       <div class="form-group"><label class="form-label">Tanggal *</label><input type="date" class="form-input" id="bd-date"/></div>
       <div class="form-group"><label class="form-label">Waktu Mulai</label><input type="time" class="form-input" id="bd-start"/></div>
       <div class="form-group"><label class="form-label">Waktu Selesai</label><input type="time" class="form-input" id="bd-end"/></div>
@@ -821,7 +824,7 @@ textarea.form-input{resize:vertical;min-height:64px}
    STATE & DEMO DATA
 ══════════════════════════════════════ */
 const API = '/api';
-const S = { machines:[], breakdowns:[], pareto:[], downtime:[], kpi:{}, sortKey:'name', sortDir:1, sf:'all', sv:'all', notifications:[], connected:false };
+const S = { machines:[], breakdowns:[], pareto:[], downtime:[], kpi:{}, sortKey:'name', sortDir:1, sf:'all', sv:'all', notifications:[], connected:false, trendRange:'week' };
 
 const DEMO = {
   kpi:{breakdowns:14,downtime_hrs:37.5,availability:83.2,performance:91.4,quality:96.8,oee:73.5,mtbf:18.4,mttr:2.7},
@@ -909,14 +912,21 @@ async function loadAll(){
     apiFetch(`/machines?period=${period}`,DEMO.machines),
     apiFetch(`/breakdowns?period=${period}`,DEMO.breakdowns),
     apiFetch(`/pareto?period=${period}`,DEMO.pareto),
-    apiFetch(`/downtime-by-day?period=${period}`,DEMO.downtime),
+    apiFetch(`/downtime-by-day?range=${S.trendRange||'week'}`,DEMO.downtime),
   ]);
   S.kpi=kpi;S.machines=machines;S.breakdowns=breakdowns;S.pareto=pareto;S.downtime=downtime;
   renderKPIs(kpi);renderOEE(kpi);
-  renderMachineTable(machines);renderMachineSidebar(machines);
+  renderMachineTable(machines);
   renderTimeline(breakdowns,'breakdown-timeline',5);
   renderPareto(pareto);renderTrend(downtime);populateMachineDD(machines);
   lu.textContent='Updated '+new Date().toLocaleTimeString();
+}
+async function setTrendRange(range,el){
+  S.trendRange=range;
+  document.querySelectorAll('.trend-tab').forEach(e=>e.classList.remove('active'));
+  el.classList.add('active');
+  const downtime=await apiFetch(`/downtime-by-day?range=${range}`,DEMO.downtime);
+  S.downtime=downtime;renderTrend(downtime);
 }
 
 /* ══════════════════════════════════════
@@ -1052,18 +1062,9 @@ async function setStatus(name,status){
   const m=S.machines.find(x=>x.name===name);if(!m)return;
   m.status=status;
   try{await fetch(`${API}/machines/${name}/status`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})});}catch{}
-  renderMachineTable(S.machines);renderMachineSidebar(S.machines);showDetail(name);
+  renderMachineTable(S.machines);showDetail(name);
   showToast(`${name} → ${status}`,status==='down'?'red':'green');
 }
-
-/* ══════════════════════════════════════
-   SIDEBAR (desktop + drawer)
-══════════════════════════════════════ */
-function renderMachineSidebar(machines){
-  const html=machines.map(m=>`<div class="sb-item" onclick="showDetail('${m.name}')"><span class="sb-icon">⚙</span>${m.name}<span class="machine-status ${m.status}"></span></div>`).join('');
-  st_html('machine-sidebar',html);st_html('drawer-machine-list',html);
-}
-function st_html(id,html){const el=document.getElementById(id);if(el)el.innerHTML=html;}
 
 /* ══════════════════════════════════════
    TIMELINE
@@ -1161,17 +1162,18 @@ function renderTrend(days){
    ADD BREAKDOWN FORM
 ══════════════════════════════════════ */
 function populateMachineDD(machines){
-  const sel=document.getElementById('bd-machine');
-  sel.innerHTML='<option value="">Select…</option>'+machines.map(m=>`<option value="${m.name}">${m.name} (${m.type})</option>`).join('');
+  const list=document.getElementById('bd-machine-list');
+  list.innerHTML=machines.map(m=>`<option value="${m.name}">${m.name} (${m.type})</option>`).join('');
   const di=document.getElementById('bd-date');if(!di.value)di.value=new Date().toISOString().slice(0,10);
 }
 async function submitBD(){
-  const m=document.getElementById('bd-machine').value,c=document.getElementById('bd-cause').value.trim();
-  document.getElementById('err-m').textContent=m?'':'Required';
+  const m=document.getElementById('bd-machine').value.trim(),c=document.getElementById('bd-cause').value.trim();
+  const validMachine=S.machines.some(mm=>mm.name===m);
+  document.getElementById('err-m').textContent=m?(validMachine?'':'Mesin tidak ditemukan'):'Required';
   document.getElementById('err-c').textContent=c?'':'Required';
-  document.getElementById('bd-machine').className='form-input'+(m?'':' error');
+  document.getElementById('bd-machine').className='form-input'+(m&&validMachine?'':' error');
   document.getElementById('bd-cause').className='form-input'+(c?'':' error');
-  if(!m||!c)return;
+  if(!m||!validMachine||!c)return;
   const btn=document.getElementById('bd-btn');btn.disabled=true;btn.textContent='Saving…';
   const payload={machine_code:m,breakdown_date:document.getElementById('bd-date').value,start_time:document.getElementById('bd-start').value,end_time:document.getElementById('bd-end').value,failure_cause:c,failure_category:document.getElementById('bd-cat').value,severity:document.getElementById('bd-sev').value,technician:document.getElementById('bd-tech').value,notes:document.getElementById('bd-notes').value};
   try{await fetch(`${API}/breakdown`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});}catch{}

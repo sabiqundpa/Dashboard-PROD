@@ -156,11 +156,42 @@ router.get('/pareto', async (req, res, next) => {
 });
 
 // ── GET /api/downtime-by-day ─────────────────────────
+// range=today  -> hourly buckets for the current day
+// range=week   -> last 7 days, one bucket per day (default)
+// range=month  -> last 30 days, one bucket per day
 router.get('/downtime-by-day', async (req, res, next) => {
   try {
-    const end = new Date();
+    const range = req.query.range || 'week';
+    const now = new Date();
+
+    if (range === 'today') {
+      const start = new Date(now);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(now);
+      end.setHours(23, 59, 59, 999);
+
+      const breakdowns = await prisma.breakdown.findMany({
+        where: { date: { gte: start, lte: end } },
+      });
+
+      const hours = [];
+      for (let h = 0; h < 24; h++) {
+        hours.push({ key: h, day: `${String(h).padStart(2, '0')}:00`, hrs: 0 });
+      }
+
+      for (const b of breakdowns) {
+        const hour = b.startTime ? Number(b.startTime.split(':')[0]) : 0;
+        const entry = hours[Number.isNaN(hour) ? 0 : hour];
+        if (entry) entry.hrs += b.durationHrs;
+      }
+
+      return res.json(hours.map(({ day, hrs }) => ({ day, hrs })));
+    }
+
+    const totalDays = range === 'month' ? 29 : 6;
+    const end = new Date(now);
     const start = new Date(end);
-    start.setDate(start.getDate() - 6);
+    start.setDate(start.getDate() - totalDays);
     start.setHours(0, 0, 0, 0);
 
     const breakdowns = await prisma.breakdown.findMany({
@@ -168,12 +199,14 @@ router.get('/downtime-by-day', async (req, res, next) => {
     });
 
     const days = [];
-    for (let i = 6; i >= 0; i--) {
+    for (let i = totalDays; i >= 0; i--) {
       const d = new Date(end);
       d.setDate(d.getDate() - i);
       days.push({
         key: d.toISOString().slice(0, 10),
-        day: d.toLocaleDateString('en-US', { weekday: 'short' }),
+        day: range === 'month'
+          ? d.toLocaleDateString('en-US', { day: '2-digit', month: '2-digit' })
+          : d.toLocaleDateString('en-US', { weekday: 'short' }),
         hrs: 0,
       });
     }

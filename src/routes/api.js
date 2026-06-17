@@ -43,8 +43,8 @@ router.get('/machines', async (req, res, next) => {
       return {
         id: m.id,
         name: m.name,
-        type: m.type,
-        location: m.location,
+        cluster: m.cluster,
+        line: m.line,
         status: m.status,
         availability,
         breakdowns: m.breakdowns.length,
@@ -348,16 +348,16 @@ router.patch('/breakdown/:id/close', async (req, res, next) => {
 // Register a new machine so it can receive work orders.
 router.post('/machines', async (req, res, next) => {
   try {
-    const { name, type, location } = req.body;
-    if (!name || !type) {
-      return res.status(400).json({ error: 'name and type are required' });
+    const { name, cluster, line } = req.body;
+    if (!name) {
+      return res.status(400).json({ error: 'name is required' });
     }
 
     const existing = await prisma.machine.findUnique({ where: { name } });
     if (existing) return res.status(409).json({ error: `Machine "${name}" already exists` });
 
     const machine = await prisma.machine.create({
-      data: { name, type, location: location || '' },
+      data: { name, cluster: cluster || '', line: line || '' },
     });
 
     res.status(201).json(machine);
@@ -387,7 +387,7 @@ router.patch('/machines/:name/status', async (req, res, next) => {
 
 // ── POST /api/import ──────────────────────────────────
 // Accepts .csv with columns:
-// machine_name, machine_type, breakdown_date, start_time, end_time, failure_cause, category, technician, notes
+// machine_name, machine_cluster, machine_line, breakdown_date, start_time, end_time, failure_cause, category, technician, notes
 router.post('/import', upload.single('file'), async (req, res, next) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
@@ -403,7 +403,7 @@ router.post('/import', upload.single('file'), async (req, res, next) => {
       const machine = await prisma.machine.upsert({
         where: { name },
         update: {},
-        create: { name, type: String(row.machine_type ?? 'Unknown') },
+        create: { name, cluster: String(row.machine_cluster ?? ''), line: String(row.machine_line ?? '') },
       });
 
       const start = parseTimeValue(row.start_time);

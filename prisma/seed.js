@@ -1,12 +1,12 @@
 const prisma = require('../src/db');
 
 const machines = [
-  { name: 'CNC-01', type: 'Turning', location: 'Bay A', status: 'running' },
-  { name: 'CNC-02', type: 'Milling', location: 'Bay A', status: 'down' },
-  { name: 'CNC-03', type: 'Turning', location: 'Bay B', status: 'running' },
-  { name: 'CNC-04', type: 'Grinding', location: 'Bay B', status: 'idle' },
-  { name: 'CNC-05', type: 'Milling', location: 'Bay C', status: 'maintenance' },
-  { name: 'CNC-06', type: 'EDM', location: 'Bay C', status: 'running' },
+  { name: 'CNC-01', cluster: 'Cluster A', line: 'Line 1', status: 'running' },
+  { name: 'CNC-02', cluster: 'Cluster A', line: 'Line 1', status: 'down' },
+  { name: 'CNC-03', cluster: 'Cluster A', line: 'Line 2', status: 'running' },
+  { name: 'CNC-04', cluster: 'Cluster B', line: 'Line 2', status: 'idle' },
+  { name: 'CNC-05', cluster: 'Cluster B', line: 'Line 3', status: 'maintenance' },
+  { name: 'CNC-06', cluster: 'Cluster B', line: 'Line 3', status: 'running' },
 ];
 
 function daysAgo(n, hour, minute) {
@@ -21,7 +21,7 @@ async function main() {
   for (const m of machines) {
     const machine = await prisma.machine.upsert({
       where: { name: m.name },
-      update: { type: m.type, location: m.location, status: m.status },
+      update: { cluster: m.cluster, line: m.line, status: m.status },
       create: m,
     });
     created[m.name] = machine;

@@ -12,8 +12,8 @@ datasource db {
 model Machine {
   id             Int         @id @default(autoincrement())
   name           String      @unique
-  type           String
-  location       String      @default("")
+  cluster        String      @default("")
+  line           String      @default("")
   status         String      @default("idle") // running | down | idle | maintenance
   performancePct Float       @default(95)
   qualityPct     Float       @default(98)

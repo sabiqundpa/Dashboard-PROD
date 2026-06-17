@@ -592,14 +592,15 @@ textarea.form-input{resize:vertical;min-height:64px}
         <table class="machine-table" style="min-width:400px">
           <thead><tr>
             <th onclick="sortBy('name')">Mesin</th>
-            <th onclick="sortBy('type')">Tipe</th>
+            <th onclick="sortBy('cluster')">Cluster</th>
+            <th onclick="sortBy('line')">Line</th>
             <th>Status</th>
             <th onclick="sortBy('availability')">Avail %</th>
             <th onclick="sortBy('breakdowns')">BD</th>
             <th onclick="sortBy('downtime_hrs')">DT Jam</th>
             <th>Last Incident</th>
           </tr></thead>
-          <tbody id="machine-tbody"><tr><td colspan="7" style="text-align:center;padding:20px;color:var(--muted)">Loading…</td></tr></tbody>
+          <tbody id="machine-tbody"><tr><td colspan="8" style="text-align:center;padding:20px;color:var(--muted)">Loading…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -639,8 +640,8 @@ textarea.form-input{resize:vertical;min-height:64px}
       </div>
       <div style="overflow-x:auto">
         <table class="machine-table" style="min-width:400px">
-          <thead><tr><th>Mesin</th><th>Tipe</th><th>Status</th><th>Avail %</th><th>Freq</th><th>Waktu DT</th><th>Action</th></tr></thead>
-          <tbody id="machine-full-tbody"><tr><td colspan="7" style="text-align:center;padding:20px;color:var(--muted)">Loading…</td></tr></tbody>
+          <thead><tr><th>Mesin</th><th>Cluster</th><th>Line</th><th>Status</th><th>Avail %</th><th>Freq</th><th>Waktu DT</th><th>Action</th></tr></thead>
+          <tbody id="machine-full-tbody"><tr><td colspan="8" style="text-align:center;padding:20px;color:var(--muted)">Loading…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -784,9 +785,9 @@ textarea.form-input{resize:vertical;min-height:64px}
       <button class="modal-close" onclick="closeModal('addMachineModal')">×</button>
     </div>
     <div class="form-grid">
-      <div class="form-group"><label class="form-label">Nama Mesin *</label><input type="text" class="form-input" id="am-name" placeholder="contoh. CNC-07"/><div class="form-error" id="err-am-name"></div></div>
-      <div class="form-group"><label class="form-label">Tipe *</label><select class="form-input" id="am-type"><option>Turning</option><option>Milling</option><option>Grinding</option><option>EDM</option><option>Lainnya</option></select></div>
-      <div class="form-group full"><label class="form-label">Cluster</label><input type="text" class="form-input" id="am-location" placeholder="contoh. Bay A"/></div>
+      <div class="form-group full"><label class="form-label">Nama Mesin *</label><input type="text" class="form-input" id="am-name" placeholder="contoh. CNC-07"/><div class="form-error" id="err-am-name"></div></div>
+      <div class="form-group"><label class="form-label">Cluster</label><input type="text" class="form-input" id="am-cluster" placeholder="contoh. Cluster A"/></div>
+      <div class="form-group"><label class="form-label">Line</label><input type="text" class="form-input" id="am-line" placeholder="contoh. Line 1"/></div>
     </div>
     <div class="modal-footer"><button class="btn" onclick="closeModal('addMachineModal')">Batal</button><button class="btn primary" id="am-btn" onclick="submitMachine()">Simpan Mesin</button></div>
   </div>
@@ -805,7 +806,7 @@ textarea.form-input{resize:vertical;min-height:64px}
     </div>
     <div style="margin-top:12px;background:var(--s2);border-radius:8px;padding:11px;font-size:11px;color:var(--muted);line-height:1.8">
       <strong style="color:var(--text)">Required columns:</strong><br>
-      <span style="font-family:var(--mono)">machine_name · breakdown_date · start_time · end_time · failure_cause · category · technician</span>
+      <span style="font-family:var(--mono)">machine_name · machine_cluster · machine_line · breakdown_date · start_time · end_time · failure_cause · category · technician</span>
     </div>
     <div class="modal-footer"><button class="btn" onclick="closeModal('importModal')">Cancel</button><button class="btn primary" id="importBtn" disabled onclick="doImport()">Import</button></div>
   </div>
@@ -957,11 +958,11 @@ function drawGauge(f){
 ══════════════════════════════════════ */
 function renderMachineTable(machines){
   st('machine-count',`${machines.length} mesin termonitor`);
-  applyTableSort(machines,'machine-tbody',7);
+  applyTableSort(machines,'machine-tbody',8);
 }
 function applyTableSort(machines,tbodyId,cols){
   const q=(document.getElementById('machineSearch')?.value||'').toLowerCase();
-  let data=machines.filter(m=>!q||m.name.toLowerCase().includes(q)||m.type.toLowerCase().includes(q));
+  let data=machines.filter(m=>!q||m.name.toLowerCase().includes(q)||m.cluster.toLowerCase().includes(q)||m.line.toLowerCase().includes(q));
   data.sort((a,b)=>{const av=a[S.sortKey]??'',bv=b[S.sortKey]??'';return S.sortDir*(typeof av==='number'?av-bv:String(av).localeCompare(String(bv)));});
   const tbody=document.getElementById(tbodyId);
   if(!data.length){tbody.innerHTML=`<tr><td colspan="${cols}" style="text-align:center;padding:20px;color:var(--muted)">No results</td></tr>`;return;}
@@ -969,7 +970,8 @@ function applyTableSort(machines,tbodyId,cols){
     const av=m.availability??0,bc=av>=90?'var(--green)':av>=75?'var(--yellow)':'var(--red)';
     return`<tr onclick="showDetail('${m.name}')">
       <td><strong style="font-size:12px">${m.name}</strong></td>
-      <td style="color:var(--muted)">${m.type}</td>
+      <td style="color:var(--muted)">${m.cluster||'—'}</td>
+      <td style="color:var(--muted)">${m.line||'—'}</td>
       <td><span class="status-pill ${m.status}"><span class="status-dot"></span>${m.status}</span></td>
       <td><span style="font-family:var(--mono);font-size:11px">${av.toFixed(1)}%</span><span class="pct-bar"><span class="pct-fill" style="width:${av}%;background:${bc}"></span></span></td>
       <td style="font-family:var(--mono);color:${m.breakdowns>3?'var(--red)':'var(--text)'}">${m.breakdowns}</td>
@@ -978,22 +980,23 @@ function applyTableSort(machines,tbodyId,cols){
     </tr>`;
   }).join('');
 }
-function sortBy(k){S.sortDir=S.sortKey===k?-S.sortDir:1;S.sortKey=k;applyTableSort(S.machines,'machine-tbody',7);}
-function filterTable(){applyTableSort(S.machines,'machine-tbody',7);}
+function sortBy(k){S.sortDir=S.sortKey===k?-S.sortDir:1;S.sortKey=k;applyTableSort(S.machines,'machine-tbody',8);}
+function filterTable(){applyTableSort(S.machines,'machine-tbody',8);}
 
 /* ══════════════════════════════════════
    MACHINES FULL PAGE
 ══════════════════════════════════════ */
 function renderMachinesFull(){
   const q=(document.getElementById('mSearchFull')?.value||'').toLowerCase();
-  let data=S.machines.filter(m=>(!q||m.name.toLowerCase().includes(q)||m.type.toLowerCase().includes(q))&&(S.sf==='all'||m.status===S.sf));
+  let data=S.machines.filter(m=>(!q||m.name.toLowerCase().includes(q)||m.cluster.toLowerCase().includes(q)||m.line.toLowerCase().includes(q))&&(S.sf==='all'||m.status===S.sf));
   const tbody=document.getElementById('machine-full-tbody');
-  if(!data.length){tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--muted)">No machines match</td></tr>';return;}
+  if(!data.length){tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--muted)">No machines match</td></tr>';return;}
   tbody.innerHTML=data.map(m=>{
     const av=m.availability??0,bc=av>=90?'var(--green)':av>=75?'var(--yellow)':'var(--red)';
     return`<tr onclick="showDetail('${m.name}')">
-      <td><strong>${m.name}</strong><div style="font-size:10px;color:var(--muted)">${m.location||''}</div></td>
-      <td style="color:var(--muted)">${m.type}</td>
+      <td><strong>${m.name}</strong></td>
+      <td style="color:var(--muted)">${m.cluster||'—'}</td>
+      <td style="color:var(--muted)">${m.line||'—'}</td>
       <td><span class="status-pill ${m.status}"><span class="status-dot"></span>${m.status}</span></td>
       <td><span style="font-family:var(--mono);font-size:11px">${av.toFixed(1)}%</span><span class="pct-bar"><span class="pct-fill" style="width:${av}%;background:${bc}"></span></span></td>
       <td style="font-family:var(--mono)">${m.breakdowns}</td>
@@ -1010,7 +1013,7 @@ function setSF(el){document.querySelectorAll('[data-sf]').forEach(e=>e.classList
 function showDetail(name){
   const m=S.machines.find(x=>x.name===name);if(!m)return;
   const panel=document.getElementById('detailPanel');
-  st('dpName',m.name);st('dpType',m.type+(m.location?' · '+m.location:''));
+  st('dpName',m.name);st('dpType',[m.cluster,m.line].filter(Boolean).join(' · ')||'—');
   const av=m.availability??0,col=av>=90?'var(--green)':av>=75?'var(--yellow)':'var(--red)';
   const rBDs=S.breakdowns.filter(b=>b.machine===name);
   document.getElementById('dpBody').innerHTML=`
@@ -1176,7 +1179,7 @@ function renderTrend(days){
 ══════════════════════════════════════ */
 function populateMachineDD(machines){
   const list=document.getElementById('bd-machine-list');
-  list.innerHTML=machines.map(m=>`<option value="${m.name}">${m.name} (${m.type})</option>`).join('');
+  list.innerHTML=machines.map(m=>`<option value="${m.name}">${m.name}${m.cluster?' ('+m.cluster+')':''}</option>`).join('');
   const di=document.getElementById('bd-date');if(!di.value)di.value=new Date().toISOString().slice(0,10);
 }
 async function submitBD(){
@@ -1232,18 +1235,18 @@ async function submitCloseWO(){
 ══════════════════════════════════════ */
 async function submitMachine(){
   const name=document.getElementById('am-name').value.trim();
-  const type=document.getElementById('am-type').value;
-  const location=document.getElementById('am-location').value.trim();
+  const cluster=document.getElementById('am-cluster').value.trim();
+  const line=document.getElementById('am-line').value.trim();
   document.getElementById('err-am-name').textContent=name?'':'Required';
   document.getElementById('am-name').className='form-input'+(name?'':' error');
   if(!name)return;
   const btn=document.getElementById('am-btn');btn.disabled=true;btn.textContent='Saving…';
   try{
-    const r=await fetch(`${API}/machines`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,type,location})});
+    const r=await fetch(`${API}/machines`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,cluster,line})});
     if(!r.ok){const e=await r.json();throw new Error(e.error||'Failed');}
     showToast(`✅ Mesin ${name} ditambahkan`,'green');
     closeModal('addMachineModal');
-    ['am-name','am-location'].forEach(id=>document.getElementById(id).value='');
+    ['am-name','am-cluster','am-line'].forEach(id=>document.getElementById(id).value='');
     loadAll();
   }catch(e){showToast(`❌ ${e.message}`,'red');}
   btn.disabled=false;btn.textContent='Save Mesin';
@@ -1355,7 +1358,7 @@ function rmToast(t){t.classList.add('removing');setTimeout(()=>t.remove(),200);}
 ══════════════════════════════════════ */
 function genReport(t){const n={oee:'Rangkuman OEE',breakdown:'Analisis Breakdown',pm:'Jadwal Preventive Maintenance'};showToast(`📊 Mengadakan ${n[t]||t}…`,'green');setTimeout(()=>showToast(`✅ ${n[t]||t} siap — Sambung backend untuk PDF`,'green'),1400);}
 function exportCSV(){
-  const rows=[['Machine','Type','Status','Availability%','Breakdowns','Downtime hrs','Last Incident'],...S.machines.map(m=>[m.name,m.type,m.status,m.availability?.toFixed(1),m.breakdowns,m.downtime_hrs?.toFixed(1),m.last_incident])];
+  const rows=[['Machine','Cluster','Line','Status','Availability%','Breakdowns','Downtime hrs','Last Incident'],...S.machines.map(m=>[m.name,m.cluster,m.line,m.status,m.availability?.toFixed(1),m.breakdowns,m.downtime_hrs?.toFixed(1),m.last_incident])];
   const csv=rows.map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
   a.download=`cnc-report-${new Date().toISOString().slice(0,10)}.csv`;a.click();showToast('✅ Diekspor ke CSV','green');

@@ -50,7 +50,7 @@ router.get('/me', (req, res) => {
 // ── GET /api/machines ──────────────────────────────
 router.get('/machines', async (req, res, next) => {
   try {
-    const { start, end } = getPeriodRange(req.query.period);
+    const { start, end } = getPeriodRange(req.query.period, req.query.date);
     const days = daysInRange(start, end);
     const machines = await prisma.machine.findMany({
       orderBy: { name: 'asc' },
@@ -90,7 +90,7 @@ router.get('/machines', async (req, res, next) => {
 // ── GET /api/kpi ────────────────────────────────────
 router.get('/kpi', async (req, res, next) => {
   try {
-    const { start, end } = getPeriodRange(req.query.period);
+    const { start, end } = getPeriodRange(req.query.period, req.query.date);
     const days = daysInRange(start, end);
 
     const machines = await prisma.machine.findMany();
@@ -99,7 +99,8 @@ router.get('/kpi', async (req, res, next) => {
     });
 
     const downtimeHrs = breakdowns.reduce((s, b) => s + b.durationHrs, 0);
-    const plannedHrsTotal = machines.reduce((s, m) => s + m.plannedHours * days, 0);
+    const plannedHrsPerDay = machines.reduce((s, m) => s + m.plannedHours, 0);
+    const plannedHrsTotal = plannedHrsPerDay * days;
 
     const availability = plannedHrsTotal > 0
       ? Math.max(0, Math.min(100, ((plannedHrsTotal - downtimeHrs) / plannedHrsTotal) * 100))
@@ -124,6 +125,7 @@ router.get('/kpi', async (req, res, next) => {
       breakdowns: breakdownCount,
       downtime_hrs: downtimeHrs,
       planned_hours: Number(plannedHrsTotal.toFixed(1)),
+      planned_hours_per_day: Number(plannedHrsPerDay.toFixed(1)),
       availability,
       performance,
       quality,
@@ -137,7 +139,7 @@ router.get('/kpi', async (req, res, next) => {
 // ── GET /api/breakdowns ─────────────────────────────
 router.get('/breakdowns', async (req, res, next) => {
   try {
-    const { start, end } = getPeriodRange(req.query.period);
+    const { start, end } = getPeriodRange(req.query.period, req.query.date);
     const breakdowns = await prisma.breakdown.findMany({
       where: { date: { gte: start, lte: end } },
       include: { machine: true },
@@ -168,7 +170,7 @@ router.get('/breakdowns', async (req, res, next) => {
 // ── GET /api/pareto ──────────────────────────────────
 router.get('/pareto', async (req, res, next) => {
   try {
-    const { start, end } = getPeriodRange(req.query.period);
+    const { start, end } = getPeriodRange(req.query.period, req.query.date);
     const breakdowns = await prisma.breakdown.findMany({
       where: { date: { gte: start, lte: end } },
     });
@@ -196,7 +198,7 @@ router.get('/pareto', async (req, res, next) => {
 // Top 10 machines by breakdown frequency within the period.
 router.get('/pareto-machines', async (req, res, next) => {
   try {
-    const { start, end } = getPeriodRange(req.query.period);
+    const { start, end } = getPeriodRange(req.query.period, req.query.date);
     const breakdowns = await prisma.breakdown.findMany({
       where: { date: { gte: start, lte: end } },
       include: { machine: true },
@@ -228,7 +230,7 @@ router.get('/pareto-machines', async (req, res, next) => {
 router.get('/downtime-by-day', async (req, res, next) => {
   try {
     const period = req.query.period || req.query.range || 'week';
-    const now = new Date();
+    const now = req.query.date ? new Date(req.query.date) : new Date();
 
     if (period === 'month') {
       const year = now.getFullYear();
@@ -326,7 +328,7 @@ router.get('/downtime-by-day', async (req, res, next) => {
 router.get('/mtbf-mttr-trend', async (req, res, next) => {
   try {
     const period = req.query.period || 'week';
-    const now = new Date();
+    const now = req.query.date ? new Date(req.query.date) : new Date();
 
     const machines = await prisma.machine.findMany();
     const plannedPerDay = machines.reduce((s, m) => s + m.plannedHours, 0);

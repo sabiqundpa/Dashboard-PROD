@@ -10,10 +10,10 @@ import Timeline from '../components/Timeline.jsx';
 import ParetoList from '../components/ParetoList.jsx';
 
 export default function Dashboard() {
-  const { kpi, machines, breakdowns, pareto, paretoMachines, downtime, mtbfMttrTrend, period, setPeriod, lastUpdate, loadAll } = useApp();
+  const { kpi, machines, breakdowns, pareto, paretoMachines, downtime, mtbfMttrTrend, period, setPeriod, refDate, setRefDate, lastUpdate, loadAll } = useApp();
   const { navigate, openModal } = useUI();
 
-  useEffect(() => { loadAll(period); }, [period]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { loadAll(); }, [period, refDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="page-view active">
@@ -28,7 +28,8 @@ export default function Dashboard() {
             <option value="week">Mingguan</option>
             <option value="month">Bulanan</option>
           </select>
-          <button className="btn-icon" title="Refresh" onClick={() => loadAll(period)}>↻</button>
+          <input type="date" className="btn" style={{ padding: '7px 10px' }} min="2026-01-01" value={refDate} onChange={(e) => setRefDate(e.target.value)} title="Pilih tanggal acuan" />
+          <button className="btn-icon" title="Refresh" onClick={() => loadAll()}>↻</button>
           <button className="btn primary" onClick={() => openModal('addBreakdown')}>+ RMO</button>
         </div>
       </div>
@@ -41,10 +42,10 @@ export default function Dashboard() {
       </div>
 
       <div className="row2-equal">
-        <MtbfMttrChart data={mtbfMttrTrend} />
+        <MtbfMttrChart kpi={kpi} data={mtbfMttrTrend} />
       </div>
 
-      <MachineTable machines={machines} />
+      <MachineTable machines={machines} limit={5} />
 
       <div className="row4">
         <div className="card">

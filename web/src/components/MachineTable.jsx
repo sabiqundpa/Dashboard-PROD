@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useUI } from '../UIContext.jsx';
 
-export default function MachineTable({ machines }) {
+export default function MachineTable({ machines, limit }) {
   const { showDetail, navigate } = useUI();
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState('name');
@@ -19,13 +19,13 @@ export default function MachineTable({ machines }) {
       const av = a[sortKey] ?? '', bv = b[sortKey] ?? '';
       return sortDir * (typeof av === 'number' ? av - bv : String(av).localeCompare(String(bv)));
     });
-    return d;
-  }, [machines, search, sortKey, sortDir]);
+    return limit ? d.slice(0, limit) : d;
+  }, [machines, search, sortKey, sortDir, limit]);
 
   return (
     <div className="card">
       <div className="card-header" style={{ flexWrap: 'wrap', gap: 8 }}>
-        <div><div className="card-title">Status Mesin</div><div className="card-sub">{machines.length} mesin termonitor</div></div>
+        <div><div className="card-title">Status Mesin</div><div className="card-sub">{limit && machines.length > limit ? `Menampilkan ${limit} dari ${machines.length} mesin` : `${machines.length} mesin termonitor`}</div></div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <div className="search-wrap" style={{ minWidth: 130 }}>
             <span className="search-icon">🔍</span>
@@ -34,7 +34,7 @@ export default function MachineTable({ machines }) {
           <button className="card-action" onClick={() => navigate('machines')}>Semua ›</button>
         </div>
       </div>
-      <div style={{ overflowX: 'auto' }}>
+      <div className="table-scroll">
         <table className="machine-table" style={{ minWidth: 400 }}>
           <thead>
             <tr>

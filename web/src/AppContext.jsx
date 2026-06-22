@@ -4,11 +4,16 @@ import { useAuth } from './AuthContext.jsx';
 
 const AppContext = createContext(null);
 
-const EMPTY_KPI = { breakdowns: 0, downtime_hrs: 0, planned_hours: 0, availability: 0, performance: 0, quality: 0, oee: 0, mtbf: 0, mttr: 0 };
+const EMPTY_KPI = { breakdowns: 0, downtime_hrs: 0, planned_hours: 0, planned_hours_per_day: 0, availability: 0, performance: 0, quality: 0, oee: 0, mtbf: 0, mttr: 0 };
+
+function todayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
 
 export function AppProvider({ children }) {
   const { logout } = useAuth();
   const [period, setPeriod] = useState('week');
+  const [refDate, setRefDate] = useState(todayStr());
   const [kpi, setKpi] = useState(EMPTY_KPI);
   const [machines, setMachines] = useState([]);
   const [breakdowns, setBreakdowns] = useState([]);
@@ -19,7 +24,9 @@ export function AppProvider({ children }) {
   const [connected, setConnected] = useState(false);
   const [lastUpdate, setLastUpdate] = useState('—');
   const [notifications, setNotifications] = useState([]);
-  const loadingRef = useRef(false);
+  const requestIdRef = useRef(0);
+  const stateRef = useRef({ period, refDate });
+  stateRef.current = { period, refDate };
 
   const addNotif = useCallback((text, color = 'yellow') => {
     setNotifications((n) => [{ text, color, time: new Date(), unread: true, id: Math.random() }, ...n]);
@@ -31,29 +38,34 @@ export function AppProvider({ children }) {
 
   const clearNotifs = useCallback(() => setNotifications([]), []);
 
-  const loadAll = useCallback(async (p) => {
-    const usePeriod = p || period;
-    if (loadingRef.current) return;
-    loadingRef.current = true;
+  const loadAll = useCallback(async () => {
+    const usePeriod = stateRef.current.period;
+    const useDate = stateRef.current.refDate;
+    // "Latest request wins": don't block overlapping calls (period/date
+    // changes must always fire immediately), but if an older, slower call
+    // finishes after a newer one, discard its results instead of
+    // clobbering fresher state.
+    const myId = ++requestIdRef.current;
     setLastUpdate('Updating…');
+    const qs = `period=${usePeriod}&date=${useDate}`;
     const [k, m, b, pr, pm, dt, mt] = await Promise.all([
-      apiFetch(`/kpi?period=${usePeriod}`, EMPTY_KPI, logout),
-      apiFetch(`/machines?period=${usePeriod}`, [], logout),
-      apiFetch(`/breakdowns?period=${usePeriod}`, [], logout),
-      apiFetch(`/pareto?period=${usePeriod}`, [], logout),
-      apiFetch(`/pareto-machines?period=${usePeriod}`, [], logout),
-      apiFetch(`/downtime-by-day?period=${usePeriod}`, [], logout),
-      apiFetch(`/mtbf-mttr-trend?period=${usePeriod}`, [], logout),
+      apiFetch(`/kpi?${qs}`, EMPTY_KPI, logout),
+      apiFetch(`/machines?${qs}`, [], logout),
+      apiFetch(`/breakdowns?${qs}`, [], logout),
+      apiFetch(`/pareto?${qs}`, [], logout),
+      apiFetch(`/pareto-machines?${qs}`, [], logout),
+      apiFetch(`/downtime-by-day?${qs}`, [], logout),
+      apiFetch(`/mtbf-mttr-trend?${qs}`, [], logout),
     ]);
+    if (myId !== requestIdRef.current) return;
     setConnected(true);
     setKpi(k); setMachines(m); setBreakdowns(b); setPareto(pr); setParetoMachines(pm); setDowntime(dt); setMtbfMttrTrend(mt);
     setLastUpdate('Updated ' + new Date().toLocaleTimeString());
-    loadingRef.current = false;
-  }, [period, logout]);
+  }, [logout]);
 
   return (
     <AppContext.Provider value={{
-      period, setPeriod, kpi, machines, breakdowns, pareto, paretoMachines, downtime, mtbfMttrTrend,
+      period, setPeriod, refDate, setRefDate, kpi, machines, breakdowns, pareto, paretoMachines, downtime, mtbfMttrTrend,
       connected, lastUpdate, loadAll, notifications, addNotif, markAllRead, clearNotifs,
     }}>
       {children}

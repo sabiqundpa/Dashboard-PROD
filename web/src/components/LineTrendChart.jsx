@@ -26,15 +26,19 @@ export default function LineTrendChart({ title, sub, data, valueKey, color, unit
       ctx.strokeStyle = 'rgba(150,150,170,.12)'; ctx.lineWidth = 1; ctx.stroke();
     }
 
-    // target dashed line
+    // target dashed line -- bright/warm color so it reads clearly against
+    // both the cool data line and the dark/light card background
     if (target) {
       const ty = yOf(target);
       ctx.save();
-      ctx.setLineDash([4, 4]);
+      ctx.setLineDash([6, 5]);
       ctx.beginPath(); ctx.moveTo(pad.l, ty); ctx.lineTo(W - pad.r, ty);
-      ctx.strokeStyle = '#9090aa';
-      ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.strokeStyle = '#ff6b35';
+      ctx.lineWidth = 2; ctx.stroke();
       ctx.restore();
+      ctx.font = '9px Inter, sans-serif';
+      ctx.fillStyle = '#ff6b35';
+      ctx.fillText(`Target ${target}`, pad.l + 2, Math.max(10, ty - 4));
     }
 
     // gradient fill under the line

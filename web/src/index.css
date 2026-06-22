@@ -141,13 +141,14 @@ body{min-height:100%;background:var(--bg);color:var(--text);font-family:var(--fo
    MACHINE TABLE
 ═══════════════════════════════════════ */
 .machine-table{width:100%;border-collapse:collapse}
-.machine-table th{font-size:9.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;padding:0 8px 8px 0;text-align:left;border-bottom:1px solid var(--border);cursor:pointer;white-space:nowrap;user-select:none}
+.machine-table th{font-size:9.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;padding:7px 10px;text-align:left;border:1px solid var(--border);cursor:pointer;white-space:nowrap;user-select:none}
 .machine-table th:hover{color:var(--text)}
 .machine-table th.sorted{color:var(--accent)}
-.machine-table td{padding:9px 8px 9px 0;border-bottom:1px solid rgba(42,42,56,.5);font-size:12px;vertical-align:middle}
-.machine-table tr:last-child td{border-bottom:none}
+.machine-table td{padding:9px 10px;border:1px solid var(--border);font-size:12px;vertical-align:middle;white-space:nowrap}
 .machine-table tbody tr{cursor:pointer;transition:background .1s}
 .machine-table tbody tr:hover td,.machine-table tbody tr:active td{background:rgba(255,255,255,.022)}
+.table-scroll{overflow:auto;max-height:480px;border-radius:8px}
+.table-scroll .machine-table thead th{position:sticky;top:0;background:var(--s1);z-index:1}
 .status-pill{display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:2px 8px;border-radius:20px;font-weight:600;white-space:nowrap}
 .status-pill.running{background:rgba(0,208,132,.12);color:var(--green)}
 .status-pill.down{background:rgba(255,68,85,.12);color:var(--red)}

@@ -13,10 +13,15 @@ Netlify (static frontend + serverless function for the API).
   - Availability = ((Jam Kerja Harian × hari periode) − downtime) / (Jam Kerja Harian × hari periode) × 100%
   - "Jam Kerja Harian" is set per machine (`plannedHours`) when adding/editing it
 - Per-machine status table (Cluster/Line) with live availability/breakdown stats;
-  machines can be added and edited (name, cluster, line, Jam Kerja Harian) from the UI
+  machines can be added and edited (name, cluster, line, Jam Kerja Harian) from the UI;
+  dashboard shows the top 5 (sortable), "Semua Mesin" page shows all
 - Breakdown timeline + Pareto analysis of failure causes and per-machine frequency
-- MTBF/MTTR bar chart and Downtime trend chart (Harian/Mingguan/Bulanan, aligned to
-  calendar day/week(Mon-Sun)/year(Jan-Dec))
+- MTBF/MTTR line charts (separate cards) with a dashed target line that scales with
+  total daily working hours (MTBF target = Jam Kerja Harian × 5, MTTR target = × 0.1)
+- Downtime trend chart (Harian/Mingguan/Bulanan, aligned to calendar
+  day/week(Mon-Sun)/year(Jan-Dec))
+- Date picker (from 2026-01-01) to view any specific day/week/month instead of only
+  "now" — Harian/Mingguan/Bulanan + the chosen date together decide the range
 - Repair Machine Order (RMO) workflow: open with PIC GH, close with PIC MTN,
   resolution/action, duration computed from start/end date+time (counted as machine downtime)
 - Auto-refreshing dashboard (polls the API every 30s)
@@ -80,10 +85,10 @@ also be running).
    - **Transaction pooler** (port 6543) → `DATABASE_URL`
    - **Session pooler or direct** (port 5432) → `DIRECT_URL`
 
-   Append `?pgbouncer=true&connection_limit=5` to `DATABASE_URL`. **Don't use
-   `connection_limit=1`** — the dashboard fires up to 6 API requests in
-   parallel on every load/refresh, and a single pooled connection isn't
-   enough to serve all of them, causing some requests to hang.
+   Append `?pgbouncer=true&connection_limit=9` to `DATABASE_URL`. **Don't use
+   a low `connection_limit`** (e.g. 1) — the dashboard fires 7 API requests
+   in parallel on every load/refresh, and too few pooled connections means
+   some requests queue indefinitely instead of just being a bit slower.
 
 2. **Netlify site**: Import this repo. `netlify.toml` already configures:
    - Build command: `npm install && npm run build && npm install --prefix web && npm run build --prefix web`

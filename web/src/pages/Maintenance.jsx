@@ -60,8 +60,8 @@ export default function Maintenance() {
             ))}
           </div>
         </div>
-        <div style={{ overflowX: 'auto' }}>
-          <table className="machine-table" style={{ minWidth: 900 }}>
+        <div className="table-scroll">
+          <table className="machine-table" style={{ minWidth: 1000 }}>
             <thead><tr><th>Mesin</th><th>Status</th><th>Tanggal</th><th>Jenis Problem</th><th>Problem Identifikasi</th><th>PIC GH</th><th>Tanggal Selesai</th><th>Penyelesaian / Action</th><th>PIC MTN</th><th>Durasi</th><th>Aksi</th></tr></thead>
             <tbody>
               {!data.length ? (

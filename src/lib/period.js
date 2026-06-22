@@ -1,17 +1,27 @@
-function getPeriodRange(period) {
-  const now = new Date();
-  const end = now;
-  let start;
+// Calendar-aligned period range, anchored to an optional reference date
+// (defaults to now). Aligned with the bucketing used by /downtime-by-day
+// and /mtbf-mttr-trend so every endpoint agrees on what "this week"/
+// "this month" means.
+function getPeriodRange(period, refDateStr) {
+  const ref = refDateStr ? new Date(refDateStr) : new Date();
+  let start, end;
 
   if (period === 'week') {
-    start = new Date(now);
-    start.setDate(start.getDate() - 6);
+    const dayOfWeek = ref.getDay(); // 0 = Sunday .. 6 = Saturday
+    const mondayOffset = (dayOfWeek + 6) % 7;
+    start = new Date(ref);
+    start.setDate(start.getDate() - mondayOffset);
     start.setHours(0, 0, 0, 0);
+    end = new Date(start);
+    end.setDate(end.getDate() + 6);
+    end.setHours(23, 59, 59, 999);
   } else if (period === 'month') {
-    start = new Date(now.getFullYear(), now.getMonth(), 1);
+    start = new Date(ref.getFullYear(), ref.getMonth(), 1);
+    end = new Date(ref.getFullYear(), ref.getMonth() + 1, 0, 23, 59, 59, 999);
   } else {
-    // default: today
-    start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    // default: a single day (today, or the chosen reference date)
+    start = new Date(ref.getFullYear(), ref.getMonth(), ref.getDate());
+    end = new Date(ref.getFullYear(), ref.getMonth(), ref.getDate(), 23, 59, 59, 999);
   }
 
   return { start, end };

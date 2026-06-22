@@ -41,7 +41,7 @@ export default function Machines() {
             ))}
           </div>
         </div>
-        <div style={{ overflowX: 'auto' }}>
+        <div className="table-scroll">
           <table className="machine-table" style={{ minWidth: 400 }}>
             <thead><tr><th>Mesin</th><th>Cluster</th><th>Line</th><th>Status</th><th>Avail %</th><th>Freq</th><th>Waktu DT</th><th>Action</th></tr></thead>
             <tbody>

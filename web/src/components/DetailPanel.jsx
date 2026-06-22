@@ -50,8 +50,14 @@ export default function DetailPanel() {
         <div>
           <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8, color: 'var(--muted)' }}>History Riwayat Mesin</div>
           {rBDs.length ? rBDs.slice(0, 4).map((b, i) => (
-            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '7px 0', borderBottom: '1px solid var(--border)' }}>
-              <span>{b.cause}</span><span style={{ color: 'var(--muted)', fontFamily: 'var(--mono)' }}>{b.duration}</span>
+            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', fontSize: 12, padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
+              <div>
+                <div style={{ fontWeight: 500 }}>{b.cause}</div>
+                <div style={{ fontSize: 10.5, color: 'var(--accent)', fontFamily: 'var(--mono)', marginTop: 2, fontWeight: 600 }}>
+                  {b.date}{b.start ? ' · ' + b.start : ''}
+                </div>
+              </div>
+              <span style={{ color: 'var(--muted)', fontFamily: 'var(--mono)', whiteSpace: 'nowrap', marginLeft: 8 }}>{b.duration}</span>
             </div>
           )) : <div style={{ color: 'var(--muted)', fontSize: 12 }}>Tidak Ada Kasus Terbaru</div>}
         </div>

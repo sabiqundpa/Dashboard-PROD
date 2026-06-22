@@ -49,10 +49,10 @@ export default function MachineTable({ machines, limit, search: controlledSearch
               <th onClick={() => sortBy('name')}>Mesin</th>
               <th onClick={() => sortBy('cluster')}>Cluster</th>
               <th onClick={() => sortBy('line')}>Line</th>
-              <th>Status</th>
-              <th onClick={() => sortBy('availability')}>Avail %</th>
-              <th onClick={() => sortBy('breakdowns')}>BD</th>
-              <th onClick={() => sortBy('downtime_hrs')}>DT Jam</th>
+              <th style={{ textAlign: 'center' }}>Status</th>
+              <th onClick={() => sortBy('availability')} style={{ textAlign: 'center' }}>Avail %</th>
+              <th onClick={() => sortBy('breakdowns')} style={{ textAlign: 'center' }}>BD</th>
+              <th onClick={() => sortBy('downtime_hrs')} style={{ textAlign: 'right' }}>DT Jam</th>
               <th>Last Incident</th>
             </tr>
           </thead>
@@ -67,13 +67,13 @@ export default function MachineTable({ machines, limit, search: controlledSearch
                   <td><strong style={{ fontSize: 12 }}>{m.name}</strong></td>
                   <td style={{ color: 'var(--muted)' }}>{m.cluster || '—'}</td>
                   <td style={{ color: 'var(--muted)' }}>{m.line || '—'}</td>
-                  <td><span className={'status-pill ' + m.status}><span className="status-dot"></span>{m.status}</span></td>
-                  <td>
+                  <td style={{ textAlign: 'center' }}><span className={'status-pill ' + m.status}><span className="status-dot"></span>{m.status}</span></td>
+                  <td style={{ textAlign: 'center' }}>
                     <span style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>{av.toFixed(1)}%</span>
                     <span className="pct-bar"><span className="pct-fill" style={{ width: `${av}%`, background: bc }}></span></span>
                   </td>
-                  <td style={{ fontFamily: 'var(--mono)', color: m.breakdowns > 3 ? 'var(--red)' : 'var(--text)' }}>{m.breakdowns}</td>
-                  <td style={{ fontFamily: 'var(--mono)' }}>{m.downtime_hrs?.toFixed(1)}</td>
+                  <td style={{ fontFamily: 'var(--mono)', textAlign: 'center', color: m.breakdowns > 3 ? 'var(--red)' : 'var(--text)' }}>{m.breakdowns}</td>
+                  <td style={{ fontFamily: 'var(--mono)', textAlign: 'right' }}>{m.downtime_hrs?.toFixed(1)}</td>
                   <td style={{ color: 'var(--muted)', fontSize: 11, maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.last_incident}</td>
                 </tr>
               );

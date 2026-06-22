@@ -29,6 +29,9 @@ export default function Dashboard() {
   const filteredPareto = useMemo(() => (!q ? pareto : pareto.filter((p) => p.cause.toLowerCase().includes(q))), [pareto, q]);
   const filteredParetoMachines = useMemo(() => (!q ? paretoMachines : paretoMachines.filter((p) => p.machine.toLowerCase().includes(q))), [paretoMachines, q]);
 
+  const selectedMachineObj = machines.find((m) => m.name === selectedMachine);
+  const year = refDate ? new Date(refDate).getFullYear() : new Date().getFullYear();
+
   return (
     <div className="page-view active">
       <div className="page-header">
@@ -67,7 +70,7 @@ export default function Dashboard() {
       </div>
 
       <div className="row2-equal">
-        <MtbfMttrChart kpi={kpi} data={mtbfMttrTrend} />
+        <MtbfMttrChart data={mtbfMttrTrend} lineLabel={selectedMachineObj?.line} year={year} />
       </div>
 
       <MachineTable machines={machines} limit={5} search={search} onSearchChange={setSearch} />

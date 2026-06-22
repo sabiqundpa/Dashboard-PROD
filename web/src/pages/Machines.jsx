@@ -43,7 +43,7 @@ export default function Machines() {
         </div>
         <div className="table-scroll">
           <table className="machine-table" style={{ minWidth: 400 }}>
-            <thead><tr><th>Mesin</th><th>Cluster</th><th>Line</th><th>Status</th><th>Avail %</th><th>Freq</th><th>Waktu DT</th><th>Action</th></tr></thead>
+            <thead><tr><th>Mesin</th><th>Cluster</th><th>Line</th><th style={{ textAlign: 'center' }}>Status</th><th style={{ textAlign: 'center' }}>Avail %</th><th style={{ textAlign: 'center' }}>Freq</th><th style={{ textAlign: 'right' }}>Waktu DT</th><th style={{ textAlign: 'center' }}>Action</th></tr></thead>
             <tbody>
               {!data.length ? (
                 <tr><td colSpan={8} style={{ textAlign: 'center', padding: 20, color: 'var(--muted)' }}>No machines match</td></tr>
@@ -55,14 +55,14 @@ export default function Machines() {
                     <td><strong>{m.name}</strong></td>
                     <td style={{ color: 'var(--muted)' }}>{m.cluster || '—'}</td>
                     <td style={{ color: 'var(--muted)' }}>{m.line || '—'}</td>
-                    <td><span className={'status-pill ' + m.status}><span className="status-dot"></span>{m.status}</span></td>
-                    <td>
+                    <td style={{ textAlign: 'center' }}><span className={'status-pill ' + m.status}><span className="status-dot"></span>{m.status}</span></td>
+                    <td style={{ textAlign: 'center' }}>
                       <span style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>{av.toFixed(1)}%</span>
                       <span className="pct-bar"><span className="pct-fill" style={{ width: `${av}%`, background: bc }}></span></span>
                     </td>
-                    <td style={{ fontFamily: 'var(--mono)' }}>{m.breakdowns}</td>
-                    <td style={{ fontFamily: 'var(--mono)' }}>{m.downtime_hrs?.toFixed(1)}</td>
-                    <td><button className="btn" style={{ padding: '3px 8px', fontSize: 11 }} onClick={(e) => { e.stopPropagation(); showDetail(m.name); }}>Details</button></td>
+                    <td style={{ fontFamily: 'var(--mono)', textAlign: 'center' }}>{m.breakdowns}</td>
+                    <td style={{ fontFamily: 'var(--mono)', textAlign: 'right' }}>{m.downtime_hrs?.toFixed(1)}</td>
+                    <td style={{ textAlign: 'center' }}><button className="btn" style={{ padding: '3px 8px', fontSize: 11 }} onClick={(e) => { e.stopPropagation(); showDetail(m.name); }}>Details</button></td>
                   </tr>
                 );
               })}

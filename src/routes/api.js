@@ -348,15 +348,42 @@ router.get('/mtbf-mttr-trend', async (req, res, next) => {
   try {
     const period = req.query.period || 'week';
     const now = req.query.date ? new Date(req.query.date) : new Date();
+    const MTTR_TARGET_MULTIPLIER = 0.1;
 
     const machines = await prisma.machine.findMany({ where: req.query.machine ? { name: req.query.machine } : {} });
     const plannedPerDay = machines.reduce((s, m) => s + m.plannedHours, 0);
+    const mttrTarget = Number((plannedPerDay * MTTR_TARGET_MULTIPLIER).toFixed(1));
 
-    function bucketMtbfMttr(downtimeHrs, count, plannedHrs) {
+    // Target MTBF for a bucket = that bucket's full planned hours (the
+    // ceiling you'd hit with zero breakdowns) -- naturally scales with how
+    // many days/hours are in the bucket, e.g. a 31-day month has a higher
+    // target than a 28-day one. Target MTTR stays flat (repair time isn't
+    // tied to calendar length).
+    function bucket(downtimeHrs, count, plannedHrs) {
       const uptimeHrs = Math.max(0, plannedHrs - downtimeHrs);
       const mtbf = count > 0 ? uptimeHrs / count : uptimeHrs;
       const mttr = count > 0 ? downtimeHrs / count : 0;
-      return { mtbf: Number(mtbf.toFixed(1)), mttr: Number(mttr.toFixed(1)) };
+      return {
+        mtbf: Number(mtbf.toFixed(1)),
+        mttr: Number(mttr.toFixed(1)),
+        mtbfTarget: Number(plannedHrs.toFixed(1)),
+        mttrTarget,
+      };
+    }
+    // Total row: real aggregate over the whole range (not an average of
+    // the per-bucket approximations), i.e. the textbook annual/period MTBF.
+    function totalRow(totalDowntimeHrs, totalCount, totalPlannedHrs, bucketTargets) {
+      const uptimeHrs = Math.max(0, totalPlannedHrs - totalDowntimeHrs);
+      const mtbf = totalCount > 0 ? uptimeHrs / totalCount : uptimeHrs;
+      const mttr = totalCount > 0 ? totalDowntimeHrs / totalCount : 0;
+      const avgTarget = bucketTargets.reduce((s, t) => s + t, 0) / (bucketTargets.length || 1);
+      return {
+        day: 'TOTAL',
+        mtbf: Number(mtbf.toFixed(1)),
+        mttr: Number(mttr.toFixed(1)),
+        mtbfTarget: Number(avgTarget.toFixed(1)),
+        mttrTarget,
+      };
     }
 
     if (period === 'month') {
@@ -381,7 +408,12 @@ router.get('/mtbf-mttr-trend', async (req, res, next) => {
         if (entry) { entry.downtimeHrs += b.durationHrs; entry.count += 1; }
       }
 
-      return res.json(months.map((m) => ({ day: m.day, ...bucketMtbfMttr(m.downtimeHrs, m.count, m.plannedHrs) })));
+      const rows = months.map((m) => ({ day: m.day, ...bucket(m.downtimeHrs, m.count, m.plannedHrs) }));
+      const totalDowntime = months.reduce((s, m) => s + m.downtimeHrs, 0);
+      const totalCount = months.reduce((s, m) => s + m.count, 0);
+      const totalPlanned = months.reduce((s, m) => s + m.plannedHrs, 0);
+      rows.push(totalRow(totalDowntime, totalCount, totalPlanned, months.map((m) => m.plannedHrs)));
+      return res.json(rows);
     }
 
     if (period === 'today') {
@@ -399,7 +431,12 @@ router.get('/mtbf-mttr-trend', async (req, res, next) => {
         if (entry) { entry.downtimeHrs += b.durationHrs; entry.count += 1; }
       }
 
-      return res.json(hours.map((h) => ({ day: h.day, ...bucketMtbfMttr(h.downtimeHrs, h.count, h.plannedHrs) })));
+      const rows = hours.map((h) => ({ day: h.day, ...bucket(h.downtimeHrs, h.count, h.plannedHrs) }));
+      const totalDowntime = hours.reduce((s, h) => s + h.downtimeHrs, 0);
+      const totalCount = hours.reduce((s, h) => s + h.count, 0);
+      const totalPlanned = hours.reduce((s, h) => s + h.plannedHrs, 0);
+      rows.push(totalRow(totalDowntime, totalCount, totalPlanned, hours.map((h) => h.plannedHrs)));
+      return res.json(rows);
     }
 
     // week: Monday through Sunday of the current calendar week
@@ -430,7 +467,12 @@ router.get('/mtbf-mttr-trend', async (req, res, next) => {
       if (entry) { entry.downtimeHrs += b.durationHrs; entry.count += 1; }
     }
 
-    res.json(days.map((d) => ({ day: d.day, ...bucketMtbfMttr(d.downtimeHrs, d.count, d.plannedHrs) })));
+    const rows = days.map((d) => ({ day: d.day, ...bucket(d.downtimeHrs, d.count, d.plannedHrs) }));
+    const totalDowntime = days.reduce((s, d) => s + d.downtimeHrs, 0);
+    const totalCount = days.reduce((s, d) => s + d.count, 0);
+    const totalPlanned = days.reduce((s, d) => s + d.plannedHrs, 0);
+    rows.push(totalRow(totalDowntime, totalCount, totalPlanned, days.map((d) => d.plannedHrs)));
+    res.json(rows);
   } catch (err) { next(err); }
 });
 
@@ -461,6 +503,10 @@ router.post('/breakdown', async (req, res, next) => {
         picGh: pic_gh || null,
       },
     });
+
+    // A new work order means the machine just went down -- reflect that
+    // immediately instead of leaving the previous status (e.g. "running").
+    await prisma.machine.update({ where: { id: machine.id }, data: { status: 'down' } });
 
     res.status(201).json(breakdown);
   } catch (err) { next(err); }

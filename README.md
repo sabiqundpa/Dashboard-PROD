@@ -16,8 +16,10 @@ Netlify (static frontend + serverless function for the API).
   machines can be added and edited (name, cluster, line, Jam Kerja Harian) from the UI;
   dashboard shows the top 5 (sortable), "Semua Mesin" page shows all
 - Breakdown timeline + Pareto analysis of failure causes and per-machine frequency
-- MTBF/MTTR line charts (separate cards) with a dashed target line that scales with
-  total daily working hours (MTBF target = Jam Kerja Harian × 5, MTTR target = × 0.1)
+- MTBF/MTTR combo charts (bar = actual, line = target) with an Excel-style data table
+  underneath and a TOTAL column; target MTBF scales with the bucket's planned hours
+  (a 31-day month has a higher target than a 28-day one), target MTTR stays flat
+  (Jam Kerja Harian × 0.1) since repair time isn't tied to calendar length
 - Downtime trend chart (Harian/Mingguan/Bulanan, aligned to calendar
   day/week(Mon-Sun)/year(Jan-Dec))
 - Date picker (from 2026-01-01) to view any specific day/week/month instead of only
@@ -27,8 +29,9 @@ Netlify (static frontend + serverless function for the API).
   that machine's own Jam Kerja Harian instead of the whole fleet's)
 - Dashboard-wide search bar that filters the machine table, breakdown timeline, and
   both Pareto lists by machine/cause/category/PIC/resolution/action in one go
-- Repair Machine Order (RMO) workflow: open with PIC GH, close with PIC MTN,
-  resolution/action, duration computed from start/end date+time (counted as machine downtime)
+- Repair Machine Order (RMO) workflow: open with PIC GH (machine auto-flips to "down"
+  status), close with PIC MTN, resolution/action, duration computed from start/end
+  date+time (counted as machine downtime). Log filters: Semua/Open/Close.
 - Auto-refreshing dashboard (polls the API every 30s)
 - CSV import/export for bulk-loading and exporting maintenance/breakdown records
   (see "Exporting data to Excel / pgAdmin" below)

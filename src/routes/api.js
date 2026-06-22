@@ -9,6 +9,12 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 const router = express.Router();
 
+// Optional ?machine=<name> filter, used across breakdown queries to scope
+// the whole dashboard to a single machine.
+function machineWhere(req) {
+  return req.query.machine ? { machine: { name: req.query.machine } } : {};
+}
+
 // ── GET /api/health ──────────────────────────────────
 // Quick diagnostic: confirms the function can reach Postgres. Left public
 // (no auth) so it stays useful for uptime checks even when logged out.
@@ -92,10 +98,14 @@ router.get('/kpi', async (req, res, next) => {
   try {
     const { start, end } = getPeriodRange(req.query.period, req.query.date);
     const days = daysInRange(start, end);
+    const machineFilter = req.query.machine ? { name: req.query.machine } : {};
 
-    const machines = await prisma.machine.findMany();
+    const machines = await prisma.machine.findMany({ where: machineFilter });
     const breakdowns = await prisma.breakdown.findMany({
-      where: { date: { gte: start, lte: end } },
+      where: {
+        date: { gte: start, lte: end },
+        ...(req.query.machine ? { machine: { name: req.query.machine } } : {}),
+      },
     });
 
     const downtimeHrs = breakdowns.reduce((s, b) => s + b.durationHrs, 0);
@@ -141,7 +151,10 @@ router.get('/breakdowns', async (req, res, next) => {
   try {
     const { start, end } = getPeriodRange(req.query.period, req.query.date);
     const breakdowns = await prisma.breakdown.findMany({
-      where: { date: { gte: start, lte: end } },
+      where: {
+        date: { gte: start, lte: end },
+        ...(req.query.machine ? { machine: { name: req.query.machine } } : {}),
+      },
       include: { machine: true },
       orderBy: { date: 'desc' },
       take: 50,
@@ -172,7 +185,10 @@ router.get('/pareto', async (req, res, next) => {
   try {
     const { start, end } = getPeriodRange(req.query.period, req.query.date);
     const breakdowns = await prisma.breakdown.findMany({
-      where: { date: { gte: start, lte: end } },
+      where: {
+        date: { gte: start, lte: end },
+        ...(req.query.machine ? { machine: { name: req.query.machine } } : {}),
+      },
     });
 
     const counts = {};
@@ -200,7 +216,10 @@ router.get('/pareto-machines', async (req, res, next) => {
   try {
     const { start, end } = getPeriodRange(req.query.period, req.query.date);
     const breakdowns = await prisma.breakdown.findMany({
-      where: { date: { gte: start, lte: end } },
+      where: {
+        date: { gte: start, lte: end },
+        ...(req.query.machine ? { machine: { name: req.query.machine } } : {}),
+      },
       include: { machine: true },
     });
 
@@ -248,7 +267,7 @@ router.get('/downtime-by-day', async (req, res, next) => {
       const end = new Date(year, 11, 31, 23, 59, 59, 999);
 
       const breakdowns = await prisma.breakdown.findMany({
-        where: { date: { gte: start, lte: end } },
+        where: { date: { gte: start, lte: end }, ...machineWhere(req) },
       });
 
       for (const b of breakdowns) {
@@ -267,7 +286,7 @@ router.get('/downtime-by-day', async (req, res, next) => {
       end.setHours(23, 59, 59, 999);
 
       const breakdowns = await prisma.breakdown.findMany({
-        where: { date: { gte: start, lte: end } },
+        where: { date: { gte: start, lte: end }, ...machineWhere(req) },
       });
 
       const hours = [];
@@ -296,7 +315,7 @@ router.get('/downtime-by-day', async (req, res, next) => {
     sunday.setHours(23, 59, 59, 999);
 
     const breakdowns = await prisma.breakdown.findMany({
-      where: { date: { gte: monday, lte: sunday } },
+      where: { date: { gte: monday, lte: sunday }, ...machineWhere(req) },
     });
 
     const days = [];
@@ -330,7 +349,7 @@ router.get('/mtbf-mttr-trend', async (req, res, next) => {
     const period = req.query.period || 'week';
     const now = req.query.date ? new Date(req.query.date) : new Date();
 
-    const machines = await prisma.machine.findMany();
+    const machines = await prisma.machine.findMany({ where: req.query.machine ? { name: req.query.machine } : {} });
     const plannedPerDay = machines.reduce((s, m) => s + m.plannedHours, 0);
 
     function bucketMtbfMttr(downtimeHrs, count, plannedHrs) {
@@ -354,7 +373,7 @@ router.get('/mtbf-mttr-trend', async (req, res, next) => {
 
       const start = new Date(year, 0, 1);
       const end = new Date(year, 11, 31, 23, 59, 59, 999);
-      const breakdowns = await prisma.breakdown.findMany({ where: { date: { gte: start, lte: end } } });
+      const breakdowns = await prisma.breakdown.findMany({ where: { date: { gte: start, lte: end }, ...machineWhere(req) } });
 
       for (const b of breakdowns) {
         const key = `${b.date.getUTCFullYear()}-${String(b.date.getUTCMonth() + 1).padStart(2, '0')}`;
@@ -368,7 +387,7 @@ router.get('/mtbf-mttr-trend', async (req, res, next) => {
     if (period === 'today') {
       const start = new Date(now); start.setHours(0, 0, 0, 0);
       const end = new Date(now); end.setHours(23, 59, 59, 999);
-      const breakdowns = await prisma.breakdown.findMany({ where: { date: { gte: start, lte: end } } });
+      const breakdowns = await prisma.breakdown.findMany({ where: { date: { gte: start, lte: end }, ...machineWhere(req) } });
 
       const hours = [];
       for (let h = 0; h < 24; h++) {
@@ -393,7 +412,7 @@ router.get('/mtbf-mttr-trend', async (req, res, next) => {
     sunday.setDate(sunday.getDate() + 6);
     sunday.setHours(23, 59, 59, 999);
 
-    const breakdowns = await prisma.breakdown.findMany({ where: { date: { gte: monday, lte: sunday } } });
+    const breakdowns = await prisma.breakdown.findMany({ where: { date: { gte: monday, lte: sunday }, ...machineWhere(req) } });
 
     const days = [];
     for (let i = 0; i < 7; i++) {

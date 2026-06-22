@@ -14,6 +14,7 @@ export function AppProvider({ children }) {
   const { logout } = useAuth();
   const [period, setPeriod] = useState('week');
   const [refDate, setRefDate] = useState(todayStr());
+  const [selectedMachine, setSelectedMachine] = useState('');
   const [kpi, setKpi] = useState(EMPTY_KPI);
   const [machines, setMachines] = useState([]);
   const [breakdowns, setBreakdowns] = useState([]);
@@ -25,8 +26,8 @@ export function AppProvider({ children }) {
   const [lastUpdate, setLastUpdate] = useState('—');
   const [notifications, setNotifications] = useState([]);
   const requestIdRef = useRef(0);
-  const stateRef = useRef({ period, refDate });
-  stateRef.current = { period, refDate };
+  const stateRef = useRef({ period, refDate, selectedMachine });
+  stateRef.current = { period, refDate, selectedMachine };
 
   const addNotif = useCallback((text, color = 'yellow') => {
     setNotifications((n) => [{ text, color, time: new Date(), unread: true, id: Math.random() }, ...n]);
@@ -41,6 +42,7 @@ export function AppProvider({ children }) {
   const loadAll = useCallback(async () => {
     const usePeriod = stateRef.current.period;
     const useDate = stateRef.current.refDate;
+    const useMachine = stateRef.current.selectedMachine;
     // "Latest request wins": don't block overlapping calls (period/date
     // changes must always fire immediately), but if an older, slower call
     // finishes after a newer one, discard its results instead of
@@ -48,14 +50,15 @@ export function AppProvider({ children }) {
     const myId = ++requestIdRef.current;
     setLastUpdate('Updating…');
     const qs = `period=${usePeriod}&date=${useDate}`;
+    const machineQs = useMachine ? `${qs}&machine=${encodeURIComponent(useMachine)}` : qs;
     const [k, m, b, pr, pm, dt, mt] = await Promise.all([
-      apiFetch(`/kpi?${qs}`, EMPTY_KPI, logout),
-      apiFetch(`/machines?${qs}`, [], logout),
-      apiFetch(`/breakdowns?${qs}`, [], logout),
-      apiFetch(`/pareto?${qs}`, [], logout),
-      apiFetch(`/pareto-machines?${qs}`, [], logout),
-      apiFetch(`/downtime-by-day?${qs}`, [], logout),
-      apiFetch(`/mtbf-mttr-trend?${qs}`, [], logout),
+      apiFetch(`/kpi?${machineQs}`, EMPTY_KPI, logout),
+      apiFetch(`/machines?${qs}`, [], logout), // unfiltered: dropdown + table always list every machine
+      apiFetch(`/breakdowns?${machineQs}`, [], logout),
+      apiFetch(`/pareto?${machineQs}`, [], logout),
+      apiFetch(`/pareto-machines?${machineQs}`, [], logout),
+      apiFetch(`/downtime-by-day?${machineQs}`, [], logout),
+      apiFetch(`/mtbf-mttr-trend?${machineQs}`, [], logout),
     ]);
     if (myId !== requestIdRef.current) return;
     setConnected(true);
@@ -65,7 +68,8 @@ export function AppProvider({ children }) {
 
   return (
     <AppContext.Provider value={{
-      period, setPeriod, refDate, setRefDate, kpi, machines, breakdowns, pareto, paretoMachines, downtime, mtbfMttrTrend,
+      period, setPeriod, refDate, setRefDate, selectedMachine, setSelectedMachine,
+      kpi, machines, breakdowns, pareto, paretoMachines, downtime, mtbfMttrTrend,
       connected, lastUpdate, loadAll, notifications, addNotif, markAllRead, clearNotifs,
     }}>
       {children}

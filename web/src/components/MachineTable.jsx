@@ -1,9 +1,12 @@
 import { useState, useMemo } from 'react';
 import { useUI } from '../UIContext.jsx';
 
-export default function MachineTable({ machines, limit }) {
+export default function MachineTable({ machines, limit, search: controlledSearch, onSearchChange }) {
   const { showDetail, navigate } = useUI();
-  const [search, setSearch] = useState('');
+  const [internalSearch, setInternalSearch] = useState('');
+  const controlled = onSearchChange !== undefined;
+  const search = controlled ? controlledSearch : internalSearch;
+  const setSearch = controlled ? onSearchChange : setInternalSearch;
   const [sortKey, setSortKey] = useState('name');
   const [sortDir, setSortDir] = useState(1);
 
@@ -13,8 +16,11 @@ export default function MachineTable({ machines, limit }) {
   }
 
   const data = useMemo(() => {
-    const q = search.toLowerCase();
-    let d = machines.filter((m) => !q || m.name.toLowerCase().includes(q) || m.cluster.toLowerCase().includes(q) || m.line.toLowerCase().includes(q));
+    const q = (search || '').toLowerCase();
+    let d = machines.filter((m) => !q ||
+      m.name.toLowerCase().includes(q) || m.cluster.toLowerCase().includes(q) ||
+      m.line.toLowerCase().includes(q) || m.status.toLowerCase().includes(q) ||
+      (m.last_incident || '').toLowerCase().includes(q));
     d.sort((a, b) => {
       const av = a[sortKey] ?? '', bv = b[sortKey] ?? '';
       return sortDir * (typeof av === 'number' ? av - bv : String(av).localeCompare(String(bv)));
@@ -27,10 +33,12 @@ export default function MachineTable({ machines, limit }) {
       <div className="card-header" style={{ flexWrap: 'wrap', gap: 8 }}>
         <div><div className="card-title">Status Mesin</div><div className="card-sub">{limit && machines.length > limit ? `Menampilkan ${limit} dari ${machines.length} mesin` : `${machines.length} mesin termonitor`}</div></div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <div className="search-wrap" style={{ minWidth: 130 }}>
-            <span className="search-icon">🔍</span>
-            <input className="search-input" placeholder="Cari Mesin…" value={search} onChange={(e) => setSearch(e.target.value)} />
-          </div>
+          {!controlled && (
+            <div className="search-wrap" style={{ minWidth: 130 }}>
+              <span className="search-icon">🔍</span>
+              <input className="search-input" placeholder="Cari Mesin…" value={search} onChange={(e) => setSearch(e.target.value)} />
+            </div>
+          )}
           <button className="card-action" onClick={() => navigate('machines')}>Semua ›</button>
         </div>
       </div>

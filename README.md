@@ -22,6 +22,11 @@ Netlify (static frontend + serverless function for the API).
   day/week(Mon-Sun)/year(Jan-Dec))
 - Date picker (from 2026-01-01) to view any specific day/week/month instead of only
   "now" — Harian/Mingguan/Bulanan + the chosen date together decide the range
+- Per-machine filter ("Semua Mesin" dropdown) that scopes every KPI/chart/list on the
+  dashboard to one machine at a time (including the MTBF/MTTR targets, which then use
+  that machine's own Jam Kerja Harian instead of the whole fleet's)
+- Dashboard-wide search bar that filters the machine table, breakdown timeline, and
+  both Pareto lists by machine/cause/category/PIC/resolution/action in one go
 - Repair Machine Order (RMO) workflow: open with PIC GH, close with PIC MTN,
   resolution/action, duration computed from start/end date+time (counted as machine downtime)
 - Auto-refreshing dashboard (polls the API every 30s)

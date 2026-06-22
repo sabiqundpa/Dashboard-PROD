@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useApp } from '../AppContext.jsx';
 import { useUI } from '../UIContext.jsx';
 import KpiRow from '../components/KpiRow.jsx';
@@ -10,10 +10,24 @@ import Timeline from '../components/Timeline.jsx';
 import ParetoList from '../components/ParetoList.jsx';
 
 export default function Dashboard() {
-  const { kpi, machines, breakdowns, pareto, paretoMachines, downtime, mtbfMttrTrend, period, setPeriod, refDate, setRefDate, lastUpdate, loadAll } = useApp();
+  const {
+    kpi, machines, breakdowns, pareto, paretoMachines, downtime, mtbfMttrTrend,
+    period, setPeriod, refDate, setRefDate, selectedMachine, setSelectedMachine,
+    lastUpdate, loadAll,
+  } = useApp();
   const { navigate, openModal } = useUI();
+  const [search, setSearch] = useState('');
 
-  useEffect(() => { loadAll(); }, [period, refDate]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { loadAll(); }, [period, refDate, selectedMachine]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const q = search.trim().toLowerCase();
+  const filteredBreakdowns = useMemo(() => {
+    if (!q) return breakdowns;
+    return breakdowns.filter((b) => [b.machine, b.cause, b.category, b.pic_gh, b.pic_mtn, b.resolution, b.action]
+      .some((v) => (v || '').toLowerCase().includes(q)));
+  }, [breakdowns, q]);
+  const filteredPareto = useMemo(() => (!q ? pareto : pareto.filter((p) => p.cause.toLowerCase().includes(q))), [pareto, q]);
+  const filteredParetoMachines = useMemo(() => (!q ? paretoMachines : paretoMachines.filter((p) => p.machine.toLowerCase().includes(q))), [paretoMachines, q]);
 
   return (
     <div className="page-view active">
@@ -34,6 +48,17 @@ export default function Dashboard() {
         </div>
       </div>
 
+      <div className="header-actions" style={{ flexWrap: 'wrap' }}>
+        <select className="btn" style={{ padding: '7px 10px' }} value={selectedMachine} onChange={(e) => setSelectedMachine(e.target.value)} title="Filter dashboard per mesin">
+          <option value="">Semua Mesin</option>
+          {machines.map((m) => <option key={m.name} value={m.name}>{m.name}</option>)}
+        </select>
+        <div className="search-wrap" style={{ flex: 1, minWidth: 200 }}>
+          <span className="search-icon">🔍</span>
+          <input className="search-input" placeholder="Cari mesin, problem, PIC, penyebab…" value={search} onChange={(e) => setSearch(e.target.value)} />
+        </div>
+      </div>
+
       <KpiRow kpi={kpi} />
 
       <div className="row2">
@@ -45,20 +70,20 @@ export default function Dashboard() {
         <MtbfMttrChart kpi={kpi} data={mtbfMttrTrend} />
       </div>
 
-      <MachineTable machines={machines} limit={5} />
+      <MachineTable machines={machines} limit={5} search={search} onSearchChange={setSearch} />
 
       <div className="row4">
         <div className="card">
           <div className="card-header"><div><div className="card-title">Breakdown Terbaru</div></div><button className="card-action" onClick={() => navigate('maintenance')}>All ›</button></div>
-          <Timeline items={breakdowns} limit={5} />
+          <Timeline items={filteredBreakdowns} limit={5} />
         </div>
         <div className="card">
           <div className="card-header"><div><div className="card-title">Top Penyebab Kerusakan</div><div className="card-sub">Pareto</div></div></div>
-          <ParetoList data={pareto} labelKey="cause" />
+          <ParetoList data={filteredPareto} labelKey="cause" />
         </div>
         <div className="card">
           <div className="card-header"><div><div className="card-title">Frekuensi Breakdown per Mesin</div><div className="card-sub">Top 10 · Pareto</div></div></div>
-          <ParetoList data={paretoMachines} labelKey="machine" />
+          <ParetoList data={filteredParetoMachines} labelKey="machine" />
         </div>
       </div>
     </div>

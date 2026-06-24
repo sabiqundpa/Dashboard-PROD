@@ -13,8 +13,13 @@ export default function AddMachineModal() {
   const { logout } = useAuth();
 
   const [name, setName] = useState('');
+  const [assetNumber, setAssetNumber] = useState('');
+  const [type, setType] = useState('');
+  const [brand, setBrand] = useState('');
+  const [power, setPower] = useState('');
   const [cluster, setCluster] = useState('');
   const [line, setLine] = useState('');
+  const [shift, setShift] = useState('');
   const [plannedHours, setPlannedHours] = useState('16');
   const [errName, setErrName] = useState('');
   const [busy, setBusy] = useState(false);
@@ -26,7 +31,14 @@ export default function AddMachineModal() {
     setBusy(true);
     try {
       await apiSend('/machines', 'POST', {
-        name: n, cluster: cluster.trim(), line: line.trim(),
+        name: n,
+        assetNumber: assetNumber.trim(),
+        type: type.trim(),
+        brand: brand.trim(),
+        power: power.trim(),
+        cluster: cluster.trim(),
+        line: line.trim(),
+        shift: shift.trim(),
         plannedHours: Number(plannedHours) || 16,
       }, logout);
       showToast(`✅ Mesin ${n} ditambahkan`, 'green');
@@ -47,6 +59,22 @@ export default function AddMachineModal() {
           <div className="form-error">{errName}</div>
         </div>
         <div className="form-group">
+          <label className="form-label">Nomor Asset</label>
+          <input type="text" className="form-input" placeholder="contoh. AST-001" value={assetNumber} onChange={(e) => setAssetNumber(e.target.value)} />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Type</label>
+          <input type="text" className="form-input" placeholder="contoh. Robot" value={type} onChange={(e) => setType(e.target.value)} />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Merk Tahun</label>
+          <input type="text" className="form-input" placeholder="contoh. Fanuc 2020" value={brand} onChange={(e) => setBrand(e.target.value)} />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Daya</label>
+          <input type="text" className="form-input" placeholder="contoh. 5.5 kW" value={power} onChange={(e) => setPower(e.target.value)} />
+        </div>
+        <div className="form-group">
           <label className="form-label">Cluster</label>
           <input type="text" className="form-input" placeholder="contoh. Cluster A" value={cluster} onChange={(e) => setCluster(e.target.value)} />
         </div>
@@ -54,7 +82,11 @@ export default function AddMachineModal() {
           <label className="form-label">Line</label>
           <input type="text" className="form-input" placeholder="contoh. Line 1" value={line} onChange={(e) => setLine(e.target.value)} />
         </div>
-        <div className="form-group full">
+        <div className="form-group">
+          <label className="form-label">Shift</label>
+          <input type="text" className="form-input" placeholder="contoh. Shift 1" value={shift} onChange={(e) => setShift(e.target.value)} />
+        </div>
+        <div className="form-group">
           <label className="form-label">Jam Kerja Harian *</label>
           <input type="number" min="0" step="0.5" className="form-input" placeholder="contoh. 16" value={plannedHours} onChange={(e) => setPlannedHours(e.target.value)} />
         </div>

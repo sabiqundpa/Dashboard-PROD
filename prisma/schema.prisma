@@ -18,13 +18,18 @@ model Admin {
 
 model Machine {
   id             Int         @id @default(autoincrement())
-  name           String      @unique
+  name           String      @unique // Nama Mesin
+  assetNumber    String      @default("") // Nomor Asset
+  type           String      @default("") // Type mesin (Robot, CNC, Conveyor, dst)
+  brand          String      @default("") // Merk Tahun
+  power          String      @default("") // Daya
   cluster        String      @default("")
   line           String      @default("")
+  shift          String      @default("") // Shift kerja
   status         String      @default("idle") // running | down | idle | maintenance
   performancePct Float       @default(95)
   qualityPct     Float       @default(98)
-  plannedHours   Float       @default(16) // planned production hours per day
+  plannedHours   Float       @default(16) // Jam Waktu Kerja (jam kerja harian)
   createdAt      DateTime    @default(now())
   breakdowns     Breakdown[]
 }

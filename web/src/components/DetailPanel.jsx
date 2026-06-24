@@ -48,6 +48,16 @@ export default function DetailPanel() {
           <div className="detail-stat"><div className="detail-stat-val">{m.downtime_hrs?.toFixed(1)}h</div><div className="detail-stat-lbl">Downtime</div></div>
         </div>
         <div>
+          <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8, color: 'var(--muted)' }}>Master Data Mesin</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px', fontSize: 12 }}>
+            <div><span style={{ color: 'var(--muted)' }}>Nomor Asset: </span>{m.assetNumber || '—'}</div>
+            <div><span style={{ color: 'var(--muted)' }}>Type: </span>{m.type || '—'}</div>
+            <div><span style={{ color: 'var(--muted)' }}>Merk Tahun: </span>{m.brand || '—'}</div>
+            <div><span style={{ color: 'var(--muted)' }}>Daya: </span>{m.power || '—'}</div>
+            <div><span style={{ color: 'var(--muted)' }}>Shift: </span>{m.shift || '—'}</div>
+          </div>
+        </div>
+        <div>
           <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8, color: 'var(--muted)' }}>History Riwayat Mesin</div>
           {rBDs.length ? rBDs.slice(0, 4).map((b, i) => (
             <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', fontSize: 12, padding: '8px 0', borderBottom: '1px solid var(--border)' }}>

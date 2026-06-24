@@ -1,15 +1,14 @@
 import { useApp } from '../AppContext.jsx';
+import { useUI } from '../UIContext.jsx';
 import { useToast } from '../ToastContext.jsx';
-import { useAuth } from '../AuthContext.jsx';
 import { exportCSV } from '../lib/exportCSV.js';
-import { apiDownload } from '../api.js';
 
 const REPORT_NAMES = { availability: 'Rangkuman Availability', breakdown: 'Analisis Breakdown', pm: 'Jadwal Preventive Maintenance' };
 
 export default function Reports() {
   const { machines } = useApp();
+  const { openModal } = useUI();
   const showToast = useToast();
-  const { logout } = useAuth();
 
   function genReport(t) {
     const n = REPORT_NAMES[t] || t;
@@ -20,15 +19,6 @@ export default function Reports() {
   function doExport() {
     exportCSV(machines);
     showToast('✅ Diekspor ke CSV', 'green');
-  }
-
-  async function doExportWorkOrders() {
-    try {
-      await apiDownload('/export/work-orders', `work-orders-${new Date().toISOString().slice(0, 10)}.csv`, logout);
-      showToast('✅ Log Work Order diekspor ke CSV', 'green');
-    } catch (e) {
-      showToast(`❌ ${e.message}`, 'red');
-    }
   }
 
   return (
@@ -47,7 +37,7 @@ export default function Reports() {
           <div className="report-icon">📥</div><div className="report-title">Export Mesin (CSV)</div>
           <div className="report-desc">Unduh Data Mesin ke Sheet</div>
         </div>
-        <div className="report-card" onClick={doExportWorkOrders}>
+        <div className="report-card" onClick={() => openModal('exportWorkOrders')}>
           <div className="report-icon">📑</div><div className="report-title">Export Log Work Order (CSV)</div>
           <div className="report-desc">Unduh seluruh riwayat RMO untuk Excel — sama dengan view "work_order_export" di pgAdmin</div>
         </div>

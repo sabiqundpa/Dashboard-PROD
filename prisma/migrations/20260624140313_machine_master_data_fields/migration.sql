@@ -1,0 +1,6 @@
+-- AlterTable
+ALTER TABLE "Machine" ADD COLUMN     "assetNumber" TEXT NOT NULL DEFAULT '',
+ADD COLUMN     "brand" TEXT NOT NULL DEFAULT '',
+ADD COLUMN     "power" TEXT NOT NULL DEFAULT '',
+ADD COLUMN     "shift" TEXT NOT NULL DEFAULT '',
+ADD COLUMN     "type" TEXT NOT NULL DEFAULT '';

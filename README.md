@@ -12,9 +12,11 @@ Netlify (static frontend + serverless function for the API).
 - KPI overview: breakdowns, downtime, Availability, MTBF, MTTR
   - Availability = ((Jam Kerja Harian × hari periode) − downtime) / (Jam Kerja Harian × hari periode) × 100%
   - "Jam Kerja Harian" is set per machine (`plannedHours`) when adding/editing it
-- Per-machine status table (Cluster/Line) with live availability/breakdown stats;
-  machines can be added and edited (name, cluster, line, Jam Kerja Harian) from the UI;
-  dashboard shows the top 5 (sortable), "Semua Mesin" page shows all
+- Per-machine status table with live availability/breakdown stats; machines can be
+  added and edited one-by-one from the UI (Nama Mesin, Nomor Asset, Type, Merk
+  Tahun, Daya, Cluster, Line, Shift, Jam Kerja Harian) or bulk-loaded via CSV
+  import; dashboard shows the top 5 (sortable), "Semua Mesin" page shows the full
+  master data for every machine
 - Breakdown timeline + Pareto analysis of failure causes and per-machine frequency
 - MTBF/MTTR combo charts (bar = actual, line = target) with an Excel-style data table
   underneath and a TOTAL column
@@ -36,8 +38,11 @@ Netlify (static frontend + serverless function for the API).
   status), close with PIC MTN, resolution/action, duration computed from start/end
   date+time (counted as machine downtime). Log filters: Semua/Open/Close.
 - Auto-refreshing dashboard (polls the API every 30s)
-- CSV import/export for bulk-loading and exporting maintenance/breakdown records
-  (see "Exporting data to Excel / pgAdmin" below)
+- CSV import/export for bulk-loading and exporting both machine master data and
+  maintenance/breakdown records (see "Importing data" and "Exporting data to
+  Excel / pgAdmin" below)
+- Export Log Work Order supports Harian/Mingguan/Bulanan (+ a reference date) or
+  the full unfiltered history; the CSV always includes both date and time columns
 
 ## Project structure
 
@@ -168,8 +173,9 @@ Both the website and pgAdmin read from the same view, so the columns/format
 are always identical.
 
 - **From the website**: Sidebar/Drawer → "Export Log Work Order", or
-  Laporan page → "Export Log Work Order (CSV)". Downloads a `.csv` that
-  opens directly in Excel.
+  Laporan page → "Export Log Work Order (CSV)". A dialog lets you pick
+  Harian/Mingguan/Bulanan (with a reference date) or the full unfiltered
+  history before downloading a `.csv` that opens directly in Excel.
 - **From pgAdmin**: connect to the same Supabase database → Query Tool → run
   ```sql
   SELECT * FROM work_order_export ORDER BY tanggal DESC;
@@ -181,15 +187,24 @@ are always identical.
   **SQL Editor** works the same way as pgAdmin's Query Tool, directly in the
   browser.
 
-## Importing maintenance data
+## Importing data
 
-Use the "Import CSV" sidebar button to upload a `.csv` file with these columns:
+The "Import CSV" sidebar button has two modes:
 
-```
-machine_name, machine_cluster, machine_line, breakdown_date, start_time, end_time, failure_cause, category, technician, notes
-```
+- **Data Breakdown / Work Order** — columns:
+  ```
+  machine_name, machine_cluster, machine_line, breakdown_date, start_time, end_time, failure_cause, category, technician, notes
+  ```
+  New machines are created automatically if they don't already exist.
 
-New machines are created automatically if they don't already exist.
+- **Master Data Mesin** — bulk-loads/updates machine master data (`POST
+  /api/import/machines`), columns:
+  ```
+  NO, Nomor Asset, Nama Mesin, Type, Merk tahun, Daya, Cluster, Line, Shift, Jam Waktu Kerja
+  ```
+  Matched by `Nama Mesin`: existing machines are updated, new ones are created.
+  Master data can also still be entered manually one machine at a time via
+  "Tambah Mesin" / "Edit Info Mesin" in the UI.
 
 ## Next steps / expanding data
 

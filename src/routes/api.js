@@ -78,8 +78,13 @@ router.get('/machines', async (req, res, next) => {
       return {
         id: m.id,
         name: m.name,
+        assetNumber: m.assetNumber,
+        type: m.type,
+        brand: m.brand,
+        power: m.power,
         cluster: m.cluster,
         line: m.line,
+        shift: m.shift,
         status: m.status,
         plannedHours: m.plannedHours,
         availability,
@@ -547,7 +552,7 @@ router.patch('/breakdown/:id/close', async (req, res, next) => {
 // Register a new machine so it can receive work orders.
 router.post('/machines', async (req, res, next) => {
   try {
-    const { name, cluster, line, plannedHours } = req.body;
+    const { name, assetNumber, type, brand, power, cluster, line, shift, plannedHours } = req.body;
     if (!name) {
       return res.status(400).json({ error: 'name is required' });
     }
@@ -558,8 +563,13 @@ router.post('/machines', async (req, res, next) => {
     const machine = await prisma.machine.create({
       data: {
         name,
+        assetNumber: assetNumber || '',
+        type: type || '',
+        brand: brand || '',
+        power: power || '',
         cluster: cluster || '',
         line: line || '',
+        shift: shift || '',
         plannedHours: plannedHours ? Number(plannedHours) : 16,
       },
     });
@@ -590,13 +600,13 @@ router.patch('/machines/:name/status', async (req, res, next) => {
 });
 
 // ── PATCH /api/machines/:name ──────────────────────────
-// Edit machine details: name, cluster, line, plannedHours (Jam Kerja Harian).
+// Edit machine details: name, master data fields, cluster/line/shift, plannedHours.
 router.patch('/machines/:name', async (req, res, next) => {
   try {
     const existing = await prisma.machine.findUnique({ where: { name: req.params.name } });
     if (!existing) return res.status(404).json({ error: `Machine "${req.params.name}" not found` });
 
-    const { name, cluster, line, plannedHours } = req.body;
+    const { name, assetNumber, type, brand, power, cluster, line, shift, plannedHours } = req.body;
     if (name && name !== existing.name) {
       const clash = await prisma.machine.findUnique({ where: { name } });
       if (clash) return res.status(409).json({ error: `Machine "${name}" already exists` });
@@ -606,8 +616,13 @@ router.patch('/machines/:name', async (req, res, next) => {
       where: { name: req.params.name },
       data: {
         name: name || existing.name,
+        assetNumber: assetNumber ?? existing.assetNumber,
+        type: type ?? existing.type,
+        brand: brand ?? existing.brand,
+        power: power ?? existing.power,
         cluster: cluster ?? existing.cluster,
         line: line ?? existing.line,
+        shift: shift ?? existing.shift,
         plannedHours: plannedHours != null ? Number(plannedHours) : existing.plannedHours,
       },
     });
@@ -619,9 +634,18 @@ router.patch('/machines/:name', async (req, res, next) => {
 // ── GET /api/export/work-orders ────────────────────────
 // CSV export of the work_order_export SQL view -- the same view that can
 // be queried directly in pgAdmin (Query Tool -> Export to CSV).
+// Optional ?period=today|week|month (+ ?date=YYYY-MM-DD) filters rows to
+// that calendar-aligned range by "tanggal" (the breakdown's start date);
+// omitting ?period keeps exporting the full history, unfiltered.
 router.get('/export/work-orders', async (req, res, next) => {
   try {
-    const rows = await prisma.$queryRaw`SELECT * FROM "work_order_export"`;
+    let rows;
+    if (req.query.period) {
+      const { start, end } = getPeriodRange(req.query.period, req.query.date);
+      rows = await prisma.$queryRaw`SELECT * FROM "work_order_export" WHERE "tanggal" BETWEEN ${start} AND ${end}`;
+    } else {
+      rows = await prisma.$queryRaw`SELECT * FROM "work_order_export"`;
+    }
     if (!rows.length) {
       res.setHeader('Content-Type', 'text/csv; charset=utf-8');
       res.setHeader('Content-Disposition', 'attachment; filename="work-orders.csv"');
@@ -688,6 +712,56 @@ router.post('/import', upload.single('file'), async (req, res, next) => {
     }
 
     res.json({ imported, total: rows.length });
+  } catch (err) { next(err); }
+});
+
+// ── POST /api/import/machines ──────────────────────────
+// Accepts .csv with machine master-data columns:
+// NO, Nomor Asset, Nama Mesin, Type, Merk tahun, Daya, Cluster, Line, Shift, Jam Waktu Kerja
+router.post('/import/machines', upload.single('file'), async (req, res, next) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+
+    const rows = parseCsv(req.file.buffer.toString('utf-8'));
+
+    let imported = 0;
+    let skipped = 0;
+    for (const row of rows) {
+      const lookup = {};
+      Object.keys(row).forEach((k) => { lookup[k.trim().toLowerCase()] = row[k]; });
+      const field = (...keys) => {
+        for (const key of keys) {
+          const v = lookup[key.toLowerCase()];
+          if (v !== undefined && v !== '') return String(v).trim();
+        }
+        return '';
+      };
+
+      const name = field('Nama Mesin', 'name');
+      if (!name) { skipped++; continue; }
+
+      const plannedHoursRaw = field('Jam Waktu Kerja', 'plannedHours');
+      const plannedHours = plannedHoursRaw !== '' && !isNaN(Number(plannedHoursRaw)) ? Number(plannedHoursRaw) : null;
+
+      const data = {
+        assetNumber: field('Nomor Asset'),
+        type: field('Type'),
+        brand: field('Merk tahun', 'Merk Tahun'),
+        power: field('Daya'),
+        cluster: field('Cluster'),
+        line: field('Line'),
+        shift: field('Shift'),
+      };
+
+      await prisma.machine.upsert({
+        where: { name },
+        update: { ...data, ...(plannedHours != null ? { plannedHours } : {}) },
+        create: { name, ...data, plannedHours: plannedHours ?? 16 },
+      });
+      imported++;
+    }
+
+    res.json({ imported, skipped, total: rows.length });
   } catch (err) { next(err); }
 });
 

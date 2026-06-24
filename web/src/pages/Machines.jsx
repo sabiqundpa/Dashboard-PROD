@@ -42,19 +42,24 @@ export default function Machines() {
           </div>
         </div>
         <div className="table-scroll">
-          <table className="machine-table" style={{ minWidth: 400 }}>
-            <thead><tr><th>Mesin</th><th>Cluster</th><th>Line</th><th style={{ textAlign: 'center' }}>Status</th><th style={{ textAlign: 'center' }}>Avail %</th><th style={{ textAlign: 'center' }}>Freq</th><th style={{ textAlign: 'right' }}>Waktu DT</th><th style={{ textAlign: 'center' }}>Action</th></tr></thead>
+          <table className="machine-table" style={{ minWidth: 920 }}>
+            <thead><tr><th>Mesin</th><th>Nomor Asset</th><th>Type</th><th>Merk Tahun</th><th>Daya</th><th>Cluster</th><th>Line</th><th>Shift</th><th style={{ textAlign: 'center' }}>Status</th><th style={{ textAlign: 'center' }}>Avail %</th><th style={{ textAlign: 'center' }}>Freq</th><th style={{ textAlign: 'right' }}>Waktu DT</th><th style={{ textAlign: 'center' }}>Action</th></tr></thead>
             <tbody>
               {!data.length ? (
-                <tr><td colSpan={8} style={{ textAlign: 'center', padding: 20, color: 'var(--muted)' }}>No machines match</td></tr>
+                <tr><td colSpan={13} style={{ textAlign: 'center', padding: 20, color: 'var(--muted)' }}>No machines match</td></tr>
               ) : data.map((m) => {
                 const av = m.availability ?? 0;
                 const bc = av >= 90 ? 'var(--green)' : av >= 75 ? 'var(--yellow)' : 'var(--red)';
                 return (
                   <tr key={m.name} onClick={() => showDetail(m.name)}>
                     <td><strong>{m.name}</strong></td>
+                    <td style={{ color: 'var(--muted)' }}>{m.assetNumber || '—'}</td>
+                    <td style={{ color: 'var(--muted)' }}>{m.type || '—'}</td>
+                    <td style={{ color: 'var(--muted)' }}>{m.brand || '—'}</td>
+                    <td style={{ color: 'var(--muted)' }}>{m.power || '—'}</td>
                     <td style={{ color: 'var(--muted)' }}>{m.cluster || '—'}</td>
                     <td style={{ color: 'var(--muted)' }}>{m.line || '—'}</td>
+                    <td style={{ color: 'var(--muted)' }}>{m.shift || '—'}</td>
                     <td style={{ textAlign: 'center' }}><span className={'status-pill ' + m.status}><span className="status-dot"></span>{m.status}</span></td>
                     <td style={{ textAlign: 'center' }}>
                       <span style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>{av.toFixed(1)}%</span>

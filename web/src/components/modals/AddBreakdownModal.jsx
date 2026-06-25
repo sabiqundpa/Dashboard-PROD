@@ -7,6 +7,11 @@ import { useAuth } from '../../AuthContext.jsx';
 import { apiSend } from '../../api.js';
 
 const CATEGORIES = ['Mechanical', 'Electrical', 'Hydraulic', 'Operator', 'Preventive'];
+const SEVERITIES = [
+  { key: 'critical', label: 'Kritis', notifColor: 'red' },
+  { key: 'warning', label: 'Waspada', notifColor: 'yellow' },
+  { key: 'info', label: 'Info', notifColor: 'blue' },
+];
 
 export default function AddBreakdownModal() {
   const { closeModal } = useUI();
@@ -18,6 +23,7 @@ export default function AddBreakdownModal() {
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [start, setStart] = useState('');
   const [category, setCategory] = useState('Mechanical');
+  const [severity, setSeverity] = useState('warning');
   const [cause, setCause] = useState('');
   const [picGh, setPicGh] = useState('');
   const [errM, setErrM] = useState('');
@@ -36,9 +42,10 @@ export default function AddBreakdownModal() {
     try {
       await apiSend('/breakdown', 'POST', {
         machine_code: m, breakdown_date: date, start_time: start,
-        failure_cause: c, failure_category: category, pic_gh: picGh,
+        failure_cause: c, failure_category: category, pic_gh: picGh, severity,
       }, logout);
-      addNotif(`⚡ ${m}: ${c}`, 'red');
+      const notifColor = SEVERITIES.find((s) => s.key === severity)?.notifColor || 'yellow';
+      addNotif(`⚡ ${m}: ${c}`, notifColor);
       showToast(`✅ Logged: ${m} — ${c}`, 'green');
       closeModal();
       loadAll();
@@ -71,6 +78,12 @@ export default function AddBreakdownModal() {
           <label className="form-label">Jenis Problem</label>
           <select className="form-input" value={category} onChange={(e) => setCategory(e.target.value)}>
             {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+          </select>
+        </div>
+        <div className="form-group">
+          <label className="form-label">Level Bahaya</label>
+          <select className="form-input" value={severity} onChange={(e) => setSeverity(e.target.value)}>
+            {SEVERITIES.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
           </select>
         </div>
         <div className="form-group full">

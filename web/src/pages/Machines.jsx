@@ -27,7 +27,11 @@ export default function Machines() {
     <div className="page-view active">
       <div className="page-header">
         <div><div className="page-title">Semua Mesin</div><div className="page-sub">Tekan baris untuk melihat detail</div></div>
-        <button className="btn primary" onClick={() => openModal('addBreakdown')}>+ RMO</button>
+        <div className="header-actions">
+          <button className="btn" onClick={() => openModal('import')}>📥 Import CSV</button>
+          <button className="btn" onClick={() => openModal('addMachine')}>🏭 Tambah Mesin</button>
+          <button className="btn primary" onClick={() => openModal('addBreakdown')}>+ RMO</button>
+        </div>
       </div>
       <div className="card">
         <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>

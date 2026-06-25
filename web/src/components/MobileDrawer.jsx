@@ -33,7 +33,7 @@ export default function MobileDrawer() {
         <div className="sb-section">Gambaran Umum</div>
         <div className="sb-item" onClick={() => go('dashboard')}><span className="sb-icon">📊</span>Dashboard</div>
         <div className="sb-item" onClick={() => go('machines')}><span className="sb-icon">📋</span>Semua Mesin</div>
-        <div className="sb-item" onClick={() => go('maintenance')}><span className="sb-icon">⚠️</span>Breakdowns<span className="sb-badge">{kpi.breakdowns ?? '—'}</span></div>
+        <div className="sb-item" onClick={() => go('maintenance')}><span className="sb-icon">⚠️</span>Breakdown<span className="sb-badge">{kpi.breakdowns ?? '—'}</span></div>
         <div className="sb-item" onClick={() => go('reports')}><span className="sb-icon">📈</span>Reports</div>
         <div className="sb-section">Data</div>
         <div className="sb-item" onClick={() => open('import')}><span className="sb-icon">📥</span>Import CSV</div>

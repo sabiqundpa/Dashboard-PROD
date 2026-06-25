@@ -33,6 +33,10 @@ export default function Reports() {
           <div className="report-icon">⚡</div><div className="report-title">Analisis Breakdown</div>
           <div className="report-desc">MTBF, MTTR, Penyebab Kerusakan (Pareto)</div>
         </div>
+        <div className="report-card" onClick={() => openModal('import')}>
+          <div className="report-icon">📂</div><div className="report-title">Import CSV</div>
+          <div className="report-desc">Muat data Breakdown/Work Order atau Master Data Mesin dari file CSV</div>
+        </div>
         <div className="report-card" onClick={doExport}>
           <div className="report-icon">📥</div><div className="report-title">Export Mesin (CSV)</div>
           <div className="report-desc">Unduh Data Mesin ke Sheet</div>

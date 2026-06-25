@@ -34,9 +34,13 @@ Netlify (static frontend + serverless function for the API).
   that machine's own Jam Kerja Harian instead of the whole fleet's)
 - Dashboard-wide search bar that filters the machine table, breakdown timeline, and
   both Pareto lists by machine/cause/category/PIC/resolution/action in one go
-- Repair Machine Order (RMO) workflow: open with PIC GH (machine auto-flips to "down"
-  status), close with PIC MTN, resolution/action, duration computed from start/end
-  date+time (counted as machine downtime). Log filters: Semua/Open/Close.
+- Repair Machine Order (RMO) workflow: open with PIC GH and a Level Bahaya
+  (Kritis/Waspada/Info) (machine auto-flips to "down" status), close with PIC MTN,
+  resolution/action, duration computed from start/end date+time (counted as machine
+  downtime). Log filters: Semua/Open/Close.
+- Top bar To-Do button lists every still-open work order (color-coded by danger
+  level) so new RMOs are visible fleet-wide, separate from the general notification
+  bell (new RMOs, theme/import events, etc.)
 - Auto-refreshing dashboard (polls the API every 30s)
 - CSV import/export for bulk-loading and exporting both machine master data and
   maintenance/breakdown records (see "Importing data" and "Exporting data to

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useUI } from '../UIContext.jsx';
 import { useApp } from '../AppContext.jsx';
 import { useAuth } from '../AuthContext.jsx';
@@ -13,49 +13,69 @@ function tickLabel() {
 const NAV_ITEMS = [
   { page: 'dashboard', label: 'Dashboard' },
   { page: 'machines', label: 'Mesin' },
-  { page: 'maintenance', label: 'Maintenance' },
+  { page: 'maintenance', label: 'Breakdown' },
   { page: 'reports', label: 'Laporan' },
 ];
 
 export default function Topbar() {
-  const { page, navigate, toggleDrawer, toggleNotif } = useUI();
-  const { connected, notifications } = useApp();
+  const { page, navigate, toggleDrawer, toggleNotif, toggleTodo } = useUI();
+  const { connected, notifications, breakdowns } = useApp();
   const { username, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [clock, setClock] = useState(tickLabel());
+  const [avatarOpen, setAvatarOpen] = useState(false);
+  const avatarRef = useRef(null);
 
   useEffect(() => {
     const t = setInterval(() => setClock(tickLabel()), 1000);
     return () => clearInterval(t);
   }, []);
 
-  const unread = notifications.filter((n) => n.unread).length;
+  useEffect(() => {
+    function onClick(e) {
+      if (avatarOpen && avatarRef.current && !avatarRef.current.contains(e.target)) {
+        setAvatarOpen(false);
+      }
+    }
+    document.addEventListener('click', onClick);
+    return () => document.removeEventListener('click', onClick);
+  }, [avatarOpen]);
 
-  function confirmLogout() {
-    if (window.confirm('Logout dari dashboard?')) logout();
-  }
+  const unread = notifications.filter((n) => n.unread).length;
+  const openWorkOrders = breakdowns.filter((b) => b.status === 'open').length;
 
   return (
     <header className="topbar">
       <button className="hamburger" onClick={toggleDrawer} aria-label="Menu">☰</button>
-      <div className="logo" onClick={() => navigate('dashboard')}>Maintenance<span> Dashboard</span></div>
-      <nav className="nav-links">
-        {NAV_ITEMS.map((n) => (
-          <span key={n.page} className={'nav-item' + (page === n.page ? ' active' : '')} onClick={() => navigate(n.page)}>{n.label}</span>
-        ))}
-      </nav>
+      <div className="brand-nav">
+        <div className="logo" onClick={() => navigate('dashboard')}>Maintenance<span> Dashboard</span></div>
+        <nav className="nav-links">
+          {NAV_ITEMS.map((n) => (
+            <span key={n.page} className={'nav-item' + (page === n.page ? ' active' : '')} onClick={() => navigate(n.page)}>{n.label}</span>
+          ))}
+        </nav>
+      </div>
       <div className="topbar-right">
         <span><span className={'conn-dot' + (connected ? '' : ' off')}></span><span className="conn-label">{connected ? 'Live' : 'Offline'}</span></span>
         <span className="date-label">{clock}</span>
         <button className="btn-icon" onClick={toggleTheme} title={theme === 'dark' ? 'Mode terang' : 'Mode gelap'}>
           {theme === 'dark' ? '☀️' : '🌙'}
         </button>
+        <div className="notif-btn todo-btn" onClick={toggleTodo} title="To-Do · Work Order">
+          📋
+          {openWorkOrders > 0 && <span className="notif-badge">{openWorkOrders}</span>}
+        </div>
         <div className="notif-btn" onClick={toggleNotif}>
           🔔
           {unread > 0 && <span className="notif-badge">{unread}</span>}
         </div>
-        <div className="avatar" onClick={confirmLogout} title={username ? `${username} — klik untuk logout` : 'Logout'}>
-          {(username || 'OP').slice(0, 2).toUpperCase()}
+        <div className="avatar-wrap" ref={avatarRef}>
+          <div className="avatar" onClick={() => setAvatarOpen((v) => !v)} title={username || 'Admin'}>
+            {(username || 'OP').slice(0, 2).toUpperCase()}
+          </div>
+          <div className={'avatar-menu' + (avatarOpen ? ' show' : '')}>
+            <div className="avatar-menu-item" onClick={logout}>🚪 Log Out</div>
+          </div>
         </div>
       </div>
     </header>

@@ -10,10 +10,10 @@ import Machines from './pages/Machines.jsx';
 import Maintenance from './pages/Maintenance.jsx';
 import Reports from './pages/Reports.jsx';
 import Topbar from './components/Topbar.jsx';
-import Sidebar from './components/Sidebar.jsx';
 import MobileDrawer from './components/MobileDrawer.jsx';
 import BottomNav from './components/BottomNav.jsx';
 import NotifPanel from './components/NotifPanel.jsx';
+import TodoPanel from './components/TodoPanel.jsx';
 import DetailPanel from './components/DetailPanel.jsx';
 import ModalRoot from './components/ModalRoot.jsx';
 
@@ -41,7 +41,6 @@ function Shell() {
     <>
       <div className="shell">
         <Topbar />
-        <Sidebar />
         <main className="content">
           <PageComponent />
         </main>
@@ -49,6 +48,7 @@ function Shell() {
       <BottomNav />
       <MobileDrawer />
       <NotifPanel />
+      <TodoPanel />
       <DetailPanel />
       <ModalRoot />
     </>

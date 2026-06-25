@@ -6,6 +6,7 @@ export function UIProvider({ children }) {
   const [page, setPage] = useState('dashboard');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [todoOpen, setTodoOpen] = useState(false);
   const [activeModal, setActiveModal] = useState(null);
   const [modalPayload, setModalPayload] = useState(null);
   const [detailMachine, setDetailMachine] = useState(null);
@@ -17,7 +18,8 @@ export function UIProvider({ children }) {
   }, []);
 
   const toggleDrawer = useCallback(() => setDrawerOpen((v) => !v), []);
-  const toggleNotif = useCallback(() => setNotifOpen((v) => !v), []);
+  const toggleNotif = useCallback(() => { setNotifOpen((v) => !v); setTodoOpen(false); }, []);
+  const toggleTodo = useCallback(() => { setTodoOpen((v) => !v); setNotifOpen(false); }, []);
 
   const openModal = useCallback((name, payload = null) => {
     setActiveModal(name);
@@ -36,6 +38,7 @@ export function UIProvider({ children }) {
       page, navigate,
       drawerOpen, toggleDrawer, setDrawerOpen,
       notifOpen, toggleNotif, setNotifOpen,
+      todoOpen, toggleTodo, setTodoOpen,
       activeModal, modalPayload, openModal, closeModal,
       detailMachine, showDetail, closeDetail,
     }}>

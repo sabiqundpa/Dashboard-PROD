@@ -487,12 +487,14 @@ router.post('/breakdown', async (req, res, next) => {
   try {
     const {
       machine_code, breakdown_date, start_time,
-      failure_cause, failure_category, pic_gh,
+      failure_cause, failure_category, pic_gh, severity,
     } = req.body;
 
     if (!machine_code || !failure_cause) {
       return res.status(400).json({ error: 'machine_code and failure_cause are required' });
     }
+
+    const allowedSeverity = ['critical', 'warning', 'info'];
 
     const machine = await prisma.machine.findUnique({ where: { name: machine_code } });
     if (!machine) return res.status(404).json({ error: `Machine "${machine_code}" not found` });
@@ -502,6 +504,7 @@ router.post('/breakdown', async (req, res, next) => {
         machineId: machine.id,
         cause: failure_cause,
         category: failure_category || 'Mechanical',
+        severity: allowedSeverity.includes(severity) ? severity : 'warning',
         status: 'open',
         date: breakdown_date ? new Date(breakdown_date) : new Date(),
         startTime: start_time || null,

@@ -346,9 +346,15 @@ textarea.form-input{resize:vertical;min-height:64px}
     grid-template-columns:none;grid-template-rows:none;overflow:hidden
   }
   .topbar{
-    height:52px;padding:0 14px;gap:12px;flex-shrink:0;
+    height:52px;padding:0 10px;gap:6px;flex-shrink:0;
     position:sticky;top:0;z-index:50
   }
+  .logo span{display:none}
+  .topbar-right{gap:6px}
+  .btn-icon{padding:6px 8px}
+  .notif-btn{padding:2px}
+  .avatar{width:28px;height:28px}
+  .avatar-menu{right:-6px}
   .content{
     flex:1;overflow-y:auto;padding:14px;gap:12px;
     padding-bottom:calc(var(--bottomnav-h) + 8px)

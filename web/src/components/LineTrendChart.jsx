@@ -129,28 +129,6 @@ export default function LineTrendChart({ title, sub, data, valueKey, targetKey, 
           style={{ width: '100%', marginTop: 6 }}
         />
       )}
-      {visibleData?.length > 0 && (
-        <div className="combo-chart-table">
-          <table>
-            <thead>
-              <tr>
-                <th></th>
-                {visibleData.map((d, i) => <th key={i} className={d.day === 'TOTAL' ? 'col-total' : ''}>{d.day}</th>)}
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td className="row-label"><span className="legend-dot" style={{ background: color }}></span>{valueKey.toUpperCase()}</td>
-                {visibleData.map((d, i) => <td key={i} className={d.day === 'TOTAL' ? 'col-total' : ''}>{(d[valueKey] ?? 0).toFixed(1)}</td>)}
-              </tr>
-              <tr>
-                <td className="row-label"><span className="legend-dot" style={{ background: '#ff6b35' }}></span>TARGET</td>
-                {visibleData.map((d, i) => <td key={i} className={d.day === 'TOTAL' ? 'col-total' : ''}>{(d[targetKey] ?? 0).toFixed(1)}</td>)}
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      )}
     </div>
   );
 }

@@ -168,6 +168,8 @@ router.get('/breakdowns', async (req, res, next) => {
     res.json(breakdowns.map((b) => ({
       id: b.id,
       machine: b.machine.name,
+      cluster: b.machine.cluster,
+      line: b.machine.line,
       cause: b.cause,
       category: b.category,
       severity: b.severity,

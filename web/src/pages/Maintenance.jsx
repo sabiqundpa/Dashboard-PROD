@@ -16,18 +16,32 @@ export default function Maintenance() {
   const { openModal } = useUI();
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
+  const [sortKey, setSortKey] = useState('date');
+  const [sortDir, setSortDir] = useState(-1);
 
   const open = breakdowns.filter((b) => b.status === 'open').length;
   const resolved = breakdowns.filter((b) => b.status === 'resolved').length;
 
+  function sortBy(k) {
+    setSortDir(sortKey === k ? -sortDir : 1);
+    setSortKey(k);
+  }
+
   const data = useMemo(() => {
     const q = search.toLowerCase();
-    return breakdowns.filter((b) => {
+    const filtered = breakdowns.filter((b) => {
       const ms = !q || b.machine.toLowerCase().includes(q) || b.cause.toLowerCase().includes(q);
       const ss = filter === 'all' || b.status === filter;
       return ms && ss;
     });
-  }, [breakdowns, search, filter]);
+    return [...filtered].sort((a, b) => {
+      const av = a[sortKey] ?? '', bv = b[sortKey] ?? '';
+      return sortDir * String(av).localeCompare(String(bv));
+    });
+  }, [breakdowns, search, filter, sortKey, sortDir]);
+
+  const arrow = (k) => (sortKey === k ? (sortDir === 1 ? ' ▲' : ' ▼') : '');
+  const thCls = (k) => (sortKey === k ? 'sorted' : '');
 
   return (
     <div className="page-view active">
@@ -63,10 +77,14 @@ export default function Maintenance() {
           </div>
         </div>
         <div className="table-scroll">
-          <table className="machine-table" style={{ minWidth: 1000 }}>
+          <table className="machine-table" style={{ minWidth: 1100 }}>
             <thead>
               <tr>
-                <th>Mesin</th><th style={center}>Status</th><th style={center}>Tanggal</th>
+                <th className={thCls('machine')} onClick={() => sortBy('machine')}>Mesin{arrow('machine')}</th>
+                <th className={thCls('cluster')} onClick={() => sortBy('cluster')}>Cluster{arrow('cluster')}</th>
+                <th className={thCls('line')} onClick={() => sortBy('line')}>Line{arrow('line')}</th>
+                <th style={center}>Status</th>
+                <th style={center} className={thCls('date')} onClick={() => sortBy('date')}>Tanggal{arrow('date')}</th>
                 <th>Jenis Problem</th><th>Problem Identifikasi</th><th style={center}>PIC GH</th>
                 <th style={center}>Tanggal Selesai</th><th>Penyelesaian / Action</th><th style={center}>PIC MTN</th>
                 <th style={right}>Durasi</th><th style={center}>Aksi</th>
@@ -74,13 +92,15 @@ export default function Maintenance() {
             </thead>
             <tbody>
               {!data.length ? (
-                <tr><td colSpan={11} style={{ textAlign: 'center', padding: 20, color: 'var(--muted)' }}>Tidak Ada Kasus</td></tr>
+                <tr><td colSpan={13} style={{ textAlign: 'center', padding: 20, color: 'var(--muted)' }}>Tidak Ada Kasus</td></tr>
               ) : data.map((b, i) => {
                 const isOpen = b.status === 'open';
                 const penyelesaian = [b.resolution, b.action].filter(Boolean).join(' · ') || '—';
                 return (
                   <tr key={b.id ?? i}>
                     <td>{b.machine}</td>
+                    <td style={{ color: 'var(--muted)' }}>{b.cluster || '—'}</td>
+                    <td style={{ color: 'var(--muted)' }}>{b.line || '—'}</td>
                     <td style={center}>{isOpen ? <span style={{ color: 'var(--red)', fontWeight: 600 }}>● OPEN</span> : <span style={{ color: 'var(--green)', fontWeight: 600 }}>✔ CLOSE</span>}</td>
                     <td style={center}>{b.date} · {b.start || '—'}</td>
                     <td>{b.category || '—'}</td>

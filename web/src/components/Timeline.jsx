@@ -9,32 +9,45 @@ export default function Timeline({ items, limit = 999 }) {
   }
 
   return (
-    <div className="timeline">
-      {data.map((b, i) => (
-        <div className="tl-item" key={b.id ?? i}>
-          <div className={'tl-dot ' + (b.status === 'open' ? 'critical' : b.severity)}></div>
-          <div className="tl-content">
-            <div className="tl-title">{b.machine} — {b.cause}</div>
-            <div className="tl-meta">
-              {b.category ? b.category + ' · ' : ''}{b.date} · {b.start}
-              {b.status === 'open' && <span style={{ color: 'var(--red)' }}> ● OPEN</span>}
-              {b.pic_gh ? ' · PIC GH: ' + b.pic_gh : ''}
-            </div>
-            {b.status === 'resolved' && (b.resolution || b.action || b.pic_mtn) && (
-              <div className="tl-meta">
-                {b.resolution ? 'Penyelesaian: ' + b.resolution + ' · ' : ''}
-                {b.action ? 'Action: ' + b.action + ' · ' : ''}
-                {b.pic_mtn ? 'PIC MTN: ' + b.pic_mtn : ''}
-              </div>
-            )}
-          </div>
-          {b.status === 'open' && b.id ? (
-            <button className="btn" style={{ padding: '5px 10px', fontSize: 11 }} onClick={() => openModal('closeWO', { id: b.id, machine: b.machine, cause: b.cause })}>Tutup WO</button>
-          ) : (
-            <div className="tl-duration">{b.duration}</div>
-          )}
-        </div>
-      ))}
+    <div className="table-scroll">
+      <table className="machine-table tl-table" style={{ minWidth: 420 }}>
+        <thead>
+          <tr>
+            <th style={{ textAlign: 'center' }}>Status</th>
+            <th>Mesin</th>
+            <th>Tanggal</th>
+            <th>Waktu</th>
+            <th style={{ textAlign: 'center' }}>Aksi</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((b, i) => {
+            const isOpen = b.status === 'open';
+            return (
+              <tr key={b.id ?? i}>
+                <td style={{ textAlign: 'center' }}>
+                  <span className={'status-pill ' + (isOpen ? 'down' : 'running')}>
+                    <span className="status-dot"></span>{isOpen ? 'OPEN' : 'CLOSE'}
+                  </span>
+                </td>
+                <td>
+                  <div style={{ fontWeight: 600 }}>{b.machine}</div>
+                  <div style={{ fontSize: 11, color: 'var(--muted)' }}>{b.cause}</div>
+                </td>
+                <td style={{ fontFamily: 'var(--mono)' }}>{b.date}</td>
+                <td style={{ fontFamily: 'var(--mono)' }}>{b.start || '—'}</td>
+                <td style={{ textAlign: 'center' }}>
+                  {isOpen && b.id ? (
+                    <button className="btn" style={{ padding: '4px 9px', fontSize: 11 }} onClick={() => openModal('closeWO', { id: b.id, machine: b.machine, cause: b.cause })}>Tutup WO</button>
+                  ) : (
+                    <span style={{ fontSize: 11, color: 'var(--muted)', fontFamily: 'var(--mono)' }}>{b.duration}</span>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }

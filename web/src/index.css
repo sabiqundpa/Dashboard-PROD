@@ -22,17 +22,17 @@
   --btn-hover-bg:var(--s2);
 }
 :root[data-theme="light"]{
-  --bg:#eef1f5;--s1:#ffffff;--s2:#eef0f5;--s3:#e3e6ec;
-  --border:#d6dae2;--text:#1a1a24;--muted:#667085;--dim:#aab1bd;
-  --accent:#d97706;--accent2:#ea580c;--green:#16a34a;--red:#dc2626;
-  --blue:#2563eb;--purple:#7c3aed;--yellow:#d97706;
+  --bg:#e3e7ed;--s1:#ffffff;--s2:#eef0f5;--s3:#dfe3e9;
+  --border:#c5cbd4;--text:#10121a;--muted:#525c6b;--dim:#9aa3b0;
+  --accent:#c2660a;--accent2:#d6480f;--green:#0f8c3f;--red:#c81e3a;
+  --blue:#1d4ed8;--purple:#6d28d9;--yellow:#c2660a;
 
   --sidebar-bg:#f7f8fa;
-  --card-border:rgba(20,20,43,.08);
-  --card-shadow:0 1px 2px rgba(16,24,40,.04),0 4px 12px rgba(16,24,40,.06);
-  --card-shadow-hover:0 2px 4px rgba(16,24,40,.05),0 8px 20px rgba(16,24,40,.09);
+  --card-border:rgba(16,18,26,.14);
+  --card-shadow:0 1px 3px rgba(16,24,40,.07),0 6px 16px rgba(16,24,40,.09);
+  --card-shadow-hover:0 3px 6px rgba(16,24,40,.08),0 10px 26px rgba(16,24,40,.13);
   --input-bg:#eef0f5;
-  --input-border:#c7cdd6;
+  --input-border:#b8c0cc;
   --btn-hover-bg:var(--s3);
 }
 :root[data-theme="light"] .conn-dot.connecting{background:var(--yellow)}

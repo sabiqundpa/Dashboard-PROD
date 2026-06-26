@@ -8,6 +8,7 @@ import DowntimeTrend from '../components/DowntimeTrend.jsx';
 import MachineTable from '../components/MachineTable.jsx';
 import Timeline from '../components/Timeline.jsx';
 import ParetoList from '../components/ParetoList.jsx';
+import DonutChart from '../components/DonutChart.jsx';
 
 export default function Dashboard() {
   const {
@@ -82,6 +83,7 @@ export default function Dashboard() {
         </div>
         <div className="card">
           <div className="card-header"><div><div className="card-title">Top Penyebab Kerusakan</div><div className="card-sub">Pareto</div></div></div>
+          <DonutChart data={filteredPareto} labelKey="cause" />
           <ParetoList data={filteredPareto} labelKey="cause" />
         </div>
         <div className="card">

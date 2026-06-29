@@ -1,14 +1,14 @@
-import { useApp } from '../AppContext.jsx';
 import { useUI } from '../UIContext.jsx';
 import { useToast } from '../ToastContext.jsx';
-import { exportCSV } from '../lib/exportCSV.js';
+import { useAuth } from '../AuthContext.jsx';
+import { apiDownload } from '../api.js';
 
 const REPORT_NAMES = { availability: 'Rangkuman Availability', breakdown: 'Analisis Breakdown', pm: 'Jadwal Preventive Maintenance' };
 
 export default function Reports() {
-  const { machines } = useApp();
   const { openModal } = useUI();
   const showToast = useToast();
+  const { logout } = useAuth();
 
   function genReport(t) {
     const n = REPORT_NAMES[t] || t;
@@ -16,9 +16,13 @@ export default function Reports() {
     setTimeout(() => showToast(`✅ ${n} siap — Sambung backend untuk PDF`, 'green'), 1400);
   }
 
-  function doExport() {
-    exportCSV(machines);
-    showToast('✅ Diekspor ke CSV', 'green');
+  async function doExport() {
+    try {
+      await apiDownload('/export/machines', `mesin-history-${new Date().toISOString().slice(0, 10)}.csv`, logout);
+      showToast('✅ Diekspor ke CSV', 'green');
+    } catch (e) {
+      showToast(`❌ ${e.message}`, 'red');
+    }
   }
 
   return (
@@ -39,7 +43,7 @@ export default function Reports() {
         </div>
         <div className="report-card" onClick={doExport}>
           <div className="report-icon">📥</div><div className="report-title">Export Mesin (CSV)</div>
-          <div className="report-desc">Unduh Data Mesin ke Sheet</div>
+          <div className="report-desc">Master data setiap mesin beserta seluruh riwayat breakdown-nya (semua mesin, bukan hanya insiden terakhir)</div>
         </div>
         <div className="report-card" onClick={() => openModal('exportWorkOrders')}>
           <div className="report-icon">📑</div><div className="report-title">Export Log Work Order (CSV)</div>

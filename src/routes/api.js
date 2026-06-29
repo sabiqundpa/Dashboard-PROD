@@ -676,6 +676,61 @@ router.get('/export/work-orders', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// ── GET /api/export/machines ───────────────────────────
+// CSV export of master data for every machine, each paired with its full
+// breakdown history (not just the latest incident, and not limited to any
+// dashboard period filter) -- one row per breakdown; machines with no
+// breakdowns at all still get a single row with the history columns blank.
+router.get('/export/machines', async (req, res, next) => {
+  try {
+    const machines = await prisma.machine.findMany({
+      include: { breakdowns: { orderBy: { date: 'desc' } } },
+      orderBy: { name: 'asc' },
+    });
+
+    const headers = [
+      'Nama Mesin', 'Nomor Asset', 'Type', 'Merk Tahun', 'Daya', 'Cluster', 'Line', 'Shift',
+      'Jam Kerja Harian', 'Status Saat Ini',
+      'Tanggal', 'Waktu Mulai', 'Jenis Problem', 'Problem Identifikasi', 'PIC GH',
+      'Tanggal Selesai', 'Waktu Selesai', 'Penyelesaian', 'Action', 'PIC MTN', 'Durasi (jam)',
+    ];
+
+    const rows = [];
+    for (const m of machines) {
+      const base = [m.name, m.assetNumber, m.type, m.brand, m.power, m.cluster, m.line, m.shift, m.plannedHours, m.status];
+      if (!m.breakdowns.length) {
+        rows.push([...base, '', '', '', '', '', '', '', '', '', '']);
+        continue;
+      }
+      for (const b of m.breakdowns) {
+        rows.push([
+          ...base,
+          b.date.toISOString().slice(0, 10),
+          b.startTime ?? '',
+          b.category,
+          b.cause,
+          b.picGh ?? '',
+          b.endDate ? b.endDate.toISOString().slice(0, 10) : '',
+          b.endTime ?? '',
+          b.resolution ?? '',
+          b.action ?? '',
+          b.picMtn ?? '',
+          b.durationHrs,
+        ]);
+      }
+    }
+
+    const csvLines = [headers.join(',')];
+    for (const row of rows) {
+      csvLines.push(row.map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`).join(','));
+    }
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="mesin-history-${new Date().toISOString().slice(0, 10)}.csv"`);
+    res.send(csvLines.join('\n'));
+  } catch (err) { next(err); }
+});
+
 // ── POST /api/import ──────────────────────────────────
 // Accepts .csv with columns:
 // machine_name, machine_cluster, machine_line, breakdown_date, start_time, end_time, failure_cause, category, technician, notes

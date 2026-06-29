@@ -1,12 +1,12 @@
 import { useUI } from '../UIContext.jsx';
-import { useApp } from '../AppContext.jsx';
 import { useToast } from '../ToastContext.jsx';
-import { exportCSV } from '../lib/exportCSV.js';
+import { useAuth } from '../AuthContext.jsx';
+import { apiDownload } from '../api.js';
 
 export default function MobileDrawer() {
   const { drawerOpen, setDrawerOpen, navigate, openModal } = useUI();
-  const { machines } = useApp();
   const showToast = useToast();
+  const { logout } = useAuth();
 
   function go(page) {
     navigate(page);
@@ -16,10 +16,14 @@ export default function MobileDrawer() {
     openModal(modal);
     setDrawerOpen(false);
   }
-  function doExport() {
-    exportCSV(machines);
-    showToast('✅ Diekspor ke CSV', 'green');
+  async function doExport() {
     setDrawerOpen(false);
+    try {
+      await apiDownload('/export/machines', `mesin-history-${new Date().toISOString().slice(0, 10)}.csv`, logout);
+      showToast('✅ Diekspor ke CSV', 'green');
+    } catch (e) {
+      showToast(`❌ ${e.message}`, 'red');
+    }
   }
 
   return (

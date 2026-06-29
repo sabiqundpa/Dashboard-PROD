@@ -56,7 +56,7 @@ export default function AddBreakdownModal() {
   }
 
   return (
-    <Modal title="Repair Machine Order" onClose={closeModal}>
+    <Modal title="Repair Machine Order" onClose={closeModal} fullscreen>
       <div className="form-grid">
         <div className="form-group">
           <label className="form-label">Mesin *</label>

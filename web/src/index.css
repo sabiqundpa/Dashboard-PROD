@@ -256,6 +256,17 @@ textarea.form-input{resize:vertical;min-height:64px}
 .modal-close:hover{color:var(--text)}
 .modal-footer{display:flex;gap:8px;margin-top:18px;padding-top:14px;border-top:1px solid var(--border)}
 .modal-footer .btn{flex:1;padding:12px;font-size:14px;text-align:center;border-radius:10px}
+
+/* Full-screen variant -- a true edge-to-edge takeover (kiosk-style RMO
+   input) instead of the bottom-sheet modal used everywhere else. */
+.overlay.fullscreen{align-items:stretch;justify-content:stretch;padding:0;backdrop-filter:none}
+.modal.fullscreen{width:100vw;height:100vh;max-width:100vw;max-height:100vh;border-radius:0;border:none;padding:0;display:flex;flex-direction:column;animation:none}
+.fullscreen-header{margin:0;padding:18px 28px;background:linear-gradient(135deg,var(--accent),var(--accent2));flex-shrink:0}
+.fullscreen-header .modal-title{color:#000;font-size:22px}
+.fullscreen-header .modal-close{color:#000;font-size:28px}
+.fullscreen-body{flex:1;overflow-y:auto;padding:28px;max-width:840px;width:100%;margin:0 auto}
+.fullscreen-body .form-grid{gap:16px}
+.fullscreen-body .modal-footer .btn{padding:14px;font-size:15px}
 .drop-zone{border:2px dashed var(--border);border-radius:10px;padding:24px;text-align:center;cursor:pointer;transition:border-color .2s}
 .drop-zone:hover,.drop-zone.drag-over{border-color:var(--accent);background:rgba(240,165,0,.04)}
 .drop-zone p{color:var(--muted);font-size:13px;margin-top:8px}
@@ -417,6 +428,8 @@ textarea.form-input{resize:vertical;min-height:64px}
   .form-group.full{grid-column:1}
   .modal-footer{flex-direction:column}
   .modal-footer .btn{width:100%}
+  .fullscreen-header{padding:14px 18px}
+  .fullscreen-body{padding:18px}
   .notif-panel{top:52px;left:0;right:0;border-radius:0 0 12px 12px;border-top:none}
   .notif-list{max-height:50vh}
   .detail-panel{inset:0;border:none;border-top:1px solid var(--border)}

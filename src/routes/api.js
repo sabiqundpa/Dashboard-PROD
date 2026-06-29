@@ -639,13 +639,17 @@ router.post('/machines/:name', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// ── GET /api/export/work-orders ────────────────────────
+// ── GET /api/exports/work-orders ───────────────────────
 // CSV export of the work_order_export SQL view -- the same view that can
 // be queried directly in pgAdmin (Query Tool -> Export to CSV).
 // Optional ?period=today|week|month (+ ?date=YYYY-MM-DD) filters rows to
 // that calendar-aligned range by "tanggal" (the breakdown's start date);
 // omitting ?period keeps exporting the full history, unfiltered.
-router.get('/export/work-orders', async (req, res, next) => {
+// (Route is "/exports/..." not "/export/..." -- the singular form 404s
+// on Vercel's edge routing for this deployment, even though every other
+// GET path works; renaming sidesteps whatever platform-specific quirk
+// that path segment triggers.)
+router.get('/exports/work-orders', async (req, res, next) => {
   try {
     let rows;
     if (req.query.period) {
@@ -676,12 +680,12 @@ router.get('/export/work-orders', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// ── GET /api/export/machines ───────────────────────────
+// ── GET /api/exports/machines ──────────────────────────
 // CSV export of master data for every machine, each paired with its full
 // breakdown history (not just the latest incident, and not limited to any
 // dashboard period filter) -- one row per breakdown; machines with no
 // breakdowns at all still get a single row with the history columns blank.
-router.get('/export/machines', async (req, res, next) => {
+router.get('/exports/machines', async (req, res, next) => {
   try {
     const machines = await prisma.machine.findMany({
       include: { breakdowns: { orderBy: { date: 'desc' } } },

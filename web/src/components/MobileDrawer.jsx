@@ -19,7 +19,7 @@ export default function MobileDrawer() {
   async function doExport() {
     setDrawerOpen(false);
     try {
-      await apiDownload('/export/machines', `mesin-history-${new Date().toISOString().slice(0, 10)}.csv`, logout);
+      await apiDownload('/exports/machines', `mesin-history-${new Date().toISOString().slice(0, 10)}.csv`, logout);
       showToast('✅ Diekspor ke CSV', 'green');
     } catch (e) {
       showToast(`❌ ${e.message}`, 'red');

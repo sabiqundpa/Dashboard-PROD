@@ -30,7 +30,8 @@ export default function EditMachineModal({ payload }) {
     if (!n) return;
     setBusy(true);
     try {
-      await apiSend(`/machines/${payload.name}`, 'POST', {
+      await apiSend('/machines-edit', 'POST', {
+        machine: payload.name,
         name: n,
         assetNumber: assetNumber.trim(),
         type: type.trim(),

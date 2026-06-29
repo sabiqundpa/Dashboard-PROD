@@ -522,14 +522,16 @@ router.post('/breakdown', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// ── POST /api/breakdown/:id/close ─────────────────────
+// ── POST /api/breakdown-close ──────────────────────────
 // Close a work order: maintenance member marks repair as done.
-// (POST, not PATCH/PUT -- this Vercel deployment's edge network returns a
-// platform-level 404 for PATCH/PUT/DELETE/OPTIONS on /api/*, only GET/POST
-// reach the serverless function, so every mutation here uses POST.)
-router.post('/breakdown/:id/close', async (req, res, next) => {
+// (Flat path, no nested segments or :id param -- this Vercel deployment's
+// edge routing only forwards single-segment /api/* paths to the
+// serverless function; anything with a second path segment, even just an
+// :id, returns a platform-level 404 before reaching Express at all. id is
+// passed in the body instead of the URL.)
+router.post('/breakdown-close', async (req, res, next) => {
   try {
-    const id = Number(req.params.id);
+    const id = Number(req.body.id);
     const { end_date, end_time, resolution, action, pic_mtn } = req.body;
 
     const existing = await prisma.breakdown.findUnique({ where: { id } });
@@ -586,20 +588,22 @@ router.post('/machines', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// ── POST /api/machines/:name/status ────────────────────
-router.post('/machines/:name/status', async (req, res, next) => {
+// ── POST /api/machines-status ──────────────────────────
+// (Flat path -- see the comment on /breakdown-close above. The machine's
+// current name is passed in the body instead of as a URL param.)
+router.post('/machines-status', async (req, res, next) => {
   try {
-    const { status } = req.body;
+    const { machine: machineName, status } = req.body;
     const allowed = ['running', 'down', 'idle', 'maintenance'];
     if (!allowed.includes(status)) {
       return res.status(400).json({ error: `status must be one of: ${allowed.join(', ')}` });
     }
 
-    const existing = await prisma.machine.findUnique({ where: { name: req.params.name } });
-    if (!existing) return res.status(404).json({ error: `Machine "${req.params.name}" not found` });
+    const existing = await prisma.machine.findUnique({ where: { name: machineName } });
+    if (!existing) return res.status(404).json({ error: `Machine "${machineName}" not found` });
 
     const machine = await prisma.machine.update({
-      where: { name: req.params.name },
+      where: { name: machineName },
       data: { status },
     });
 
@@ -607,21 +611,23 @@ router.post('/machines/:name/status', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// ── POST /api/machines/:name ───────────────────────────
+// ── POST /api/machines-edit ─────────────────────────────
 // Edit machine details: name, master data fields, cluster/line/shift, plannedHours.
-router.post('/machines/:name', async (req, res, next) => {
+// (Flat path -- the machine's current name is passed in the body as
+// `machine`, distinct from `name` which may be a rename.)
+router.post('/machines-edit', async (req, res, next) => {
   try {
-    const existing = await prisma.machine.findUnique({ where: { name: req.params.name } });
-    if (!existing) return res.status(404).json({ error: `Machine "${req.params.name}" not found` });
+    const { machine: machineName, name, assetNumber, type, brand, power, cluster, line, shift, plannedHours } = req.body;
+    const existing = await prisma.machine.findUnique({ where: { name: machineName } });
+    if (!existing) return res.status(404).json({ error: `Machine "${machineName}" not found` });
 
-    const { name, assetNumber, type, brand, power, cluster, line, shift, plannedHours } = req.body;
     if (name && name !== existing.name) {
       const clash = await prisma.machine.findUnique({ where: { name } });
       if (clash) return res.status(409).json({ error: `Machine "${name}" already exists` });
     }
 
     const machine = await prisma.machine.update({
-      where: { name: req.params.name },
+      where: { name: machineName },
       data: {
         name: name || existing.name,
         assetNumber: assetNumber ?? existing.assetNumber,
@@ -639,17 +645,14 @@ router.post('/machines/:name', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// ── GET /api/exports/work-orders ───────────────────────
+// ── GET /api/export-work-orders ────────────────────────
 // CSV export of the work_order_export SQL view -- the same view that can
 // be queried directly in pgAdmin (Query Tool -> Export to CSV).
 // Optional ?period=today|week|month (+ ?date=YYYY-MM-DD) filters rows to
 // that calendar-aligned range by "tanggal" (the breakdown's start date);
 // omitting ?period keeps exporting the full history, unfiltered.
-// (Route is "/exports/..." not "/export/..." -- the singular form 404s
-// on Vercel's edge routing for this deployment, even though every other
-// GET path works; renaming sidesteps whatever platform-specific quirk
-// that path segment triggers.)
-router.get('/exports/work-orders', async (req, res, next) => {
+// (Flat path, no nested segments -- see the comment on /breakdown-close.)
+router.get('/export-work-orders', async (req, res, next) => {
   try {
     let rows;
     if (req.query.period) {
@@ -680,12 +683,12 @@ router.get('/exports/work-orders', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// ── GET /api/exports/machines ──────────────────────────
+// ── GET /api/export-machines ───────────────────────────
 // CSV export of master data for every machine, each paired with its full
 // breakdown history (not just the latest incident, and not limited to any
 // dashboard period filter) -- one row per breakdown; machines with no
 // breakdowns at all still get a single row with the history columns blank.
-router.get('/exports/machines', async (req, res, next) => {
+router.get('/export-machines', async (req, res, next) => {
   try {
     const machines = await prisma.machine.findMany({
       include: { breakdowns: { orderBy: { date: 'desc' } } },
@@ -782,10 +785,10 @@ router.post('/import', upload.single('file'), async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// ── POST /api/import/machines ──────────────────────────
+// ── POST /api/import-machines ──────────────────────────
 // Accepts .csv with machine master-data columns:
 // NO, Nomor Asset, Nama Mesin, Type, Merk tahun, Daya, Cluster, Line, Shift, Jam Waktu Kerja
-router.post('/import/machines', upload.single('file'), async (req, res, next) => {
+router.post('/import-machines', upload.single('file'), async (req, res, next) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 

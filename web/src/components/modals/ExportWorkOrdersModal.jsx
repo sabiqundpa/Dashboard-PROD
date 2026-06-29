@@ -27,7 +27,7 @@ export default function ExportWorkOrdersModal() {
       const params = new URLSearchParams();
       if (period) { params.set('period', period); params.set('date', date); }
       const qs = params.toString() ? `?${params.toString()}` : '';
-      await apiDownload(`/exports/work-orders${qs}`, `work-orders-${date}.csv`, logout);
+      await apiDownload(`/export-work-orders${qs}`, `work-orders-${date}.csv`, logout);
       closeModal();
     } catch (e) {
       showToast(`❌ ${e.message}`, 'red');

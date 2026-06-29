@@ -18,7 +18,7 @@ export default function Reports() {
 
   async function doExport() {
     try {
-      await apiDownload('/exports/machines', `mesin-history-${new Date().toISOString().slice(0, 10)}.csv`, logout);
+      await apiDownload('/export-machines', `mesin-history-${new Date().toISOString().slice(0, 10)}.csv`, logout);
       showToast('✅ Diekspor ke CSV', 'green');
     } catch (e) {
       showToast(`❌ ${e.message}`, 'red');

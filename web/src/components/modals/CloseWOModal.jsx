@@ -27,8 +27,8 @@ export default function CloseWOModal({ payload }) {
   async function submit() {
     setBusy(true);
     try {
-      await apiSend(`/breakdown/${payload.id}/close`, 'POST', {
-        end_date: endDate, end_time: endTime, resolution, action, pic_mtn: picMtn,
+      await apiSend('/breakdown-close', 'POST', {
+        id: payload.id, end_date: endDate, end_time: endTime, resolution, action, pic_mtn: picMtn,
       }, logout);
       showToast('✅ Work order ditutup', 'green');
       closeModal();

@@ -190,15 +190,8 @@ body{min-height:100%;background:var(--bg);color:var(--text);font-family:var(--fo
 ═══════════════════════════════════════ */
 .trend-wrap{position:relative;height:110px}
 .trend-wrap canvas{display:block;width:100%;height:110px}
+.axis-unit-label{font-size:9px;color:var(--muted);margin-bottom:2px}
 .trend-tooltip{position:absolute;background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:5px 9px;font-size:11px;pointer-events:none;display:none;z-index:5;white-space:nowrap}
-
-.combo-chart-table{overflow-x:auto;margin-top:10px;border:1px solid var(--border);border-radius:8px}
-.combo-chart-table table{width:100%;border-collapse:collapse;font-size:10.5px;font-family:var(--mono)}
-.combo-chart-table th,.combo-chart-table td{padding:5px 8px;text-align:center;border:1px solid var(--border);white-space:nowrap}
-.combo-chart-table th{color:var(--muted);font-weight:600;background:var(--s2)}
-.combo-chart-table td.row-label,.combo-chart-table th:first-child{text-align:left;font-family:var(--font);font-weight:600}
-.combo-chart-table .col-total{font-weight:700;border-left:2px solid var(--accent2)}
-.legend-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:middle}
 
 /* ═══════════════════════════════════════
    TIMELINE

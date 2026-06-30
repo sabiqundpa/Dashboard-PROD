@@ -50,7 +50,8 @@ export default function LineTrendChart({ title, data, valueKey, targetKey, color
     const H = 130;
     canvas.width = W; canvas.height = H;
     const ctx = canvas.getContext('2d');
-    const pad = { t: 10, b: 4, l: 4, r: 4 }, iW = W - pad.l - pad.r, iH = H - pad.t - pad.b;
+    const muted = getComputedStyle(document.documentElement).getPropertyValue('--muted').trim() || '#888';
+    const pad = { t: 10, b: 4, l: 30, r: 4 }, iW = W - pad.l - pad.r, iH = H - pad.t - pad.b;
     const vals = visibleData.map((d) => d[valueKey] ?? 0);
     const targets = visibleData.map((d) => d[targetKey] ?? 0);
     const maxV = Math.max(...vals, ...targets, 1) * 1.15;
@@ -62,10 +63,16 @@ export default function LineTrendChart({ title, data, valueKey, targetKey, color
     const isTotal = visibleData[m - 1]?.day === 'TOTAL';
 
     ctx.clearRect(0, 0, W, H);
+    ctx.font = '9px Inter, sans-serif';
+    ctx.fillStyle = muted;
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
     for (let i = 0; i < 4; i++) {
       const y = pad.t + iH * (i / 3);
       ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y);
       ctx.strokeStyle = 'rgba(150,150,170,.12)'; ctx.lineWidth = 1; ctx.stroke();
+      const tickVal = maxV * (1 - i / 3);
+      ctx.fillText(tickVal.toFixed(tickVal < 10 ? 1 : 0), pad.l - 6, y);
     }
 
     // divider before the TOTAL column
@@ -121,6 +128,7 @@ export default function LineTrendChart({ title, data, valueKey, targetKey, color
         <div><div className="card-title">{title}</div></div>
         {zoom < 1 && <button className="card-action" onClick={() => { setZoom(1); setPanStart(0); }}>Reset zoom</button>}
       </div>
+      <div className="axis-unit-label">Waktu (Jam)</div>
       <div className="trend-wrap" style={{ height: 130 }} ref={wrapRef}><canvas ref={canvasRef}></canvas><div className="trend-tooltip" ref={tipRef}></div></div>
       {visibleCount < n && (
         <input
@@ -129,6 +137,9 @@ export default function LineTrendChart({ title, data, valueKey, targetKey, color
           style={{ width: '100%', marginTop: 6 }}
         />
       )}
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 4, marginTop: 5, marginLeft: 30, fontSize: 9, color: 'var(--muted)', fontFamily: 'var(--mono)' }}>
+        {visibleData.map((d, i) => <span key={i} style={d.day === 'TOTAL' ? { fontWeight: 700, color: 'var(--accent2)' } : undefined}>{d.day}</span>)}
+      </div>
     </div>
   );
 }

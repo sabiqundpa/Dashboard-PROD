@@ -47,17 +47,24 @@ export default function DowntimeTrend({ days }) {
     const W = canvas.parentElement.offsetWidth || 360;
     canvas.width = W; canvas.height = 110;
     const ctx = canvas.getContext('2d');
-    const pad = { t: 8, b: 4, l: 4, r: 4 }, iW = W - pad.l - pad.r, iH = 110 - pad.t - pad.b;
+    const muted = getComputedStyle(document.documentElement).getPropertyValue('--muted').trim() || '#888';
+    const pad = { t: 8, b: 4, l: 30, r: 4 }, iW = W - pad.l - pad.r, iH = 110 - pad.t - pad.b;
     const vals = visible.map((d) => d.hrs), maxV = Math.max(...vals, 1);
     const m = visible.length;
     const slot = iW / m, barW = Math.max(2, slot * 0.55);
     const xOf = (i) => pad.l + i * slot + (slot - barW) / 2;
     const yOf = (v) => pad.t + (1 - v / maxV) * iH;
     ctx.clearRect(0, 0, W, 110);
+    ctx.font = '9px Inter, sans-serif';
+    ctx.fillStyle = muted;
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
     for (let i = 0; i < 4; i++) {
       const y = pad.t + iH * (i / 3);
       ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y);
       ctx.strokeStyle = 'rgba(255,255,255,.04)'; ctx.lineWidth = 1; ctx.stroke();
+      const tickVal = maxV * (1 - i / 3);
+      ctx.fillText(tickVal.toFixed(tickVal < 10 ? 1 : 0), pad.l - 6, y);
     }
     const g = ctx.createLinearGradient(0, pad.t, 0, 110);
     g.addColorStop(0, '#4488ff'); g.addColorStop(1, 'rgba(68,136,255,.35)');
@@ -94,6 +101,7 @@ export default function DowntimeTrend({ days }) {
         <div><div className="card-title">Downtime Trend</div></div>
         {zoom < 1 && <button className="card-action" onClick={() => { setZoom(1); setPanStart(0); }}>Reset zoom</button>}
       </div>
+      <div className="axis-unit-label">Waktu (Jam)</div>
       <div className="trend-wrap" ref={wrapRef}>
         <canvas ref={canvasRef}></canvas>
         <div className="trend-tooltip" ref={tipRef}></div>
@@ -105,7 +113,7 @@ export default function DowntimeTrend({ days }) {
           style={{ width: '100%', marginTop: 6 }}
         />
       )}
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 4, marginTop: 5, fontSize: 9, color: 'var(--muted)', fontFamily: 'var(--mono)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 4, marginTop: 5, marginLeft: 30, fontSize: 9, color: 'var(--muted)', fontFamily: 'var(--mono)' }}>
         {visible.map((d, i) => <span key={i}>{d.day}</span>)}
       </div>
     </div>

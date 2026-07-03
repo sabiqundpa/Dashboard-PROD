@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import Modal from '../Modal.jsx';
 import { useUI } from '../../UIContext.jsx';
 import { useApp } from '../../AppContext.jsx';
@@ -30,12 +30,46 @@ export default function AddBreakdownModal() {
   const [errC, setErrC] = useState('');
   const [busy, setBusy] = useState(false);
 
-  const validMachine = machines.some((m) => m.name === machine.trim());
+  // Auto-fill cluster & line from machine master data
+  const machineObj = machines.find((m) => m.name === machine.trim());
+  const validMachine = !!machineObj;
+  const autoCluster = machineObj?.cluster || '';
+  const autoLine = machineObj?.line || '';
+
+  // Refs for Enter-key sequential navigation
+  const dateRef     = useRef(null);
+  const timeRef     = useRef(null);
+  const machineRef  = useRef(null);
+  const causeRef    = useRef(null);
+  const picGhRef    = useRef(null);
+  const catRef      = useRef(null);
+  const sevRef      = useRef(null);
+  const submitRef   = useRef(null);
+
+  // Focus next field on Enter key
+  function onEnter(nextRef) {
+    return (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        nextRef.current?.focus();
+      }
+    };
+  }
+
+  function handleMachineChange(e) {
+    const val = e.target.value;
+    setMachine(val);
+    // Auto-advance to Problem Identifikasi if exact match selected
+    if (machines.some((m) => m.name === val.trim())) {
+      setErrM('');
+      setTimeout(() => causeRef.current?.focus(), 80);
+    }
+  }
 
   async function submit() {
     const m = machine.trim(), c = cause.trim();
-    setErrM(m ? (validMachine ? '' : 'Mesin tidak ditemukan') : 'Required');
-    setErrC(c ? '' : 'Required');
+    setErrM(m ? (validMachine ? '' : 'Mesin tidak ditemukan dalam master data') : 'Wajib diisi');
+    setErrC(c ? '' : 'Wajib diisi');
     if (!m || !validMachine || !c) return;
 
     setBusy(true);
@@ -57,48 +91,153 @@ export default function AddBreakdownModal() {
 
   return (
     <Modal title="Repair Machine Order" onClose={closeModal} fullscreen>
-      <div className="form-grid">
-        <div className="form-group">
-          <label className="form-label">Mesin *</label>
-          <input type="text" className={'form-input' + (machine && !validMachine ? ' error' : '')} list="bd-machine-list" placeholder="Ketik nama mesin…" autoComplete="off" value={machine} onChange={(e) => setMachine(e.target.value)} />
-          <datalist id="bd-machine-list">
-            {machines.map((m) => <option key={m.name} value={m.name}>{m.name}{m.cluster ? ` (${m.cluster})` : ''}</option>)}
-          </datalist>
-          <div className="form-error">{errM}</div>
-        </div>
+      <div className="rmo-form">
+
+        {/* ── Baris 1: Tanggal + Waktu ─────────────────── */}
         <div className="form-group">
           <label className="form-label">Tanggal *</label>
-          <input type="date" className="form-input" value={date} onChange={(e) => setDate(e.target.value)} />
+          <input
+            ref={dateRef}
+            type="date"
+            className="form-input"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            onKeyDown={onEnter(timeRef)}
+          />
         </div>
         <div className="form-group">
           <label className="form-label">Waktu Mulai</label>
-          <input type="time" className="form-input" value={start} onChange={(e) => setStart(e.target.value)} />
+          <input
+            ref={timeRef}
+            type="time"
+            className="form-input"
+            value={start}
+            onChange={(e) => setStart(e.target.value)}
+            onKeyDown={onEnter(machineRef)}
+          />
+        </div>
+
+        {/* ── Baris 2: Mesin (full width) ──────────────── */}
+        <div className="form-group rmo-full">
+          <label className="form-label">Mesin *</label>
+          <input
+            ref={machineRef}
+            type="text"
+            className={'form-input' + (machine && !validMachine ? ' error' : '')}
+            list="bd-machine-list"
+            placeholder="Ketik nama mesin…"
+            autoComplete="off"
+            value={machine}
+            onChange={handleMachineChange}
+            onKeyDown={onEnter(causeRef)}
+          />
+          <datalist id="bd-machine-list">
+            {machines.map((m) => (
+              <option key={m.name} value={m.name}>
+                {m.name}{m.cluster ? ` — ${m.cluster}` : ''}{m.line ? ` / Line ${m.line}` : ''}
+              </option>
+            ))}
+          </datalist>
+          <div className="form-error">{errM}</div>
+        </div>
+
+        {/* ── Baris 3: Cluster + Line (read-only auto-fill) */}
+        <div className="form-group">
+          <label className="form-label">
+            Cluster
+            <span style={{ fontSize: 10, fontWeight: 400, opacity: .55, marginLeft: 5, textTransform: 'none', letterSpacing: 0 }}>
+              — terisi otomatis
+            </span>
+          </label>
+          <input
+            type="text"
+            className="form-input auto-fill"
+            value={autoCluster}
+            readOnly
+            placeholder="Otomatis dari mesin"
+            tabIndex={-1}
+          />
+        </div>
+        <div className="form-group">
+          <label className="form-label">
+            Line
+            <span style={{ fontSize: 10, fontWeight: 400, opacity: .55, marginLeft: 5, textTransform: 'none', letterSpacing: 0 }}>
+              — terisi otomatis
+            </span>
+          </label>
+          <input
+            type="text"
+            className="form-input auto-fill"
+            value={autoLine}
+            readOnly
+            placeholder="Otomatis dari mesin"
+            tabIndex={-1}
+          />
+        </div>
+
+        {/* ── Baris 4: Problem Identifikasi (full width) ── */}
+        <div className="form-group rmo-full">
+          <label className="form-label">Problem Identifikasi *</label>
+          <input
+            ref={causeRef}
+            type="text"
+            className={'form-input' + (!cause.trim() && errC ? ' error' : '')}
+            placeholder="contoh. Spindle rusak"
+            value={cause}
+            onChange={(e) => setCause(e.target.value)}
+            onKeyDown={onEnter(picGhRef)}
+          />
+          <div className="form-error">{errC}</div>
+        </div>
+
+        {/* ── Baris 5: PIC GH + Jenis Problem ────────────── */}
+        <div className="form-group">
+          <label className="form-label">PIC GH</label>
+          <input
+            ref={picGhRef}
+            type="text"
+            className="form-input"
+            placeholder="Nama PIC GH"
+            value={picGh}
+            onChange={(e) => setPicGh(e.target.value)}
+            onKeyDown={onEnter(catRef)}
+          />
         </div>
         <div className="form-group">
           <label className="form-label">Jenis Problem</label>
-          <select className="form-input" value={category} onChange={(e) => setCategory(e.target.value)}>
+          <select
+            ref={catRef}
+            className="form-input"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            onKeyDown={onEnter(sevRef)}
+          >
             {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
           </select>
         </div>
+
+        {/* ── Baris 6: Level Bahaya ────────────────────── */}
         <div className="form-group">
           <label className="form-label">Level Bahaya</label>
-          <select className="form-input" value={severity} onChange={(e) => setSeverity(e.target.value)}>
+          <select
+            ref={sevRef}
+            className="form-input"
+            value={severity}
+            onChange={(e) => setSeverity(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submitRef.current?.click(); } }}
+          >
             {SEVERITIES.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
           </select>
         </div>
-        <div className="form-group full">
-          <label className="form-label">Problem Identifikasi *</label>
-          <input type="text" className={'form-input' + (!cause.trim() && errC ? ' error' : '')} placeholder="contoh. Spindle rusak" value={cause} onChange={(e) => setCause(e.target.value)} />
-          <div className="form-error">{errC}</div>
-        </div>
-        <div className="form-group">
-          <label className="form-label">PIC GH</label>
-          <input type="text" className="form-input" placeholder="Nama PIC GH" value={picGh} onChange={(e) => setPicGh(e.target.value)} />
-        </div>
+
       </div>
+
+      {/* ── Footer ─────────────────────────────────────── */}
       <div className="modal-footer">
         <button className="btn" onClick={closeModal}>Cancel</button>
-        <button className="btn primary" disabled={busy} onClick={submit}>{busy ? 'Saving…' : 'Simpan Work Order'}</button>
+        <button ref={submitRef} className="btn primary" disabled={busy} onClick={submit}>
+          {busy ? 'Menyimpan…' : 'Simpan Work Order'}
+        </button>
       </div>
     </Modal>
   );

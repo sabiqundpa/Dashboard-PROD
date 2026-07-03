@@ -259,9 +259,25 @@ textarea.form-input{resize:vertical;min-height:64px}
 .fullscreen-header{margin:0;padding:18px 28px;background:linear-gradient(135deg,var(--accent),var(--accent2));flex-shrink:0}
 .fullscreen-header .modal-title{color:#000;font-size:22px}
 .fullscreen-header .modal-close{color:#000;font-size:28px}
-.fullscreen-body{flex:1;overflow-y:auto;padding:28px;max-width:840px;width:100%;margin:0 auto}
-.fullscreen-body .form-grid{gap:16px}
-.fullscreen-body .modal-footer .btn{padding:14px;font-size:15px}
+.fullscreen-body{flex:1;overflow-y:auto;padding:32px 56px;max-width:1060px;width:100%;margin:0 auto;display:flex;flex-direction:column}
+.fullscreen-body .form-grid{gap:18px}
+.fullscreen-body .modal-footer{margin-top:28px;padding-top:20px;border-top:1px solid var(--border)}
+.fullscreen-body .modal-footer .btn{padding:15px;font-size:15px;border-radius:10px}
+
+/* ── RMO Form ────────────────────────────────────── */
+.rmo-form{display:grid;grid-template-columns:1fr 1fr;gap:20px 36px;align-items:start}
+.rmo-form .rmo-full{grid-column:1 / -1}
+.rmo-form .form-input{padding:14px 16px;font-size:15px;border-radius:9px}
+.rmo-form .form-label{font-size:12px;letter-spacing:.07em;margin-bottom:8px;display:block}
+.rmo-form .form-error{font-size:11px;margin-top:5px}
+.rmo-form select.form-input{padding-right:28px}
+.form-input.auto-fill{background:var(--s3);cursor:default}
+.form-input.auto-fill:not(:placeholder-shown){color:var(--text)}
+@media(max-width:767px){
+  .rmo-form{grid-template-columns:1fr}
+  .rmo-form .rmo-full{grid-column:1}
+  .fullscreen-body{padding:18px}
+}
 .drop-zone{border:2px dashed var(--border);border-radius:10px;padding:24px;text-align:center;cursor:pointer;transition:border-color .2s}
 .drop-zone:hover,.drop-zone.drag-over{border-color:var(--accent);background:rgba(240,165,0,.04)}
 .drop-zone p{color:var(--muted);font-size:13px;margin-top:8px}

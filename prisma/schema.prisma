@@ -17,24 +17,52 @@ model Admin {
 }
 
 model Machine {
-  id             Int         @id @default(autoincrement())
-  name           String      @unique @map("machine")           // Nama Mesin
-  assetNumber    String      @default("") @map("id_asset_machine") // Nomor Asset
-  type           String      @default("") @map("type_machine")  // Type mesin (Robot, CNC, Conveyor, dst)
-  brand          String      @default("") @map("brand_machine") // Merk / Merek
-  yearMachine    String?     @map("year_machine")               // Tahun mesin (diisi manual, format bebas misal "2020")
-  power          String      @default("") @map("power_machine") // Daya
-  cluster        String      @default("")
-  line           String      @default("")
-  shift          String      @default("")                        // Shift kerja
-  status         String      @default("idle")                   // running | down | idle | maintenance
-  performancePct Float       @default(95)
-  qualityPct     Float       @default(98)
-  plannedHours   Float       @default(16) @map("worktime_machine") // Jam Waktu Kerja (jam kerja harian)
-  createdAt      DateTime    @default(now())
+  id             Int            @id @default(autoincrement())
+  name           String         @unique @map("machine")            // Nama Mesin
+  assetNumber    String         @default("") @map("id_asset_machine") // Nomor Asset
+  type           String         @default("") @map("type_machine")   // Type mesin
+  brand          String         @default("") @map("brand_machine")  // Merk
+  yearMachine    String?        @map("year_machine")                // Tahun mesin
+  power          String         @default("") @map("power_machine")  // Daya
+  cluster        String         @default("")
+  line           String         @default("")
+  shift          String         @default("")                         // Shift kerja
+  plannedHours   Float          @default(16) @map("worktime_machine") // Jam Waktu Kerja harian
+  createdAt      DateTime       @default(now())
   breakdowns     Breakdown[]
+  machineStatus  MachineStatus?
+  analytics      Analytic[]
 
   @@map("Machine")
+}
+
+// Runtime status mesin — terpisah dari master data Machine
+// agar Machine tetap bersih sebagai data referensi statis.
+model MachineStatus {
+  id         Int      @id @default(autoincrement())
+  machineId  Int      @unique
+  machine    Machine  @relation(fields: [machineId], references: [id], onDelete: Cascade)
+  status     String   @default("idle") // running | down | idle | maintenance
+  updatedAt  DateTime @updatedAt
+}
+
+// Hasil kalkulasi analitik per mesin per periode.
+// Diisi otomatis via endpoint POST /api/analytics/compute.
+model Analytic {
+  id              Int      @id @default(autoincrement())
+  machineId       Int
+  machine         Machine  @relation(fields: [machineId], references: [id], onDelete: Cascade)
+  periodStart     DateTime
+  periodEnd       DateTime
+  periodType      String   // 'daily' | 'weekly' | 'monthly' | 'custom'
+  availability    Float    // % (0-100)
+  mtbf            Float    // jam (Mean Time Between Failure)
+  mttr            Float    // jam (Mean Time To Repair)
+  totalDowntime   Float    // total jam downtime dalam periode
+  totalBreakdowns Int      // jumlah breakdown dalam periode
+  plannedHours    Float    // jam kerja yang direncanakan dalam periode
+  notes           String?  // catatan tambahan, untuk kebutuhan analisis di masa depan
+  calculatedAt    DateTime @default(now())
 }
 
 model Breakdown {

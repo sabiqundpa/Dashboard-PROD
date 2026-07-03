@@ -16,6 +16,7 @@ const NAV_ITEMS = [
   { page: 'machines', label: 'Mesin' },
   { page: 'maintenance', label: 'Breakdown' },
   { page: 'reports', label: 'Laporan' },
+  { page: 'analytics', label: 'Analitik' },
 ];
 
 export default function Topbar() {

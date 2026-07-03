@@ -61,6 +61,7 @@ router.get('/machines', async (req, res, next) => {
     const machines = await prisma.machine.findMany({
       orderBy: { name: 'asc' },
       include: {
+        machineStatus: true,
         breakdowns: {
           where: { date: { gte: start, lte: end } },
           orderBy: { date: 'desc' },
@@ -86,7 +87,7 @@ router.get('/machines', async (req, res, next) => {
         cluster: m.cluster,
         line: m.line,
         shift: m.shift,
-        status: m.status,
+        status: m.machineStatus?.status ?? 'idle',
         plannedHours: m.plannedHours,
         availability,
         breakdowns: m.breakdowns.length,
@@ -122,14 +123,10 @@ router.get('/kpi', async (req, res, next) => {
       ? Math.max(0, Math.min(100, ((plannedHrsTotal - downtimeHrs) / plannedHrsTotal) * 100))
       : 0;
 
-    const performance = machines.length
-      ? machines.reduce((s, m) => s + m.performancePct, 0) / machines.length
-      : 0;
-
-    const quality = machines.length
-      ? machines.reduce((s, m) => s + m.qualityPct, 0) / machines.length
-      : 0;
-
+    // performancePct/qualityPct removed from Machine (were always constant
+    // defaults 95/98); OEE still computed but using those fixed values.
+    const performance = 95;
+    const quality = 98;
     const oee = (availability * performance * quality) / 10000;
 
     const breakdownCount = breakdowns.length;
@@ -516,8 +513,12 @@ router.post('/breakdown', async (req, res, next) => {
     });
 
     // A new work order means the machine just went down -- reflect that
-    // immediately instead of leaving the previous status (e.g. "running").
-    await prisma.machine.update({ where: { id: machine.id }, data: { status: 'down' } });
+    // immediately in MachineStatus (status is now separate from master data).
+    await prisma.machineStatus.upsert({
+      where: { machineId: machine.id },
+      update: { status: 'down' },
+      create: { machineId: machine.id, status: 'down' },
+    });
 
     res.status(201).json(breakdown);
   } catch (err) { next(err); }
@@ -604,12 +605,14 @@ router.post('/machines-status', async (req, res, next) => {
     const existing = await prisma.machine.findUnique({ where: { name: machineName } });
     if (!existing) return res.status(404).json({ error: `Machine "${machineName}" not found` });
 
-    const machine = await prisma.machine.update({
-      where: { name: machineName },
-      data: { status },
+    // Upsert ke MachineStatus — satu baris per mesin
+    const ms = await prisma.machineStatus.upsert({
+      where: { machineId: existing.id },
+      update: { status },
+      create: { machineId: existing.id, status },
     });
 
-    res.json(machine);
+    res.json({ ...existing, status: ms.status });
   } catch (err) { next(err); }
 });
 
@@ -694,7 +697,7 @@ router.get('/export-work-orders', async (req, res, next) => {
 router.get('/export-machines', async (req, res, next) => {
   try {
     const machines = await prisma.machine.findMany({
-      include: { breakdowns: { orderBy: { date: 'desc' } } },
+      include: { machineStatus: true, breakdowns: { orderBy: { date: 'desc' } } },
       orderBy: { name: 'asc' },
     });
 
@@ -707,7 +710,7 @@ router.get('/export-machines', async (req, res, next) => {
 
     const rows = [];
     for (const m of machines) {
-      const base = [m.name, m.assetNumber, m.type, m.brand, m.yearMachine ?? '', m.power, m.cluster, m.line, m.shift, m.plannedHours, m.status];
+      const base = [m.name, m.assetNumber, m.type, m.brand, m.yearMachine ?? '', m.power, m.cluster, m.line, m.shift, m.plannedHours, m.machineStatus?.status ?? 'idle'];
       if (!m.breakdowns.length) {
         rows.push([...base, '', '', '', '', '', '', '', '', '', '', '']);
         continue;
@@ -837,6 +840,104 @@ router.post('/import-machines', upload.single('file'), async (req, res, next) =>
     }
 
     res.json({ imported, skipped, total: rows.length });
+  } catch (err) { next(err); }
+});
+
+// ── POST /api/analytics-compute ────────────────────────
+// Hitung dan simpan Availability, MTBF, MTTR ke tabel Analytic
+// dari data Breakdown yang sudah ada untuk periode tertentu.
+// Body: { period: 'monthly'|'weekly'|'daily', date: 'YYYY-MM-DD', machineId?: number }
+// Jika machineId tidak diberikan, hitung untuk SEMUA mesin.
+router.post('/analytics-compute', async (req, res, next) => {
+  try {
+    const { period = 'monthly', date, machineId } = req.body;
+    const { start, end } = getPeriodRange(period, date);
+
+    const whereClause = machineId ? { id: Number(machineId) } : {};
+    const machines = await prisma.machine.findMany({
+      where: whereClause,
+      include: {
+        breakdowns: {
+          where: { date: { gte: start, lte: end } },
+        },
+      },
+    });
+
+    const results = [];
+    for (const m of machines) {
+      const bds = m.breakdowns;
+      const totalBreakdowns = bds.length;
+      const totalDowntime = bds.reduce((s, b) => s + b.durationHrs, 0);
+      const days = Math.max(1, (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+      const plannedHours = m.plannedHours * days;
+      const uptime = Math.max(0, plannedHours - totalDowntime);
+      const availability = plannedHours > 0
+        ? Math.max(0, Math.min(100, (uptime / plannedHours) * 100))
+        : 0;
+      const mtbf = totalBreakdowns > 0 ? uptime / totalBreakdowns : uptime;
+      const mttr = totalBreakdowns > 0 ? totalDowntime / totalBreakdowns : 0;
+
+      // Upsert: jika sudah ada record untuk mesin+periode ini, ganti nilainya
+      const analytic = await prisma.analytic.create({
+        data: {
+          machineId: m.id,
+          periodStart: start,
+          periodEnd: end,
+          periodType: period,
+          availability: Number(availability.toFixed(2)),
+          mtbf: Number(mtbf.toFixed(2)),
+          mttr: Number(mttr.toFixed(2)),
+          totalDowntime: Number(totalDowntime.toFixed(2)),
+          totalBreakdowns,
+          plannedHours: Number(plannedHours.toFixed(2)),
+        },
+      });
+      results.push({ machine: m.name, ...analytic });
+    }
+
+    res.json({ computed: results.length, period, start, end, results });
+  } catch (err) { next(err); }
+});
+
+// ── GET /api/analytics ──────────────────────────────────
+// Ambil hasil analitik yang sudah disimpan.
+// Query params: machineId (opsional), limit (default 100), offset (default 0)
+router.get('/analytics', async (req, res, next) => {
+  try {
+    const { machineId, limit = 100, offset = 0 } = req.query;
+    const where = machineId ? { machineId: Number(machineId) } : {};
+
+    const [records, total] = await Promise.all([
+      prisma.analytic.findMany({
+        where,
+        include: { machine: { select: { name: true, cluster: true, line: true } } },
+        orderBy: [{ machineId: 'asc' }, { periodStart: 'desc' }],
+        take: Number(limit),
+        skip: Number(offset),
+      }),
+      prisma.analytic.count({ where }),
+    ]);
+
+    res.json({
+      total,
+      records: records.map((r) => ({
+        id: r.id,
+        machine: r.machine.name,
+        cluster: r.machine.cluster,
+        line: r.machine.line,
+        periodStart: r.periodStart.toISOString().slice(0, 10),
+        periodEnd: r.periodEnd.toISOString().slice(0, 10),
+        periodType: r.periodType,
+        availability: r.availability,
+        mtbf: r.mtbf,
+        mttr: r.mttr,
+        totalDowntime: r.totalDowntime,
+        totalBreakdowns: r.totalBreakdowns,
+        plannedHours: r.plannedHours,
+        notes: r.notes,
+        calculatedAt: r.calculatedAt.toISOString().slice(0, 16).replace('T', ' '),
+      })),
+    });
   } catch (err) { next(err); }
 });
 

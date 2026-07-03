@@ -9,6 +9,7 @@ import Dashboard from './pages/Dashboard.jsx';
 import Machines from './pages/Machines.jsx';
 import Maintenance from './pages/Maintenance.jsx';
 import Reports from './pages/Reports.jsx';
+import Analytics from './pages/Analytics.jsx';
 import Topbar from './components/Topbar.jsx';
 import MobileDrawer from './components/MobileDrawer.jsx';
 import BottomNav from './components/BottomNav.jsx';
@@ -17,7 +18,7 @@ import TodoPanel from './components/TodoPanel.jsx';
 import DetailPanel from './components/DetailPanel.jsx';
 import ModalRoot from './components/ModalRoot.jsx';
 
-const PAGES = { dashboard: Dashboard, machines: Machines, maintenance: Maintenance, reports: Reports };
+const PAGES = { dashboard: Dashboard, machines: Machines, maintenance: Maintenance, reports: Reports, analytics: Analytics };
 
 function Shell() {
   const { page, closeModal, setNotifOpen, closeDetail } = useUI();

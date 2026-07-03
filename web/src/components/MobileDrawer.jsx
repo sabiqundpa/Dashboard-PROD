@@ -1,4 +1,4 @@
-import { TrendingUp, FolderUp, Download, FileText, Factory, X } from 'lucide-react';
+import { TrendingUp, BarChart3, FolderUp, Download, FileText, Factory, X } from 'lucide-react';
 import { useUI } from '../UIContext.jsx';
 import { useToast } from '../ToastContext.jsx';
 import { useAuth } from '../AuthContext.jsx';
@@ -37,6 +37,7 @@ export default function MobileDrawer() {
         </div>
         <div className="sb-section">Gambaran Umum</div>
         <div className="sb-item" onClick={() => go('reports')}><span className="sb-icon"><TrendingUp size={16} /></span>Laporan</div>
+        <div className="sb-item" onClick={() => go('analytics')}><span className="sb-icon"><BarChart3 size={16} /></span>Analitik</div>
         <div className="sb-section">Data</div>
         <div className="sb-item" onClick={() => open('import')}><span className="sb-icon"><FolderUp size={16} /></span>Import CSV</div>
         <div className="sb-item" onClick={doExport}><span className="sb-icon"><Download size={16} /></span>Export Mesin (CSV)</div>

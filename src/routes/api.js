@@ -534,7 +534,7 @@ router.post('/breakdown', async (req, res, next) => {
 router.post('/breakdown-close', async (req, res, next) => {
   try {
     const id = Number(req.body.id);
-    const { end_date, end_time, resolution, action, pic_mtn } = req.body;
+    const { end_date, end_time, resolution, action, pic_mtn, failure_category, severity } = req.body;
 
     const existing = await prisma.breakdown.findUnique({ where: { id } });
     if (!existing) return res.status(404).json({ error: `Work order #${id} not found` });
@@ -543,6 +543,7 @@ router.post('/breakdown-close', async (req, res, next) => {
     const endDate = end_date ? new Date(end_date) : new Date();
     const durationHrs = computeDurationBetween(existing.date, existing.startTime, endDate, endTime);
 
+    const allowedSeverity = ['critical', 'warning', 'info'];
     const breakdown = await prisma.breakdown.update({
       where: { id },
       data: {
@@ -553,6 +554,8 @@ router.post('/breakdown-close', async (req, res, next) => {
         resolution: resolution || null,
         action: action || null,
         picMtn: pic_mtn || null,
+        category: failure_category || existing.category,
+        severity: allowedSeverity.includes(severity) ? severity : existing.severity,
       },
     });
 

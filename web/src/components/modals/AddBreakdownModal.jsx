@@ -6,11 +6,10 @@ import { useToast } from '../../ToastContext.jsx';
 import { useAuth } from '../../AuthContext.jsx';
 import { apiSend } from '../../api.js';
 
-const CATEGORIES = ['Mechanical', 'Electrical', 'Hydraulic', 'Operator', 'Preventive'];
 const SEVERITIES = [
-  { key: 'critical', label: 'Kritis', notifColor: 'red' },
-  { key: 'warning', label: 'Waspada', notifColor: 'yellow' },
-  { key: 'info', label: 'Info', notifColor: 'blue' },
+  { key: 'critical', notifColor: 'red' },
+  { key: 'warning', notifColor: 'yellow' },
+  { key: 'info', notifColor: 'blue' },
 ];
 
 export default function AddBreakdownModal() {
@@ -22,8 +21,6 @@ export default function AddBreakdownModal() {
   const [machine, setMachine] = useState('');
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [start, setStart] = useState('');
-  const [category, setCategory] = useState('Mechanical');
-  const [severity, setSeverity] = useState('warning');
   const [cause, setCause] = useState('');
   const [picGh, setPicGh] = useState('');
   const [errM, setErrM] = useState('');
@@ -42,8 +39,6 @@ export default function AddBreakdownModal() {
   const machineRef  = useRef(null);
   const causeRef    = useRef(null);
   const picGhRef    = useRef(null);
-  const catRef      = useRef(null);
-  const sevRef      = useRef(null);
   const submitRef   = useRef(null);
 
   // Focus next field on Enter key
@@ -74,11 +69,12 @@ export default function AddBreakdownModal() {
 
     setBusy(true);
     try {
+      // category & severity are filled by MTN staff when closing the WO
       await apiSend('/breakdown', 'POST', {
         machine_code: m, breakdown_date: date, start_time: start,
-        failure_cause: c, failure_category: category, pic_gh: picGh, severity,
+        failure_cause: c, failure_category: 'Mechanical', pic_gh: picGh, severity: 'warning',
       }, logout);
-      const notifColor = SEVERITIES.find((s) => s.key === severity)?.notifColor || 'yellow';
+      const notifColor = 'yellow';
       addNotif(`${m}: ${c}`, notifColor);
       showToast(`Logged: ${m} — ${c}`, 'green');
       closeModal();
@@ -190,7 +186,7 @@ export default function AddBreakdownModal() {
           <div className="form-error">{errC}</div>
         </div>
 
-        {/* ── Baris 5: PIC GH + Jenis Problem ────────────── */}
+        {/* ── Baris 5: PIC GH ─────────────────────────── */}
         <div className="form-group">
           <label className="form-label">PIC GH</label>
           <input
@@ -200,34 +196,8 @@ export default function AddBreakdownModal() {
             placeholder="Nama PIC GH"
             value={picGh}
             onChange={(e) => setPicGh(e.target.value)}
-            onKeyDown={onEnter(catRef)}
-          />
-        </div>
-        <div className="form-group">
-          <label className="form-label">Jenis Problem</label>
-          <select
-            ref={catRef}
-            className="form-input"
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            onKeyDown={onEnter(sevRef)}
-          >
-            {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
-          </select>
-        </div>
-
-        {/* ── Baris 6: Level Bahaya ────────────────────── */}
-        <div className="form-group">
-          <label className="form-label">Level Bahaya</label>
-          <select
-            ref={sevRef}
-            className="form-input"
-            value={severity}
-            onChange={(e) => setSeverity(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submitRef.current?.click(); } }}
-          >
-            {SEVERITIES.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
-          </select>
+          />
         </div>
 
       </div>

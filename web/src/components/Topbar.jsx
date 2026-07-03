@@ -82,17 +82,28 @@ export default function Topbar() {
   const [avatarOpen, setAvatarOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const avatarRef = useRef(null);
+  // Track whether the exit was triggered by the button (true) or Esc (false).
+  // Browser Fullscreen API cannot be told to ignore Esc — instead we detect
+  // an unintended exit and immediately re-enter fullscreen.
+  const intentionalExitRef = useRef(false);
 
   function toggleFullscreen() {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch(() => {});
     } else {
+      intentionalExitRef.current = true;
       document.exitFullscreen().catch(() => {});
     }
   }
 
   useEffect(() => {
     function onFsChange() {
+      if (!document.fullscreenElement && !intentionalExitRef.current) {
+        // Esc was pressed — re-enter fullscreen to lock it to button-only exit
+        document.documentElement.requestFullscreen().catch(() => {});
+        return;
+      }
+      intentionalExitRef.current = false;
       setIsFullscreen(!!document.fullscreenElement);
     }
     document.addEventListener('fullscreenchange', onFsChange);

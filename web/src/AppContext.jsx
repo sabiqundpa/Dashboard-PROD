@@ -12,7 +12,7 @@ function todayStr() {
 
 export function AppProvider({ children }) {
   const { logout } = useAuth();
-  const [period, setPeriod] = useState('week');
+  const [period, setPeriod] = useState('month');
   const [refDate, setRefDate] = useState(todayStr());
   const [selectedMachine, setSelectedMachine] = useState('');
   const [kpi, setKpi] = useState(EMPTY_KPI);

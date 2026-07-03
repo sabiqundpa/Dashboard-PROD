@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { RefreshCw, Search } from 'lucide-react';
+import { useEffect, useMemo } from 'react';
+import { Search, AlertCircle, CheckCircle2, CalendarCheck, RefreshCw } from 'lucide-react';
 import { useApp } from '../AppContext.jsx';
 import { useUI } from '../UIContext.jsx';
 import KpiRow from '../components/KpiRow.jsx';
@@ -10,6 +10,75 @@ import MachineTable from '../components/MachineTable.jsx';
 import Timeline from '../components/Timeline.jsx';
 import ParetoList from '../components/ParetoList.jsx';
 import DonutChart from '../components/DonutChart.jsx';
+import { useState } from 'react';
+
+const PERIODS = [
+  { key: 'today', label: 'Harian' },
+  { key: 'week', label: 'Mingguan' },
+  { key: 'month', label: 'Bulanan' },
+];
+
+function BreakdownSidebarCard({ items, onMore }) {
+  const { openModal } = useUI();
+  const recent = (items || []).slice(0, 4);
+
+  return (
+    <div className="card">
+      <div className="card-header">
+        <div><div className="card-title">Breakdown Terbaru</div></div>
+        <button className="card-action" onClick={onMore}>Semua ›</button>
+      </div>
+
+      {!recent.length ? (
+        <div style={{ color: 'var(--muted)', fontSize: 12, padding: '8px 0' }}>Tidak ada kasus</div>
+      ) : recent.map((b) => {
+        const isPM = b.category === 'Preventive';
+        const isOpen = b.status === 'open';
+        const statusLabel = isPM ? 'PM' : isOpen ? 'Proses' : 'Selesai';
+        const statusClass = isPM ? 'pm' : isOpen ? 'proses' : 'selesai';
+        const iconColor = isPM ? 'var(--purple)' : isOpen ? 'var(--red)' : 'var(--green)';
+        const iconBg = isPM ? 'rgba(168,85,247,.12)' : isOpen ? 'rgba(255,68,85,.12)' : 'rgba(0,208,132,.12)';
+        const IconComp = isPM ? CalendarCheck : isOpen ? AlertCircle : CheckCircle2;
+
+        return (
+          <div key={b.id} className="bd-item">
+            <div className="bd-icon" style={{ background: iconBg }}>
+              <IconComp size={15} style={{ color: iconColor }} />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 4, marginBottom: 3 }}>
+                <div style={{ fontWeight: 600, fontSize: 11.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                  {b.machine} — {b.cause}
+                </div>
+                <div style={{ fontSize: 9.5, color: 'var(--muted)', whiteSpace: 'nowrap', fontFamily: 'var(--mono)', flexShrink: 0 }}>
+                  {b.date}
+                </div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 4 }}>
+                <div style={{ fontSize: 10.5, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {b.pic_gh ? `PIC: ${b.pic_gh}` : ''}
+                  {b.duration ? ` · ${b.duration}` : ''}
+                </div>
+                <span className={`bd-badge ${statusClass}`}>{statusLabel}</span>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+
+      <button
+        onClick={onMore}
+        style={{
+          width: '100%', textAlign: 'center', padding: '8px 0 2px',
+          fontSize: 12, color: 'var(--accent)', background: 'none',
+          border: 'none', cursor: 'pointer', marginTop: 4,
+        }}
+      >
+        Lihat semua riwayat →
+      </button>
+    </div>
+  );
+}
 
 export default function Dashboard() {
   const {
@@ -36,50 +105,99 @@ export default function Dashboard() {
 
   return (
     <div className="page-view active">
+
+      {/* ── Page header ────────────────────────────────── */}
       <div className="page-header">
         <div>
           <div className="page-title">Monitoring</div>
-          <div className="page-sub">Real-time performance · {lastUpdate}</div>
+          <div className="page-sub">Performa real-time · {lastUpdate}</div>
         </div>
         <div className="header-actions">
-          <select className="btn" style={{ padding: '7px 10px' }} value={period} onChange={(e) => setPeriod(e.target.value)}>
-            <option value="today">Harian</option>
-            <option value="week">Mingguan</option>
-            <option value="month">Bulanan</option>
-          </select>
-          <input type="date" className="btn" style={{ padding: '7px 10px' }} min="2026-01-01" value={refDate} onChange={(e) => setRefDate(e.target.value)} title="Pilih tanggal acuan" />
-          <button className="btn-icon" title="Refresh" onClick={() => loadAll()}><RefreshCw size={14} /></button>
+          {/* Period tabs */}
+          <div className="period-tabs">
+            {PERIODS.map((p) => (
+              <button
+                key={p.key}
+                className={`period-tab${period === p.key ? ' active' : ''}`}
+                onClick={() => setPeriod(p.key)}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Date picker */}
+          <input
+            type="date"
+            className="btn"
+            style={{ padding: '6px 10px', minWidth: 130 }}
+            min="2026-01-01"
+            value={refDate}
+            onChange={(e) => setRefDate(e.target.value)}
+            title="Pilih tanggal acuan"
+          />
+
+          {/* Refresh */}
+          <button className="btn-icon" title="Refresh data" onClick={() => loadAll()}>
+            <RefreshCw size={14} />
+          </button>
+
+          {/* RMO */}
           <button className="btn primary" onClick={() => openModal('addBreakdown')}>+ RMO</button>
         </div>
       </div>
 
+      {/* ── Filters & Search ───────────────────────────── */}
       <div className="header-actions" style={{ flexWrap: 'wrap' }}>
-        <select className="btn" style={{ padding: '7px 10px' }} value={selectedMachine} onChange={(e) => setSelectedMachine(e.target.value)} title="Filter dashboard per mesin">
+        <select
+          className="btn"
+          style={{ padding: '7px 10px' }}
+          value={selectedMachine}
+          onChange={(e) => setSelectedMachine(e.target.value)}
+          title="Filter per mesin"
+        >
           <option value="">Semua Mesin</option>
           {machines.map((m) => <option key={m.name} value={m.name}>{m.name}</option>)}
         </select>
         <div className="search-wrap" style={{ flex: 1, minWidth: 200 }}>
           <span className="search-icon"><Search size={14} /></span>
-          <input className="search-input" placeholder="Cari mesin, problem, PIC, penyebab…" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <input
+            className="search-input"
+            placeholder="Cari mesin, problem, PIC, penyebab…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
       </div>
 
-      <KpiRow kpi={kpi} />
+      {/* ── Main grid: content + sidebar ──────────────── */}
+      <div className="dash-grid">
 
-      <div className="row2">
-        <AvailabilityCard kpi={kpi} />
-        <DowntimeTrend days={downtime} />
+        {/* Left: main charts */}
+        <div className="dash-main">
+          <KpiRow kpi={kpi} />
+          <DowntimeTrend days={downtime} year={year} />
+          <div className="row2-equal">
+            <MtbfMttrChart data={mtbfMttrTrend} lineLabel={selectedMachineObj?.line} year={year} />
+          </div>
+        </div>
+
+        {/* Right: sidebar */}
+        <div className="dash-sidebar">
+          <AvailabilityCard kpi={kpi} />
+          <BreakdownSidebarCard items={filteredBreakdowns} onMore={() => navigate('maintenance')} />
+        </div>
       </div>
 
-      <div className="row2-equal">
-        <MtbfMttrChart data={mtbfMttrTrend} lineLabel={selectedMachineObj?.line} year={year} />
-      </div>
-
+      {/* ── Full-width bottom section ──────────────────── */}
       <MachineTable machines={machines} limit={5} search={search} onSearchChange={setSearch} />
 
       <div className="row4">
         <div className="card">
-          <div className="card-header"><div><div className="card-title">Breakdown Terbaru</div></div><button className="card-action" onClick={() => navigate('maintenance')}>All ›</button></div>
+          <div className="card-header">
+            <div><div className="card-title">Log Breakdown Terbaru</div></div>
+            <button className="card-action" onClick={() => navigate('maintenance')}>All ›</button>
+          </div>
           <Timeline items={filteredBreakdowns} limit={5} />
         </div>
         <div className="card">

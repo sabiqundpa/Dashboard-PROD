@@ -482,3 +482,50 @@ textarea.form-input{resize:vertical;min-height:64px}
 .input-icon-wrap{position:relative}
 .input-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
 .form-input.has-icon{padding-left:34px}
+
+/* ═══════════════════════════════════════
+   DASHBOARD GRID LAYOUT
+═══════════════════════════════════════ */
+.dash-grid{display:grid;grid-template-columns:1fr 276px;gap:14px;align-items:start}
+.dash-main{display:flex;flex-direction:column;gap:14px}
+.dash-sidebar{display:flex;flex-direction:column;gap:12px}
+@media(max-width:1100px){.dash-grid{grid-template-columns:1fr}}
+@media(max-width:767px){.dash-sidebar{flex-direction:column}}
+
+/* ═══════════════════════════════════════
+   PERIOD TABS
+═══════════════════════════════════════ */
+.period-tabs{display:flex;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:3px;gap:2px;flex-shrink:0}
+.period-tab{padding:5px 14px;font-size:12px;font-weight:500;border:none;border-radius:6px;cursor:pointer;color:var(--muted);background:transparent;font-family:var(--font);transition:all .15s;white-space:nowrap;user-select:none;touch-action:manipulation}
+.period-tab.active{background:var(--accent);color:#000;font-weight:600}
+.period-tab:hover:not(.active){color:var(--text)}
+
+/* ═══════════════════════════════════════
+   KPI CARD ICON CIRCLE
+═══════════════════════════════════════ */
+.kpi-icon-bg{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;flex-shrink:0}
+
+/* ═══════════════════════════════════════
+   BREAKDOWN SIDEBAR ITEMS
+═══════════════════════════════════════ */
+.bd-item{display:flex;gap:10px;padding:11px 0;border-bottom:1px solid var(--border)}
+.bd-item:last-child{border-bottom:none}
+.bd-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.bd-badge{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:600;white-space:nowrap}
+.bd-badge.proses{background:rgba(240,165,0,.14);color:var(--accent)}
+.bd-badge.pm{background:rgba(168,85,247,.14);color:var(--purple)}
+.bd-badge.selesai{background:rgba(0,208,132,.14);color:var(--green)}
+
+/* ═══════════════════════════════════════
+   CHART LEGEND ROW
+═══════════════════════════════════════ */
+.chart-legend{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)}
+.legend-swatch{width:8px;height:8px;border-radius:50%;flex-shrink:0;display:inline-block}
+.legend-dash{width:16px;height:2px;border-radius:1px;flex-shrink:0;display:inline-block}
+
+/* ═══════════════════════════════════════
+   CHART EXPAND BUTTON
+═══════════════════════════════════════ */
+.chart-expand{background:none;border:1px solid var(--border);color:var(--muted);cursor:pointer;padding:3px 6px;border-radius:5px;display:inline-flex;align-items:center;transition:all .15s}
+.chart-expand:hover{color:var(--text);border-color:var(--dim)}

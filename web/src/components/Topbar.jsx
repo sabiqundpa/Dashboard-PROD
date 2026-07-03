@@ -50,7 +50,7 @@ export default function Topbar() {
     <header className="topbar">
       <button className="hamburger" onClick={toggleDrawer} aria-label="Menu"><Menu size={20} /></button>
       <div className="brand-nav">
-        <div className="logo" onClick={() => navigate('dashboard')}>Maintenance<span> Dashboard</span></div>
+        <div className="logo" onClick={() => navigate('dashboard')}>Maintenance<span> - DPA</span></div>
         <nav className="nav-links">
           {NAV_ITEMS.map((n) => (
             <span key={n.page} className={'nav-item' + (page === n.page ? ' active' : '')} onClick={() => navigate(n.page)}>{n.label}</span>

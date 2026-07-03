@@ -594,3 +594,10 @@ textarea.form-input{resize:vertical;min-height:64px}
 ═══════════════════════════════════════ */
 .chart-expand{background:none;border:1px solid var(--border);color:var(--muted);cursor:pointer;padding:3px 6px;border-radius:5px;display:inline-flex;align-items:center;transition:all .15s}
 .chart-expand:hover{color:var(--text);border-color:var(--dim)}
+/* Chart fullscreen expand overlay + modal */
+.chart-expand-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:790;cursor:pointer}
+.chart-expand-modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:800;width:min(92vw,1100px);max-height:88vh;overflow-y:auto;border-radius:var(--r);padding:20px 24px}
+.chart-expand-close{position:absolute;top:14px;right:14px;background:var(--s3);border:1px solid var(--border);border-radius:6px;color:var(--muted);cursor:pointer;padding:4px 7px;display:inline-flex;align-items:center;transition:color .12s,background .12s}
+.chart-expand-close:hover{color:var(--text);background:var(--s2)}
+/* Fix InfoTip z-index: hovered KPI card rises above siblings */
+.kpi-card:hover{z-index:10}

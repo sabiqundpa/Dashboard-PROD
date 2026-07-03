@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Maximize2 } from 'lucide-react';
+import { Maximize2, Minimize2, X } from 'lucide-react';
 
 const MIN_VISIBLE = 3;
 
@@ -11,17 +11,16 @@ function calcMovingAvg(arr, window = 3) {
   });
 }
 
-export default function LineTrendChart({
-  title, data, valueKey, targetKey, color, unit,
-  showMovingAvg = false, movingAvgColor = '#f0a500',
-  overTargetColor = null,
-  legendItems = null,
+function ChartCanvas({
+  data, valueKey, targetKey, color, unit,
+  showMovingAvg, movingAvgColor, overTargetColor, expanded,
 }) {
   const canvasRef = useRef(null);
-  const tipRef = useRef(null);
-  const wrapRef = useRef(null);
-  const [zoom, setZoom] = useState(1);
+  const tipRef    = useRef(null);
+  const wrapRef   = useRef(null);
+  const [zoom, setZoom]       = useState(1);
   const [panStart, setPanStart] = useState(0);
+  const [tick, setTick]       = useState(0);
 
   const hasTotal = data?.[data.length - 1]?.day === 'TOTAL';
   const mainData = hasTotal ? data.slice(0, -1) : (data || []);
@@ -53,7 +52,7 @@ export default function LineTrendChart({
     if (!visibleData?.length || !canvasRef.current) return;
     const canvas = canvasRef.current;
     const W = canvas.parentElement.offsetWidth || 360;
-    const H = 130;
+    const H = expanded ? Math.round(window.innerHeight * 0.4) : 130;
     canvas.width = W; canvas.height = H;
     const ctx = canvas.getContext('2d');
 
@@ -75,7 +74,6 @@ export default function LineTrendChart({
 
     ctx.clearRect(0, 0, W, H);
 
-    // Grid + Y ticks
     ctx.font = '9px Inter, sans-serif';
     ctx.fillStyle = muted;
     ctx.textAlign = 'right';
@@ -90,7 +88,6 @@ export default function LineTrendChart({
       ctx.fillText(tickVal.toFixed(tickVal < 10 ? 1 : 0), pad.l - 6, y);
     }
 
-    // TOTAL column divider
     if (isTotal && m > 1) {
       const dx = pad.l + (m - 1) * slot;
       ctx.beginPath(); ctx.moveTo(dx, pad.t); ctx.lineTo(dx, pad.t + iH);
@@ -99,23 +96,15 @@ export default function LineTrendChart({
       ctx.setLineDash([]);
     }
 
-    // Draw bars
     vals.forEach((v, i) => {
       const x = barX(i);
       const y = yOf(v);
       const h = (pad.t + iH) - y;
       const r = Math.min(4, barW / 2);
-
-      // Determine bar color (over-target = red, total = full opacity, else normal)
       let barColor = color;
-      if (overTargetColor && targetKey && v > targets[i] && targets[i] > 0) {
-        barColor = overTargetColor;
-      } else if (isTotal && i === m - 1) {
-        barColor = color;
-      } else {
-        barColor = color + 'cc';
-      }
-
+      if (overTargetColor && targetKey && v > targets[i] && targets[i] > 0) barColor = overTargetColor;
+      else if (isTotal && i === m - 1) barColor = color;
+      else barColor = color + 'cc';
       ctx.fillStyle = barColor;
       if (h > 0) {
         ctx.beginPath();
@@ -129,7 +118,6 @@ export default function LineTrendChart({
       }
     });
 
-    // Target line (dashed gray)
     if (targetKey && targets.some((t) => t > 0)) {
       ctx.beginPath();
       ctx.lineWidth = 1.5;
@@ -144,7 +132,6 @@ export default function LineTrendChart({
       ctx.setLineDash([]);
     }
 
-    // Moving average line (orange)
     if (showMovingAvg && vals.length >= 2) {
       const mavg = calcMovingAvg(vals.map((v) => (typeof v === 'number' ? v : 0)));
       ctx.beginPath();
@@ -157,7 +144,6 @@ export default function LineTrendChart({
         else ctx.lineTo(xOf(i), yOf(v));
       });
       ctx.stroke();
-      // dots on moving avg line
       mavg.forEach((v, i) => {
         ctx.beginPath();
         ctx.arc(xOf(i), yOf(v), 2.5, 0, Math.PI * 2);
@@ -166,7 +152,6 @@ export default function LineTrendChart({
       });
     }
 
-    // Tooltip
     const tip = tipRef.current;
     const showTip = (clientX, rect) => {
       const mx = (clientX - rect.left) * (W / rect.width);
@@ -186,54 +171,21 @@ export default function LineTrendChart({
     canvas.onmouseleave = () => { tip.style.display = 'none'; };
     canvas.ontouchmove = (e) => {
       e.preventDefault();
-      const t = e.touches[0];
-      showTip(t.clientX, canvas.getBoundingClientRect());
+      showTip(e.touches[0].clientX, canvas.getBoundingClientRect());
     };
     canvas.ontouchend = () => setTimeout(() => { tip.style.display = 'none'; }, 1500);
-  }, [visibleData, valueKey, targetKey, color, unit, showMovingAvg, movingAvgColor, overTargetColor]);
+  }, [visibleData, valueKey, targetKey, color, unit, showMovingAvg, movingAvgColor, overTargetColor, expanded, tick]);
 
-  // Build default legend if not provided
-  const legend = legendItems || (() => {
-    const items = [{ type: 'dot', color, label: `${unit} (nilai)` }];
-    if (showMovingAvg) items.push({ type: 'line', color: movingAvgColor, label: 'Rata-rata bergerak' });
-    if (targetKey) items.push({ type: 'dash', color: 'rgba(150,150,180,.7)', label: 'Target' });
-    return items;
-  })();
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setTick(t => t + 1));
+    return () => cancelAnimationFrame(id);
+  }, [expanded]);
+
+  const chartH = expanded ? Math.round(window.innerHeight * 0.4) : 130;
 
   return (
-    <div className="card">
-      <div className="card-header">
-        <div><div className="card-title">{title}</div></div>
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          {zoom < 1 && (
-            <button className="card-action" onClick={() => { setZoom(1); setPanStart(0); }}>
-              Reset zoom
-            </button>
-          )}
-          <button className="chart-expand" title="Scroll mouse untuk zoom">
-            <Maximize2 size={12} />
-          </button>
-        </div>
-      </div>
-
-      {/* Legend */}
-      <div className="chart-legend">
-        {legend.map((l, i) => (
-          <div key={i} className="legend-item">
-            {l.type === 'dot' && <span className="legend-swatch" style={{ background: l.color }}></span>}
-            {(l.type === 'line' || l.type === 'dash') && (
-              <span className="legend-dash" style={{
-                background: l.color,
-                ...(l.type === 'dash' ? { borderTop: `2px dashed ${l.color}`, background: 'none', height: 0 } : {}),
-              }}></span>
-            )}
-            {l.label}
-          </div>
-        ))}
-      </div>
-
-      <div className="axis-unit-label">Waktu (Jam)</div>
-      <div className="trend-wrap" style={{ height: 130 }} ref={wrapRef}>
+    <>
+      <div className="trend-wrap" style={{ height: chartH }} ref={wrapRef}>
         <canvas ref={canvasRef}></canvas>
         <div className="trend-tooltip" ref={tipRef}></div>
       </div>
@@ -256,6 +208,101 @@ export default function LineTrendChart({
           </span>
         ))}
       </div>
+
+      {visibleCount < n && (
+        <button className="card-action" style={{ marginTop: 6 }}
+          onClick={() => { setZoom(1); setPanStart(0); }}>
+          Reset zoom
+        </button>
+      )}
+    </>
+  );
+}
+
+export default function LineTrendChart({
+  title, data, valueKey, targetKey, color, unit,
+  showMovingAvg = false, movingAvgColor = '#f0a500',
+  overTargetColor = null,
+  legendItems = null,
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    if (!expanded) return;
+    const fn = (e) => { if (e.key === 'Escape') setExpanded(false); };
+    window.addEventListener('keydown', fn);
+    return () => window.removeEventListener('keydown', fn);
+  }, [expanded]);
+
+  const legend = legendItems || (() => {
+    const items = [{ type: 'dot', color, label: `${unit} (nilai)` }];
+    if (showMovingAvg) items.push({ type: 'line', color: movingAvgColor, label: 'Rata-rata bergerak' });
+    if (targetKey) items.push({ type: 'dash', color: 'rgba(150,150,180,.7)', label: 'Target' });
+    return items;
+  })();
+
+  const header = (
+    <div className="card-header">
+      <div><div className="card-title">{title}</div></div>
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+        <button className="chart-expand" onClick={() => setExpanded(v => !v)}
+          title={expanded ? 'Perkecil' : 'Perbesar grafik'}>
+          {expanded ? <Minimize2 size={12}/> : <Maximize2 size={12}/>}
+        </button>
+      </div>
+    </div>
+  );
+
+  const legendEl = (
+    <div className="chart-legend">
+      {legend.map((l, i) => (
+        <div key={i} className="legend-item">
+          {l.type === 'dot' && <span className="legend-swatch" style={{ background: l.color }}></span>}
+          {(l.type === 'line' || l.type === 'dash') && (
+            <span className="legend-dash" style={{
+              background: l.color,
+              ...(l.type === 'dash' ? { borderTop: `2px dashed ${l.color}`, background: 'none', height: 0 } : {}),
+            }}></span>
+          )}
+          {l.label}
+        </div>
+      ))}
+    </div>
+  );
+
+  const canvasEl = (
+    <ChartCanvas
+      data={data} valueKey={valueKey} targetKey={targetKey}
+      color={color} unit={unit}
+      showMovingAvg={showMovingAvg} movingAvgColor={movingAvgColor}
+      overTargetColor={overTargetColor}
+      expanded={expanded}
+    />
+  );
+
+  if (expanded) {
+    return (
+      <>
+        <div className="chart-expand-overlay" onClick={() => setExpanded(false)} />
+        <div className="card chart-expand-modal">
+          {header}
+          {legendEl}
+          <div className="axis-unit-label">Waktu (Jam)</div>
+          {canvasEl}
+          <button className="chart-expand-close" onClick={() => setExpanded(false)} title="Tutup">
+            <X size={16}/>
+          </button>
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <div className="card">
+      {header}
+      {legendEl}
+      <div className="axis-unit-label">Waktu (Jam)</div>
+      {canvasEl}
     </div>
   );
 }

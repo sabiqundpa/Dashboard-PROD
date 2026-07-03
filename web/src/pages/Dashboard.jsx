@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Search, AlertCircle, CheckCircle2, CalendarCheck, RefreshCw } from 'lucide-react';
+import { useEffect } from 'react';
+import { AlertCircle, CheckCircle2, CalendarCheck, RefreshCw } from 'lucide-react';
 import { useApp } from '../AppContext.jsx';
 import { useUI } from '../UIContext.jsx';
 import KpiRow from '../components/KpiRow.jsx';
@@ -13,7 +13,6 @@ import DonutChart from '../components/DonutChart.jsx';
 import PeriodPicker from '../components/PeriodPicker.jsx';
 
 function BreakdownSidebarCard({ items, onMore }) {
-  const { openModal } = useUI();
   const recent = (items || []).slice(0, 4);
 
   return (
@@ -81,18 +80,8 @@ export default function Dashboard() {
     lastUpdate, loadAll,
   } = useApp();
   const { navigate, openModal } = useUI();
-  const [search, setSearch] = useState('');
 
   useEffect(() => { loadAll(); }, [period, refDate, selectedMachine]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const q = search.trim().toLowerCase();
-  const filteredBreakdowns = useMemo(() => {
-    if (!q) return breakdowns;
-    return breakdowns.filter((b) => [b.machine, b.cause, b.category, b.pic_gh, b.pic_mtn, b.resolution, b.action]
-      .some((v) => (v || '').toLowerCase().includes(q)));
-  }, [breakdowns, q]);
-  const filteredPareto = useMemo(() => (!q ? pareto : pareto.filter((p) => p.cause.toLowerCase().includes(q))), [pareto, q]);
-  const filteredParetoMachines = useMemo(() => (!q ? paretoMachines : paretoMachines.filter((p) => p.machine.toLowerCase().includes(q))), [paretoMachines, q]);
 
   const selectedMachineObj = machines.find((m) => m.name === selectedMachine);
   const year = refDate ? new Date(refDate).getFullYear() : new Date().getFullYear();
@@ -107,6 +96,18 @@ export default function Dashboard() {
           <div className="page-sub">Performa real-time · {lastUpdate}</div>
         </div>
         <div className="header-actions">
+          {/* Machine filter */}
+          <select
+            className="btn"
+            style={{ padding: '6px 10px' }}
+            value={selectedMachine}
+            onChange={(e) => setSelectedMachine(e.target.value)}
+            title="Filter per mesin"
+          >
+            <option value="">Semua Mesin</option>
+            {machines.map((m) => <option key={m.name} value={m.name}>{m.name}</option>)}
+          </select>
+
           <PeriodPicker
             period={period} setPeriod={setPeriod}
             refDate={refDate} setRefDate={setRefDate}
@@ -115,29 +116,6 @@ export default function Dashboard() {
             <RefreshCw size={14} />
           </button>
           <button className="btn primary" onClick={() => openModal('addBreakdown')}>+ RMO</button>
-        </div>
-      </div>
-
-      {/* ── Filters & Search ───────────────────────────── */}
-      <div className="header-actions" style={{ flexWrap: 'wrap' }}>
-        <select
-          className="btn"
-          style={{ padding: '7px 10px' }}
-          value={selectedMachine}
-          onChange={(e) => setSelectedMachine(e.target.value)}
-          title="Filter per mesin"
-        >
-          <option value="">Semua Mesin</option>
-          {machines.map((m) => <option key={m.name} value={m.name}>{m.name}</option>)}
-        </select>
-        <div className="search-wrap" style={{ flex: 1, minWidth: 200 }}>
-          <span className="search-icon"><Search size={14} /></span>
-          <input
-            className="search-input"
-            placeholder="Cari mesin, problem, PIC, penyebab…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
         </div>
       </div>
 
@@ -156,12 +134,12 @@ export default function Dashboard() {
         {/* Right: sidebar */}
         <div className="dash-sidebar">
           <AvailabilityCard kpi={kpi} />
-          <BreakdownSidebarCard items={filteredBreakdowns} onMore={() => navigate('maintenance')} />
+          <BreakdownSidebarCard items={breakdowns} onMore={() => navigate('maintenance')} />
         </div>
       </div>
 
       {/* ── Full-width bottom section ──────────────────── */}
-      <MachineTable machines={machines} limit={5} search={search} onSearchChange={setSearch} />
+      <MachineTable machines={machines} limit={5} />
 
       <div className="row4">
         <div className="card">
@@ -169,16 +147,16 @@ export default function Dashboard() {
             <div><div className="card-title">Log Breakdown Terbaru</div></div>
             <button className="card-action" onClick={() => navigate('maintenance')}>All ›</button>
           </div>
-          <Timeline items={filteredBreakdowns} limit={5} />
+          <Timeline items={breakdowns} limit={5} />
         </div>
         <div className="card">
           <div className="card-header"><div><div className="card-title">Top Penyebab Kerusakan</div></div></div>
-          <DonutChart data={filteredPareto} labelKey="cause" />
-          <ParetoList data={filteredPareto} labelKey="cause" />
+          <DonutChart data={pareto} labelKey="cause" />
+          <ParetoList data={pareto} labelKey="cause" />
         </div>
         <div className="card">
           <div className="card-header"><div><div className="card-title">Frekuensi Breakdown per Mesin</div></div></div>
-          <ParetoList data={filteredParetoMachines} labelKey="machine" />
+          <ParetoList data={paretoMachines} labelKey="machine" />
         </div>
       </div>
     </div>

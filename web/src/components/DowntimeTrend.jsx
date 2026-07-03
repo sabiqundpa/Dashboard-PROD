@@ -1,22 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
-import { Maximize2 } from 'lucide-react';
+import { Maximize2, Minimize2, X } from 'lucide-react';
 
 const MIN_VISIBLE = 3;
 const MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 
-export default function DowntimeTrend({ days, year }) {
+function ChartCanvas({ days, year, expanded }) {
   const canvasRef = useRef(null);
-  const tipRef = useRef(null);
-  const wrapRef = useRef(null);
-  const [, forceResize] = useState(0);
-  const [zoom, setZoom] = useState(1);
+  const tipRef    = useRef(null);
+  const wrapRef   = useRef(null);
+  const [zoom, setZoom]       = useState(1);
   const [panStart, setPanStart] = useState(0);
-
-  useEffect(() => {
-    const onResize = () => forceResize((n) => n + 1);
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
+  const [tick, setTick]       = useState(0);
 
   useEffect(() => { setZoom(1); setPanStart(0); }, [days?.length]);
 
@@ -45,7 +39,7 @@ export default function DowntimeTrend({ days, year }) {
     if (!visible.length || !canvasRef.current) return;
     const canvas = canvasRef.current;
     const W = canvas.parentElement.offsetWidth || 360;
-    const H = 130;
+    const H = expanded ? Math.round(window.innerHeight * 0.45) : 130;
     canvas.width = W; canvas.height = H;
     const ctx = canvas.getContext('2d');
 
@@ -65,7 +59,6 @@ export default function DowntimeTrend({ days, year }) {
 
     ctx.clearRect(0, 0, W, H);
 
-    // Grid lines + Y tick labels
     ctx.font = '9px Inter, sans-serif';
     ctx.fillStyle = muted;
     ctx.textAlign = 'right';
@@ -80,7 +73,6 @@ export default function DowntimeTrend({ days, year }) {
       ctx.fillText(tickVal.toFixed(tickVal < 10 ? 1 : 0), pad.l - 6, y);
     }
 
-    // Blue gradient for data bars
     const g = ctx.createLinearGradient(0, pad.t, 0, H);
     g.addColorStop(0, '#4488ff');
     g.addColorStop(1, 'rgba(68,136,255,.3)');
@@ -90,7 +82,6 @@ export default function DowntimeTrend({ days, year }) {
       const isCurrent = dayLabel === currentMonthAbbr;
       const noData = v === 0;
 
-      // Column highlight for current month
       if (isCurrent) {
         ctx.fillStyle = 'rgba(68,136,255,.07)';
         ctx.fillRect(pad.l + i * slot, pad.t, slot, iH);
@@ -100,7 +91,6 @@ export default function DowntimeTrend({ days, year }) {
       const r = Math.min(5, barW / 2);
 
       if (noData) {
-        // tiny placeholder stub for months with no data
         const stubH = 4;
         ctx.fillStyle = 'rgba(90,90,140,.3)';
         ctx.beginPath();
@@ -123,7 +113,6 @@ export default function DowntimeTrend({ days, year }) {
       }
     });
 
-    // Tooltip
     const tip = tipRef.current;
     const showTip = (clientX, rect) => {
       const mx = (clientX - rect.left) * (W / rect.width);
@@ -138,34 +127,21 @@ export default function DowntimeTrend({ days, year }) {
     canvas.onmouseleave = () => { tip.style.display = 'none'; };
     canvas.ontouchmove = (e) => {
       e.preventDefault();
-      const t = e.touches[0];
-      showTip(t.clientX, canvas.getBoundingClientRect());
+      showTip(e.touches[0].clientX, canvas.getBoundingClientRect());
     };
     canvas.ontouchend = () => setTimeout(() => { tip.style.display = 'none'; }, 1500);
-  }, [visible, currentMonthAbbr]);
+  }, [visible, currentMonthAbbr, expanded, tick]);
+
+  // Force canvas repaint after mount/expand so offsetWidth is correct
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setTick(t => t + 1));
+    return () => cancelAnimationFrame(id);
+  }, [expanded]);
 
   const hasNoData = visible.some((d) => (d.hrs ?? 0) === 0);
 
   return (
-    <div className="card">
-      <div className="card-header">
-        <div>
-          <div className="card-title">Tren Downtime {year}</div>
-          <div className="card-sub">Arahkan kursor ke bar untuk detail</div>
-        </div>
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          {zoom < 1 && (
-            <button className="card-action" onClick={() => { setZoom(1); setPanStart(0); }}>
-              Reset zoom
-            </button>
-          )}
-          <button className="chart-expand" title="Scroll mouse untuk zoom">
-            <Maximize2 size={12} />
-          </button>
-        </div>
-      </div>
-
-      {/* Legend */}
+    <>
       <div className="chart-legend">
         <div className="legend-item">
           <span className="legend-swatch" style={{ background: '#4488ff' }}></span>
@@ -180,7 +156,7 @@ export default function DowntimeTrend({ days, year }) {
       </div>
 
       <div className="axis-unit-label">Waktu (Jam)</div>
-      <div className="trend-wrap" style={{ height: 130 }} ref={wrapRef}>
+      <div className="trend-wrap" style={{ height: expanded ? Math.round(window.innerHeight * 0.45) : 130 }} ref={wrapRef}>
         <canvas ref={canvasRef}></canvas>
         <div className="trend-tooltip" ref={tipRef}></div>
       </div>
@@ -203,6 +179,61 @@ export default function DowntimeTrend({ days, year }) {
           </span>
         ))}
       </div>
+
+      {zoom < 1 && (
+        <button className="card-action" style={{ marginTop: 6 }}
+          onClick={() => { setZoom(1); setPanStart(0); }}>
+          Reset zoom
+        </button>
+      )}
+    </>
+  );
+}
+
+export default function DowntimeTrend({ days, year }) {
+  const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    if (!expanded) return;
+    const fn = (e) => { if (e.key === 'Escape') setExpanded(false); };
+    window.addEventListener('keydown', fn);
+    return () => window.removeEventListener('keydown', fn);
+  }, [expanded]);
+
+  const header = (
+    <div className="card-header">
+      <div>
+        <div className="card-title">Tren Downtime {year}</div>
+        <div className="card-sub">Arahkan kursor ke bar · scroll untuk zoom</div>
+      </div>
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+        <button className="chart-expand" onClick={() => setExpanded(v => !v)}
+          title={expanded ? 'Perkecil' : 'Perbesar grafik'}>
+          {expanded ? <Minimize2 size={12}/> : <Maximize2 size={12}/>}
+        </button>
+      </div>
+    </div>
+  );
+
+  if (expanded) {
+    return (
+      <>
+        <div className="chart-expand-overlay" onClick={() => setExpanded(false)} />
+        <div className="card chart-expand-modal">
+          {header}
+          <ChartCanvas days={days} year={year} expanded />
+          <button className="chart-expand-close" onClick={() => setExpanded(false)} title="Tutup">
+            <X size={16}/>
+          </button>
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <div className="card">
+      {header}
+      <ChartCanvas days={days} year={year} expanded={false} />
     </div>
   );
 }

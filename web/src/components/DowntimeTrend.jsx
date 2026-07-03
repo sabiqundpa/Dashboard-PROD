@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Maximize2, Minimize2, X } from 'lucide-react';
+import { Maximize2, X } from 'lucide-react';
 
 const MIN_VISIBLE = 3;
 const MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
@@ -46,7 +46,8 @@ function ChartCanvas({ days, year, expanded }) {
     const styles = getComputedStyle(document.documentElement);
     const muted = styles.getPropertyValue('--muted').trim() || '#5a5a78';
 
-    const pad = { t: 8, b: 4, l: 30, r: 4 };
+    // pad.b = 18 to reserve space for X-axis labels drawn on canvas
+    const pad = { t: 8, b: 18, l: 30, r: 4 };
     const iW = W - pad.l - pad.r;
     const iH = H - pad.t - pad.b;
     const vals = visible.map((d) => d.hrs ?? 0);
@@ -113,6 +114,21 @@ function ChartCanvas({ days, year, expanded }) {
       }
     });
 
+    // X-axis labels on canvas — auto-step to avoid overlap
+    const minGap = 22;
+    const step = Math.max(1, Math.ceil(minGap / slot));
+    const labelY = pad.t + iH + 4;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    visible.forEach((d, i) => {
+      if (i % step !== 0 && i !== m - 1) return;
+      const cx = pad.l + i * slot + slot / 2;
+      const isCurrent = d.day === currentMonthAbbr;
+      ctx.fillStyle = isCurrent ? '#4488ff' : muted;
+      ctx.font = isCurrent ? 'bold 9px Inter, sans-serif' : '9px Inter, sans-serif';
+      ctx.fillText(d.day, cx, labelY);
+    });
+
     const tip = tipRef.current;
     const showTip = (clientX, rect) => {
       const mx = (clientX - rect.left) * (W / rect.width);
@@ -132,13 +148,13 @@ function ChartCanvas({ days, year, expanded }) {
     canvas.ontouchend = () => setTimeout(() => { tip.style.display = 'none'; }, 1500);
   }, [visible, currentMonthAbbr, expanded, tick]);
 
-  // Force canvas repaint after mount/expand so offsetWidth is correct
   useEffect(() => {
     const id = requestAnimationFrame(() => setTick(t => t + 1));
     return () => cancelAnimationFrame(id);
   }, [expanded]);
 
   const hasNoData = visible.some((d) => (d.hrs ?? 0) === 0);
+  const chartH = expanded ? Math.round(window.innerHeight * 0.45) : 130;
 
   return (
     <>
@@ -156,7 +172,7 @@ function ChartCanvas({ days, year, expanded }) {
       </div>
 
       <div className="axis-unit-label">Waktu (Jam)</div>
-      <div className="trend-wrap" style={{ height: expanded ? Math.round(window.innerHeight * 0.45) : 130 }} ref={wrapRef}>
+      <div className="trend-wrap" style={{ height: chartH }} ref={wrapRef}>
         <canvas ref={canvasRef}></canvas>
         <div className="trend-tooltip" ref={tipRef}></div>
       </div>
@@ -165,26 +181,9 @@ function ChartCanvas({ days, year, expanded }) {
         <input
           type="range" min={0} max={maxStart} value={start}
           onChange={(e) => setPanStart(Number(e.target.value))}
-          style={{ width: '100%', marginTop: 6 }}
+          style={{ width: '100%', marginTop: 4 }}
         />
       )}
-
-      <div style={{
-        position: 'relative', height: 14, marginTop: 5,
-        marginLeft: 30, marginRight: 4, fontSize: 9, color: 'var(--muted)', fontFamily: 'var(--mono)',
-      }}>
-        {visible.map((d, i) => (
-          <span key={i} style={{
-            position: 'absolute',
-            left: `${(i + 0.5) / visible.length * 100}%`,
-            transform: 'translateX(-50%)',
-            whiteSpace: 'nowrap',
-            ...(d.day === currentMonthAbbr ? { color: '#4488ff', fontWeight: 700 } : {}),
-          }}>
-            {d.day}
-          </span>
-        ))}
-      </div>
 
       {zoom < 1 && (
         <button className="card-action" style={{ marginTop: 6 }}
@@ -212,12 +211,12 @@ export default function DowntimeTrend({ days, year }) {
         <div className="card-title">Tren Downtime {year}</div>
         <div className="card-sub">Arahkan kursor ke bar · scroll untuk zoom</div>
       </div>
-      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-        <button className="chart-expand" onClick={() => setExpanded(v => !v)}
-          title={expanded ? 'Perkecil' : 'Perbesar grafik'}>
-          {expanded ? <Minimize2 size={12}/> : <Maximize2 size={12}/>}
+      {!expanded && (
+        <button className="chart-expand" onClick={() => setExpanded(true)}
+          title="Perbesar grafik">
+          <Maximize2 size={12}/>
         </button>
-      </div>
+      )}
     </div>
   );
 

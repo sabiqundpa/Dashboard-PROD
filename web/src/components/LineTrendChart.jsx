@@ -199,11 +199,17 @@ function ChartCanvas({
       )}
 
       <div style={{
-        display: 'flex', justifyContent: 'space-between', gap: 4, marginTop: 5,
-        marginLeft: 30, fontSize: 9, color: 'var(--muted)', fontFamily: 'var(--mono)',
+        position: 'relative', height: 14, marginTop: 5,
+        marginLeft: 30, marginRight: 4, fontSize: 9, color: 'var(--muted)', fontFamily: 'var(--mono)',
       }}>
         {visibleData.map((d, i) => (
-          <span key={i} style={d.day === 'TOTAL' ? { fontWeight: 700, color: 'var(--accent2)' } : undefined}>
+          <span key={i} style={{
+            position: 'absolute',
+            left: `${(i + 0.5) / visibleData.length * 100}%`,
+            transform: 'translateX(-50%)',
+            whiteSpace: 'nowrap',
+            ...(d.day === 'TOTAL' ? { fontWeight: 700, color: 'var(--accent2)' } : {}),
+          }}>
             {d.day}
           </span>
         ))}

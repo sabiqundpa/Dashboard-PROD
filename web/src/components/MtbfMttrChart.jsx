@@ -5,7 +5,7 @@ export default function MtbfMttrChart({ data, lineLabel, year }) {
   return (
     <>
       <LineTrendChart
-        title={`MTBF per Bulan${scope}`}
+        title={`MTBF${scope}`}
         data={data} valueKey="mtbf" targetKey={null}
         color="#a855f7" unit="jam"
         showMovingAvg={true} movingAvgColor="#f0a500"
@@ -15,7 +15,7 @@ export default function MtbfMttrChart({ data, lineLabel, year }) {
         ]}
       />
       <LineTrendChart
-        title={`MTTR per Bulan${scope}`}
+        title={`MTTR${scope}`}
         data={data} valueKey="mttr" targetKey="mttrTarget"
         color="#f0b429" overTargetColor="#ff4455" unit="jam"
         legendItems={[

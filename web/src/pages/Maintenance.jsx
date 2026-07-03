@@ -12,6 +12,13 @@ const FILTERS = [
 const center = { textAlign: 'center' };
 const right = { textAlign: 'right' };
 
+function fmtHrs(hrs) {
+  if (!hrs && hrs !== 0) return '—';
+  const h = Math.floor(hrs);
+  const m = Math.round((hrs - h) * 60);
+  return m > 0 ? `${h}j ${m}m` : `${h}j`;
+}
+
 export default function Maintenance() {
   const { breakdowns, kpi } = useApp();
   const { openModal } = useUI();
@@ -78,39 +85,55 @@ export default function Maintenance() {
           </div>
         </div>
         <div className="table-scroll">
-          <table className="machine-table" style={{ minWidth: 1100 }}>
+          <table className="machine-table" style={{ minWidth: 1400 }}>
             <thead>
               <tr>
-                <th className={thCls('machine')} onClick={() => sortBy('machine')}>Mesin{arrow('machine')}</th>
+                <th style={center}>NO</th>
+                <th className={thCls('date')} onClick={() => sortBy('date')}>Tanggal Lapor{arrow('date')}</th>
+                <th style={center}>Waktu Lapor</th>
+                <th className={thCls('machine')} onClick={() => sortBy('machine')}>Nama Mesin{arrow('machine')}</th>
                 <th className={thCls('cluster')} onClick={() => sortBy('cluster')}>Cluster{arrow('cluster')}</th>
                 <th className={thCls('line')} onClick={() => sortBy('line')}>Line{arrow('line')}</th>
+                <th>Problem Identifikasi</th>
+                <th>Penyelesaian</th>
+                <th style={center}>Tanggal Mulai</th>
+                <th style={center}>Waktu Mulai</th>
+                <th style={center}>Tanggal Selesai</th>
+                <th style={center}>Waktu Selesai</th>
+                <th style={right}>Waktu Pengerjaan</th>
+                <th style={right}>Breakdown Time</th>
                 <th style={center}>Status</th>
-                <th style={center} className={thCls('date')} onClick={() => sortBy('date')}>Tanggal{arrow('date')}</th>
-                <th>Jenis Problem</th><th>Problem Identifikasi</th><th style={center}>PIC GH</th>
-                <th style={center}>Tanggal Selesai</th><th>Penyelesaian / Action</th><th style={center}>PIC MTN</th>
-                <th style={right}>Durasi</th><th style={center}>Aksi</th>
+                <th style={center}>PIC MTN</th>
+                <th style={center}>Aksi</th>
               </tr>
             </thead>
             <tbody>
               {!data.length ? (
-                <tr><td colSpan={13} style={{ textAlign: 'center', padding: 20, color: 'var(--muted)' }}>Tidak Ada Kasus</td></tr>
+                <tr><td colSpan={17} style={{ textAlign: 'center', padding: 20, color: 'var(--muted)' }}>Tidak Ada Kasus</td></tr>
               ) : data.map((b, i) => {
                 const isOpen = b.status === 'open';
-                const penyelesaian = [b.resolution, b.action].filter(Boolean).join(' · ') || '—';
                 return (
                   <tr key={b.id ?? i}>
+                    <td style={center}>{i + 1}</td>
+                    <td>{b.date || '—'}</td>
+                    <td style={center}>{b.start || '—'}</td>
                     <td>{b.machine}</td>
                     <td style={{ color: 'var(--muted)' }}>{b.cluster || '—'}</td>
                     <td style={{ color: 'var(--muted)' }}>{b.line || '—'}</td>
-                    <td style={center}>{isOpen ? <span style={{ color: 'var(--red)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}><Circle size={9} fill="var(--red)" stroke="none" />OPEN</span> : <span style={{ color: 'var(--green)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}><CheckCircle2 size={13} />CLOSE</span>}</td>
-                    <td style={center}>{b.date} · {b.start || '—'}</td>
-                    <td>{b.category || '—'}</td>
                     <td>{b.cause}</td>
-                    <td style={center}>{b.pic_gh || '—'}</td>
-                    <td style={center}>{b.end_date ? b.end_date + ' · ' + (b.end_time || '') : '—'}</td>
-                    <td>{penyelesaian}</td>
+                    <td>{b.resolution || '—'}</td>
+                    <td style={center}>{b.date || '—'}</td>
+                    <td style={center}>{b.start || '—'}</td>
+                    <td style={center}>{b.end_date || '—'}</td>
+                    <td style={center}>{b.end_time || '—'}</td>
+                    <td style={right}>{fmtHrs(b.durationHrs)}</td>
+                    <td style={right}>{b.durationHrs != null ? `${b.durationHrs.toFixed(1)} jam` : '—'}</td>
+                    <td style={center}>
+                      {isOpen
+                        ? <span style={{ color: 'var(--red)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}><Circle size={9} fill="var(--red)" stroke="none" />OPEN</span>
+                        : <span style={{ color: 'var(--green)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}><CheckCircle2 size={13} />CLOSE</span>}
+                    </td>
                     <td style={center}>{b.pic_mtn || '—'}</td>
-                    <td style={right}>{b.duration}</td>
                     <td style={center}>
                       {isOpen && b.id ? (
                         <button className="btn" style={{ padding: '4px 8px', fontSize: 11 }} onClick={() => openModal('closeWO', { id: b.id, machine: b.machine, cause: b.cause })}>Tutup WO</button>

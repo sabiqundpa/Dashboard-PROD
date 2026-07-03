@@ -11,6 +11,7 @@ import Maintenance from './pages/Maintenance.jsx';
 import Reports from './pages/Reports.jsx';
 import Analytics from './pages/Analytics.jsx';
 import Topbar from './components/Topbar.jsx';
+import AppSidebar from './components/AppSidebar.jsx';
 import MobileDrawer from './components/MobileDrawer.jsx';
 import BottomNav from './components/BottomNav.jsx';
 import NotifPanel from './components/NotifPanel.jsx';
@@ -21,7 +22,7 @@ import ModalRoot from './components/ModalRoot.jsx';
 const PAGES = { dashboard: Dashboard, machines: Machines, maintenance: Maintenance, reports: Reports, analytics: Analytics };
 
 function Shell() {
-  const { page, closeModal, setNotifOpen, closeDetail } = useUI();
+  const { page, closeModal, setNotifOpen, closeDetail, sidebarOpen } = useUI();
   const { loadAll } = useApp();
   const PageComponent = PAGES[page] || Dashboard;
 
@@ -40,8 +41,9 @@ function Shell() {
 
   return (
     <>
-      <div className="shell">
+      <div className={`shell${sidebarOpen ? ' sidebar-open' : ''}`}>
         <Topbar />
+        <AppSidebar />
         <main className="content">
           <PageComponent />
         </main>

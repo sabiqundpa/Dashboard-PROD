@@ -176,6 +176,7 @@ router.get('/breakdowns', async (req, res, next) => {
       end_date: b.endDate ? b.endDate.toISOString().slice(0, 10) : '',
       end_time: b.endTime ?? '',
       duration: `${b.durationHrs.toFixed(1)} hrs`,
+      durationHrs: b.durationHrs,
       date: b.date.toISOString().slice(0, 10),
       pic_gh: b.picGh ?? '',
       pic_mtn: b.picMtn ?? '',
@@ -748,8 +749,11 @@ router.get('/export-machines', async (req, res, next) => {
 });
 
 // ── POST /api/import ──────────────────────────────────
-// Accepts .csv with columns:
-// machine_name, machine_cluster, machine_line, breakdown_date, start_time, end_time, failure_cause, category, technician, notes
+// Accepts .csv with columns (format baru — Indonesian):
+// NO, Tanggal Lapor, Waktu Lapor, Nama Mesin, Cluster, Line, Problem Identifikasi,
+// Penyelesaian, Tanggal Mulai, Waktu Mulai, Tanggal Selesai, Waktu Selesai,
+// Waktu Pengerjaan, Breakdown Time, Status, PIC MTN
+// Juga mendukung kolom lama (backward-compatible): machine_name, failure_cause, dll.
 router.post('/import', upload.single('file'), async (req, res, next) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
@@ -758,32 +762,54 @@ router.post('/import', upload.single('file'), async (req, res, next) => {
 
     let imported = 0;
     for (const row of rows) {
-      const name = String(row.machine_name ?? '').trim();
-      const cause = String(row.failure_cause ?? '').trim();
+      // Support both new Indonesian column names and legacy English names
+      const name = String(row['Nama Mesin'] ?? row.machine_name ?? '').trim();
+      const cause = String(row['Problem Identifikasi'] ?? row.failure_cause ?? '').trim();
       if (!name || !cause) continue;
 
       const machine = await prisma.machine.upsert({
         where: { name },
         update: {},
-        create: { name, cluster: String(row.machine_cluster ?? ''), line: String(row.machine_line ?? '') },
+        create: {
+          name,
+          cluster: String(row['Cluster'] ?? row.machine_cluster ?? ''),
+          line: String(row['Line'] ?? row.machine_line ?? ''),
+        },
       });
 
-      const start = parseTimeValue(row.start_time);
-      const end = parseTimeValue(row.end_time);
-      const durationHrs = computeDurationHrs(start, end);
+      const startTime = parseTimeValue(row['Waktu Mulai'] ?? row['Waktu Lapor'] ?? row.start_time);
+      const endTime   = parseTimeValue(row['Waktu Selesai'] ?? row.end_time);
+      const reportDate = parseDateValue(row['Tanggal Lapor'] ?? row.breakdown_date);
+      const startDate  = parseDateValue(row['Tanggal Mulai'] ?? row['Tanggal Lapor'] ?? row.breakdown_date);
+      const endDate    = parseDateValue(row['Tanggal Selesai']);
+
+      // Prefer explicit "Breakdown Time" (hrs) if provided, else compute from times
+      const btRaw = row['Breakdown Time'] ?? row['Waktu Pengerjaan'];
+      let durationHrs = computeDurationHrs(startTime, endTime);
+      if (btRaw !== undefined && btRaw !== '' && !isNaN(parseFloat(btRaw))) {
+        durationHrs = parseFloat(btRaw);
+      }
+
+      const statusRaw = String(row['Status'] ?? '').toLowerCase();
+      const status = statusRaw === 'open' ? 'open'
+        : ['resolved', 'close', 'closed', 'selesai'].includes(statusRaw) ? 'resolved'
+        : (endTime ? 'resolved' : 'open');
 
       await prisma.breakdown.create({
         data: {
           machineId: machine.id,
           cause,
-          category: row.category ? String(row.category) : 'Mechanical',
+          category: row['category'] ? String(row['category']) : 'Mechanical',
           severity: 'warning',
-          status: end ? 'resolved' : 'open',
-          date: parseDateValue(row.breakdown_date) ?? new Date(),
-          startTime: start,
-          endTime: end,
+          status,
+          date: startDate ?? reportDate ?? new Date(),
+          startTime,
+          endDate: endDate ?? (endTime ? (startDate ?? reportDate ?? new Date()) : null),
+          endTime,
           durationHrs,
-          technician: row.technician ? String(row.technician) : null,
+          picMtn: (row['PIC MTN'] ? String(row['PIC MTN']).trim() : null)
+                  ?? (row.technician ? String(row.technician).trim() : null),
+          resolution: row['Penyelesaian'] ? String(row['Penyelesaian']).trim() : null,
           notes: row.notes ? String(row.notes) : null,
         },
       });

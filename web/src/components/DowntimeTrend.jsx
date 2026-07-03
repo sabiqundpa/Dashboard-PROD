@@ -170,11 +170,17 @@ function ChartCanvas({ days, year, expanded }) {
       )}
 
       <div style={{
-        display: 'flex', justifyContent: 'space-between', gap: 4, marginTop: 5,
-        marginLeft: 30, fontSize: 9, color: 'var(--muted)', fontFamily: 'var(--mono)',
+        position: 'relative', height: 14, marginTop: 5,
+        marginLeft: 30, marginRight: 4, fontSize: 9, color: 'var(--muted)', fontFamily: 'var(--mono)',
       }}>
         {visible.map((d, i) => (
-          <span key={i} style={d.day === currentMonthAbbr ? { color: '#4488ff', fontWeight: 700 } : undefined}>
+          <span key={i} style={{
+            position: 'absolute',
+            left: `${(i + 0.5) / visible.length * 100}%`,
+            transform: 'translateX(-50%)',
+            whiteSpace: 'nowrap',
+            ...(d.day === currentMonthAbbr ? { color: '#4488ff', fontWeight: 700 } : {}),
+          }}>
             {d.day}
           </span>
         ))}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Search, AlertCircle, CheckCircle2, CalendarCheck, RefreshCw } from 'lucide-react';
 import { useApp } from '../AppContext.jsx';
 import { useUI } from '../UIContext.jsx';
@@ -10,13 +10,7 @@ import MachineTable from '../components/MachineTable.jsx';
 import Timeline from '../components/Timeline.jsx';
 import ParetoList from '../components/ParetoList.jsx';
 import DonutChart from '../components/DonutChart.jsx';
-import { useState } from 'react';
-
-const PERIODS = [
-  { key: 'today', label: 'Harian' },
-  { key: 'week', label: 'Mingguan' },
-  { key: 'month', label: 'Bulanan' },
-];
+import PeriodPicker from '../components/PeriodPicker.jsx';
 
 function BreakdownSidebarCard({ items, onMore }) {
   const { openModal } = useUI();
@@ -113,36 +107,13 @@ export default function Dashboard() {
           <div className="page-sub">Performa real-time · {lastUpdate}</div>
         </div>
         <div className="header-actions">
-          {/* Period tabs */}
-          <div className="period-tabs">
-            {PERIODS.map((p) => (
-              <button
-                key={p.key}
-                className={`period-tab${period === p.key ? ' active' : ''}`}
-                onClick={() => setPeriod(p.key)}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Date picker */}
-          <input
-            type="date"
-            className="btn"
-            style={{ padding: '6px 10px', minWidth: 130 }}
-            min="2026-01-01"
-            value={refDate}
-            onChange={(e) => setRefDate(e.target.value)}
-            title="Pilih tanggal acuan"
+          <PeriodPicker
+            period={period} setPeriod={setPeriod}
+            refDate={refDate} setRefDate={setRefDate}
           />
-
-          {/* Refresh */}
           <button className="btn-icon" title="Refresh data" onClick={() => loadAll()}>
             <RefreshCw size={14} />
           </button>
-
-          {/* RMO */}
           <button className="btn primary" onClick={() => openModal('addBreakdown')}>+ RMO</button>
         </div>
       </div>

@@ -1,6 +1,7 @@
 import { Zap, Timer, Activity, RefreshCw, Wrench } from 'lucide-react';
 import { useUI } from '../UIContext.jsx';
 import { useAnimatedNumber } from '../hooks/useAnimatedNumber.js';
+import InfoTip from './InfoTip.jsx';
 
 function trendDir(v, target, lowerBetter = false) {
   if (v == null) return 'neutral';
@@ -8,15 +9,25 @@ function trendDir(v, target, lowerBetter = false) {
   return v >= target ? 'up' : 'down';
 }
 
+const KPI_INFO = {
+  Breakdown: 'Jumlah kejadian kerusakan mesin yang dicatat sebagai Work Order dalam periode ini.',
+  Downtime:  'Total waktu mesin berhenti beroperasi akibat gangguan atau kerusakan (dalam jam).',
+  Availability: 'Persentase waktu mesin siap digunakan: (Jam Kerja − Downtime) ÷ Jam Kerja × 100%. Target ≥ 90%.',
+  MTBF: 'Mean Time Between Failures — rata-rata selang waktu antar dua kerusakan (jam). Nilai lebih tinggi berarti mesin lebih andal.',
+  MTTR: 'Mean Time To Repair — rata-rata waktu perbaikan per kerusakan (jam). Target ≤ 4 jam. Nilai lebih rendah lebih baik.',
+};
+
 function KpiCard({ icon: Icon, label, value, unit, color, trendLabel, trendDir: dir, onClick }) {
   return (
     <div className="kpi-card" style={{ '--kpi-color': color }} onClick={onClick}>
-      {/* top accent stripe */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
         <div className="kpi-icon-bg" style={{ background: color + '1f' }}>
           <Icon size={15} style={{ color }} />
         </div>
-        <div className="kpi-label" style={{ margin: 0 }}>{label}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+          <div className="kpi-label" style={{ margin: 0 }}>{label}</div>
+          <InfoTip text={KPI_INFO[label]} />
+        </div>
       </div>
       <div>
         <span className="kpi-value">{value}</span>
@@ -31,11 +42,11 @@ function KpiCard({ icon: Icon, label, value, unit, color, trendLabel, trendDir: 
 
 export default function KpiRow({ kpi }) {
   const { navigate } = useUI();
-  const breakdowns = useAnimatedNumber(kpi.breakdowns, 0);
-  const downtime = useAnimatedNumber(kpi.downtime_hrs, 1);
+  const breakdowns   = useAnimatedNumber(kpi.breakdowns, 0);
+  const downtime     = useAnimatedNumber(kpi.downtime_hrs, 1);
   const availability = useAnimatedNumber(kpi.availability, 1);
-  const mtbf = useAnimatedNumber(kpi.mtbf, 1);
-  const mttr = useAnimatedNumber(kpi.mttr, 1);
+  const mtbf         = useAnimatedNumber(kpi.mtbf, 1);
+  const mttr         = useAnimatedNumber(kpi.mttr, 1);
 
   return (
     <div className="kpi-row">

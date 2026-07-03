@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Menu, Sun, Moon, ClipboardList, Bell, LogOut } from 'lucide-react';
+import { Menu, Sun, Moon, ClipboardList, Bell, LogOut, Maximize2, Minimize2 } from 'lucide-react';
 import { useUI } from '../UIContext.jsx';
 import { useApp } from '../AppContext.jsx';
 import { useAuth } from '../AuthContext.jsx';
@@ -80,7 +80,24 @@ export default function Topbar() {
   const { theme, toggleTheme } = useTheme();
   const [clock, setClock] = useState(tickLabel());
   const [avatarOpen, setAvatarOpen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const avatarRef = useRef(null);
+
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+  }
+
+  useEffect(() => {
+    function onFsChange() {
+      setIsFullscreen(!!document.fullscreenElement);
+    }
+    document.addEventListener('fullscreenchange', onFsChange);
+    return () => document.removeEventListener('fullscreenchange', onFsChange);
+  }, []);
 
   useEffect(() => {
     const t = setInterval(() => setClock(tickLabel()), 1000);
@@ -119,6 +136,13 @@ export default function Topbar() {
         <span className="date-label">{clock}</span>
         <button className="btn-icon" onClick={toggleTheme} title={theme === 'dark' ? 'Mode terang' : 'Mode gelap'}>
           {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+        </button>
+        <button
+          className="btn-icon"
+          onClick={toggleFullscreen}
+          title={isFullscreen ? 'Keluar fullscreen (Esc)' : 'Tampilan fullscreen'}
+        >
+          {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
         </button>
         <div className="notif-btn todo-btn" onClick={toggleTodo} title="To-Do · Work Order">
           <ClipboardList size={18} />

@@ -41,7 +41,12 @@ export default function AvailabilityCard({ kpi }) {
             transform="rotate(-90 87 87)"
             style={{ transition: 'stroke-dasharray 1.4s cubic-bezier(.4,0,.2,1)' }}
           />
-          {/* center intentionally empty — value is in the stats row below */}
+          {/* percentage in center */}
+          <text x={87} y={87} textAnchor="middle" dominantBaseline="middle"
+            fill={colHex}
+            style={{ fontSize: 30, fontWeight: 700, fontFamily: 'Inter,sans-serif' }}>
+            {av.toFixed(1)}%
+          </text>
         </svg>
       </div>
 

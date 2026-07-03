@@ -282,9 +282,8 @@ export default function LineTrendChart({
 
   if (expanded) {
     return (
-      <>
-        <div className="chart-expand-overlay" onClick={() => setExpanded(false)} />
-        <div className="card chart-expand-modal">
+      <div className="chart-expand-overlay" onClick={() => setExpanded(false)}>
+        <div className="card chart-expand-modal" onClick={e => e.stopPropagation()}>
           {header}
           {legendEl}
           <div className="axis-unit-label">Waktu (Jam)</div>
@@ -293,7 +292,7 @@ export default function LineTrendChart({
             <X size={16}/>
           </button>
         </div>
-      </>
+      </div>
     );
   }
 

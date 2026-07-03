@@ -217,16 +217,15 @@ export default function DowntimeTrend({ days, year }) {
 
   if (expanded) {
     return (
-      <>
-        <div className="chart-expand-overlay" onClick={() => setExpanded(false)} />
-        <div className="card chart-expand-modal">
+      <div className="chart-expand-overlay" onClick={() => setExpanded(false)}>
+        <div className="card chart-expand-modal" onClick={e => e.stopPropagation()}>
           {header}
           <ChartCanvas days={days} year={year} expanded />
           <button className="chart-expand-close" onClick={() => setExpanded(false)} title="Tutup">
             <X size={16}/>
           </button>
         </div>
-      </>
+      </div>
     );
   }
 

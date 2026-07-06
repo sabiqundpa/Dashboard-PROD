@@ -1,7 +1,6 @@
 node_modules/
 .env
 *.log
-.netlify/
 PG Local.session.sql
 web/node_modules/
 web/dist/

@@ -1,7 +1,8 @@
-import { useState, useMemo } from 'react';
-import { Search, Circle, CheckCircle2, ChevronUp, ChevronDown } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { Search, Circle, CheckCircle2, ChevronUp, ChevronDown, RefreshCw } from 'lucide-react';
 import { useApp } from '../AppContext.jsx';
 import { useUI } from '../UIContext.jsx';
+import PeriodPicker from '../components/PeriodPicker.jsx';
 
 const FILTERS = [
   { key: 'all', label: 'Semua' },
@@ -20,12 +21,19 @@ function fmtHrs(hrs) {
 }
 
 export default function Maintenance() {
-  const { breakdowns, kpi } = useApp();
+  const {
+    breakdowns, kpi, machines,
+    period, setPeriod, refDate, setRefDate,
+    selectedMachine, setSelectedMachine,
+    loadAll,
+  } = useApp();
   const { openModal } = useUI();
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
   const [sortKey, setSortKey] = useState('date');
   const [sortDir, setSortDir] = useState(-1);
+
+  useEffect(() => { loadAll(); }, [period, refDate, selectedMachine]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const open = breakdowns.filter((b) => b.status === 'open').length;
   const resolved = breakdowns.filter((b) => b.status === 'resolved').length;
@@ -55,7 +63,26 @@ export default function Maintenance() {
     <div className="page-view active">
       <div className="page-header">
         <div><div className="page-title">Log Work Order Maintenance</div></div>
-        <button className="btn primary" onClick={() => openModal('addBreakdown')}>+ RMO</button>
+        <div className="header-actions">
+          <select
+            className="btn"
+            style={{ padding: '6px 10px' }}
+            value={selectedMachine}
+            onChange={(e) => setSelectedMachine(e.target.value)}
+            title="Filter per mesin"
+          >
+            <option value="">Semua Mesin</option>
+            {machines.map((m) => <option key={m.name} value={m.name}>{m.name}</option>)}
+          </select>
+          <PeriodPicker
+            period={period} setPeriod={setPeriod}
+            refDate={refDate} setRefDate={setRefDate}
+          />
+          <button className="btn-icon" title="Refresh data" onClick={() => loadAll()}>
+            <RefreshCw size={14} />
+          </button>
+          <button className="btn primary" onClick={() => openModal('addBreakdown')}>+ RMO</button>
+        </div>
       </div>
       <div className="maint-grid">
         <div className="maint-card">

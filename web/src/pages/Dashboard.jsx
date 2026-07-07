@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { AlertCircle, CheckCircle2, CalendarCheck, RefreshCw } from 'lucide-react';
+import { AlertCircle, CheckCircle2, CalendarCheck, RefreshCw, Maximize2, Minimize2 } from 'lucide-react';
 import { useApp } from '../AppContext.jsx';
 import { useUI } from '../UIContext.jsx';
 import KpiRow from '../components/KpiRow.jsx';
@@ -79,7 +79,7 @@ export default function Dashboard() {
     period, setPeriod, refDate, setRefDate, selectedMachine, setSelectedMachine,
     lastUpdate, loadAll,
   } = useApp();
-  const { navigate, openModal } = useUI();
+  const { navigate, openModal, presentMode, togglePresentMode } = useUI();
 
   useEffect(() => { loadAll(); }, [period, refDate, selectedMachine]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -114,6 +114,13 @@ export default function Dashboard() {
           />
           <button className="btn-icon" title="Refresh data" onClick={() => loadAll()}>
             <RefreshCw size={14} />
+          </button>
+          <button
+            className="btn-icon"
+            onClick={togglePresentMode}
+            title={presentMode ? 'Keluar mode layar penuh' : 'Mode layar penuh'}
+          >
+            {presentMode ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
           </button>
           <button className="btn primary" onClick={() => openModal('addBreakdown')}>+ RMO</button>
         </div>

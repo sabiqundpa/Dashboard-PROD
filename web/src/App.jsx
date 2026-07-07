@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { Minimize2 } from 'lucide-react';
 import { AuthProvider, useAuth } from './AuthContext.jsx';
 import { ThemeProvider } from './ThemeContext.jsx';
 import { ToastProvider } from './ToastContext.jsx';
@@ -22,7 +23,7 @@ import ModalRoot from './components/ModalRoot.jsx';
 const PAGES = { dashboard: Dashboard, machines: Machines, maintenance: Maintenance, reports: Reports, analytics: Analytics };
 
 function Shell() {
-  const { page, closeModal, setNotifOpen, closeDetail, sidebarOpen } = useUI();
+  const { page, closeModal, setNotifOpen, closeDetail, sidebarOpen, presentMode, togglePresentMode } = useUI();
   const { loadAll } = useApp();
   const PageComponent = PAGES[page] || Dashboard;
 
@@ -41,7 +42,7 @@ function Shell() {
 
   return (
     <>
-      <div className={`shell${sidebarOpen ? ' sidebar-open' : ''}`}>
+      <div className={`shell${sidebarOpen && !presentMode ? ' sidebar-open' : ''}${presentMode ? ' pres-mode' : ''}`}>
         <Topbar />
         <AppSidebar />
         <main className="content">
@@ -54,6 +55,11 @@ function Shell() {
       <TodoPanel />
       <DetailPanel />
       <ModalRoot />
+      {presentMode && (
+        <button className="pres-fab" onClick={togglePresentMode} title="Keluar mode layar penuh">
+          <Minimize2 size={14} /> Keluar
+        </button>
+      )}
     </>
   );
 }

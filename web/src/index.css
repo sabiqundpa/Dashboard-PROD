@@ -605,9 +605,16 @@ textarea.form-input{resize:vertical;min-height:64px}
 .chart-expand:hover{color:var(--text);border-color:var(--dim)}
 /* Chart fullscreen expand overlay + modal */
 /* Chart fullscreen expand — overlay as flex container so modal is truly centered */
-.chart-expand-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:790;display:flex;align-items:center;justify-content:center;padding:24px}
-.chart-expand-modal{position:relative;z-index:800;width:min(92vw,1100px);max-height:85vh;overflow-y:auto;border-radius:var(--r);padding:20px 24px;background:var(--s1);border:1px solid var(--border);box-shadow:0 16px 48px rgba(0,0,0,.5)}
-.chart-expand-close{position:absolute;top:14px;right:14px;background:var(--s3);border:1px solid var(--border);border-radius:6px;color:var(--muted);cursor:pointer;padding:4px 7px;display:inline-flex;align-items:center;transition:color .12s,background .12s}
+.chart-expand-overlay{position:fixed;inset:0;background:rgba(0,0,0,.80);z-index:790;display:flex;align-items:center;justify-content:center;padding:12px}
+.chart-expand-modal{position:relative;z-index:800;width:min(98vw,1400px);height:90vh;display:flex;flex-direction:column;border-radius:var(--r);padding:16px 20px;background:var(--s1);border:1px solid var(--border);box-shadow:0 24px 60px rgba(0,0,0,.6);overflow:hidden}
+.chart-expand-modal .trend-wrap{flex:1 !important;height:auto !important;min-height:0}
+.chart-expand-close{position:absolute;top:12px;right:12px;background:var(--s3);border:1px solid var(--border);border-radius:6px;color:var(--muted);cursor:pointer;padding:5px 8px;display:inline-flex;align-items:center;transition:color .12s,background .12s;z-index:1}
 .chart-expand-close:hover{color:var(--text);background:var(--s2)}
+/* Presentation / kiosk mode */
+.shell.pres-mode{grid-template-rows:1fr !important;grid-template-columns:1fr !important}
+.shell.pres-mode .topbar{display:none}
+.shell.pres-mode .app-sidebar{display:none !important}
+.pres-fab{position:fixed;bottom:20px;right:20px;z-index:999;background:rgba(10,10,18,.75);backdrop-filter:blur(6px);border:1px solid var(--border);border-radius:8px;padding:8px 14px;color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:6px;font-size:11px;font-family:var(--font);transition:all .15s}
+.pres-fab:hover{color:var(--text);background:rgba(30,30,46,.9)}
 /* Fix InfoTip z-index: hovered KPI card rises above siblings */
 .kpi-card:hover{z-index:10}

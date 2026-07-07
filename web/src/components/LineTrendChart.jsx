@@ -52,7 +52,9 @@ function ChartCanvas({
     if (!visibleData?.length || !canvasRef.current) return;
     const canvas = canvasRef.current;
     const W = canvas.parentElement.offsetWidth || 360;
-    const H = expanded ? Math.round(window.innerHeight * 0.4) : 130;
+    const H = expanded
+      ? Math.max(100, canvas.parentElement.offsetHeight || Math.round(window.innerHeight * 0.7))
+      : 130;
     canvas.width = W; canvas.height = H;
     const ctx = canvas.getContext('2d');
 
@@ -198,11 +200,11 @@ function ChartCanvas({
     return () => cancelAnimationFrame(id);
   }, [expanded]);
 
-  const chartH = expanded ? Math.round(window.innerHeight * 0.4) : 130;
+  const chartH = expanded ? undefined : 130;
 
   return (
     <>
-      <div className="trend-wrap" style={{ height: chartH }} ref={wrapRef}>
+      <div className="trend-wrap" style={chartH ? { height: chartH } : undefined} ref={wrapRef}>
         <canvas ref={canvasRef}></canvas>
         <div className="trend-tooltip" ref={tipRef}></div>
       </div>

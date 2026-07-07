@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { User, Lock } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { User, Lock, Maximize2, Minimize2 } from 'lucide-react';
 import { useAuth } from '../AuthContext.jsx';
 
 export default function Login() {
@@ -8,6 +8,21 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
+
+  const toggleFullscreen = useCallback(() => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+  }, []);
 
   async function submit() {
     setErr('');
@@ -27,6 +42,10 @@ export default function Login() {
 
   return (
     <div className="login-page">
+      <button className="login-fs-btn" onClick={toggleFullscreen}
+        title={isFullscreen ? 'Keluar layar penuh' : 'Layar penuh'}>
+        {isFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+      </button>
       <div className="login-card">
         <div className="logo" style={{ marginBottom: 20 }}>Maintenance<span> Dashboard</span></div>
         <div className="form-group" style={{ marginBottom: 14 }}>

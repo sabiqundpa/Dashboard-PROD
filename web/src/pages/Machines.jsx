@@ -3,26 +3,27 @@ import { FolderUp, Factory, Search } from 'lucide-react';
 import { useApp } from '../AppContext.jsx';
 import { useUI } from '../UIContext.jsx';
 
-const FILTERS = [
-  { key: 'all', label: 'Semua' },
-  { key: 'running', label: 'Running' },
-  { key: 'down', label: 'Stop' },
-  { key: 'idle', label: 'Idle' },
-];
-
 export default function Machines() {
   const { machines } = useApp();
   const { showDetail, openModal } = useUI();
   const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState('all');
+  const [filterCluster, setFilterCluster] = useState('');
+  const [filterLine, setFilterLine] = useState('');
+
+  const clusters = useMemo(() => [...new Set(machines.map((m) => m.cluster).filter(Boolean))].sort(), [machines]);
+  const lines = useMemo(() => {
+    const src = filterCluster ? machines.filter((m) => m.cluster === filterCluster) : machines;
+    return [...new Set(src.map((m) => m.line).filter(Boolean))].sort();
+  }, [machines, filterCluster]);
 
   const data = useMemo(() => {
     const q = search.toLowerCase();
     return machines.filter((m) =>
-      (!q || m.name.toLowerCase().includes(q) || m.cluster.toLowerCase().includes(q) || m.line.toLowerCase().includes(q)) &&
-      (filter === 'all' || m.status === filter)
+      (!q || m.name.toLowerCase().includes(q) || (m.cluster || '').toLowerCase().includes(q) || (m.line || '').toLowerCase().includes(q)) &&
+      (!filterCluster || m.cluster === filterCluster) &&
+      (!filterLine || m.line === filterLine)
     );
-  }, [machines, search, filter]);
+  }, [machines, search, filterCluster, filterLine]);
 
   return (
     <div className="page-view active">
@@ -35,16 +36,21 @@ export default function Machines() {
         </div>
       </div>
       <div className="card">
-        <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
           <div className="search-wrap" style={{ flex: 1, minWidth: 140 }}>
             <span className="search-icon"><Search size={14} /></span>
             <input className="search-input" placeholder="Cari Mesin…" value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
-          <div className="filter-row">
-            {FILTERS.map((f) => (
-              <span key={f.key} className={'filter-chip' + (filter === f.key ? ' active' : '')} onClick={() => setFilter(f.key)}>{f.label}</span>
-            ))}
-          </div>
+          <select className="btn" style={{ padding: '6px 10px' }} value={filterCluster}
+            onChange={(e) => { setFilterCluster(e.target.value); setFilterLine(''); }}>
+            <option value="">Semua Cluster</option>
+            {clusters.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <select className="btn" style={{ padding: '6px 10px' }} value={filterLine}
+            onChange={(e) => setFilterLine(e.target.value)}>
+            <option value="">Semua Line</option>
+            {lines.map((l) => <option key={l} value={l}>{l}</option>)}
+          </select>
         </div>
         <div className="table-scroll">
           <table className="machine-table" style={{ minWidth: 1020 }}>

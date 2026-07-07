@@ -4,7 +4,7 @@ import { useApp } from '../AppContext.jsx';
 import { useUI } from '../UIContext.jsx';
 import PeriodPicker from '../components/PeriodPicker.jsx';
 
-const FILTERS = [
+const STATUS_FILTERS = [
   { key: 'all', label: 'Semua' },
   { key: 'open', label: 'Open' },
   { key: 'resolved', label: 'Close' },
@@ -22,18 +22,24 @@ function fmtHrs(hrs) {
 
 export default function Maintenance() {
   const {
-    breakdowns, kpi, machines,
+    breakdowns, kpi,
     period, setPeriod, refDate, setRefDate,
-    selectedMachine, setSelectedMachine,
     loadAll,
   } = useApp();
   const { openModal } = useUI();
+
   const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [machineFilter, setMachineFilter] = useState('');
   const [sortKey, setSortKey] = useState('date');
   const [sortDir, setSortDir] = useState(-1);
 
-  useEffect(() => { loadAll(); }, [period, refDate, selectedMachine]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { loadAll(); }, [period, refDate]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Unique machine names from all loaded breakdowns
+  const machineOptions = useMemo(() =>
+    [...new Set(breakdowns.map((b) => b.machine).filter(Boolean))].sort()
+  , [breakdowns]);
 
   const open = breakdowns.filter((b) => b.status === 'open').length;
   const resolved = breakdowns.filter((b) => b.status === 'resolved').length;
@@ -47,14 +53,15 @@ export default function Maintenance() {
     const q = search.toLowerCase();
     const filtered = breakdowns.filter((b) => {
       const ms = !q || b.machine.toLowerCase().includes(q) || b.cause.toLowerCase().includes(q);
-      const ss = filter === 'all' || b.status === filter;
-      return ms && ss;
+      const ss = statusFilter === 'all' || b.status === statusFilter;
+      const mc = !machineFilter || b.machine === machineFilter;
+      return ms && ss && mc;
     });
     return [...filtered].sort((a, b) => {
       const av = a[sortKey] ?? '', bv = b[sortKey] ?? '';
       return sortDir * String(av).localeCompare(String(bv));
     });
-  }, [breakdowns, search, filter, sortKey, sortDir]);
+  }, [breakdowns, search, statusFilter, machineFilter, sortKey, sortDir]);
 
   const arrow = (k) => (sortKey === k ? (sortDir === 1 ? <ChevronUp size={12} style={{ verticalAlign: 'middle' }} /> : <ChevronDown size={12} style={{ verticalAlign: 'middle' }} />) : null);
   const thCls = (k) => (sortKey === k ? 'sorted' : '');
@@ -64,16 +71,6 @@ export default function Maintenance() {
       <div className="page-header">
         <div><div className="page-title">Log Work Order Maintenance</div></div>
         <div className="header-actions">
-          <select
-            className="btn"
-            style={{ padding: '6px 10px' }}
-            value={selectedMachine}
-            onChange={(e) => setSelectedMachine(e.target.value)}
-            title="Filter per mesin"
-          >
-            <option value="">Semua Mesin</option>
-            {machines.map((m) => <option key={m.name} value={m.name}>{m.name}</option>)}
-          </select>
           <PeriodPicker
             period={period} setPeriod={setPeriod}
             refDate={refDate} setRefDate={setRefDate}
@@ -84,6 +81,7 @@ export default function Maintenance() {
           <button className="btn primary" onClick={() => openModal('addBreakdown')}>+ RMO</button>
         </div>
       </div>
+
       <div className="maint-grid">
         <div className="maint-card">
           <div style={{ fontSize: 9.5, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 5 }}>OPEN</div>
@@ -99,18 +97,26 @@ export default function Maintenance() {
           <div style={{ fontFamily: 'var(--display)', fontSize: 26, fontWeight: 700, color: 'var(--green)' }}>{resolved}</div>
         </div>
       </div>
+
       <div className="card">
-        <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
           <div className="search-wrap" style={{ flex: 1, minWidth: 140 }}>
             <span className="search-icon"><Search size={14} /></span>
             <input className="search-input" placeholder="Cari log…" value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
+          <select className="btn" style={{ padding: '6px 10px' }} value={machineFilter}
+            onChange={(e) => setMachineFilter(e.target.value)}>
+            <option value="">Semua Mesin</option>
+            {machineOptions.map((name) => <option key={name} value={name}>{name}</option>)}
+          </select>
           <div className="filter-row">
-            {FILTERS.map((f) => (
-              <span key={f.key} className={'filter-chip' + (filter === f.key ? ' active' : '')} onClick={() => setFilter(f.key)}>{f.label}</span>
+            {STATUS_FILTERS.map((f) => (
+              <span key={f.key} className={'filter-chip' + (statusFilter === f.key ? ' active' : '')}
+                onClick={() => setStatusFilter(f.key)}>{f.label}</span>
             ))}
           </div>
         </div>
+
         <div className="table-scroll">
           <table className="machine-table" style={{ minWidth: 1400 }}>
             <thead>

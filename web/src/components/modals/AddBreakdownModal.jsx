@@ -147,7 +147,7 @@ export default function AddBreakdownModal() {
           </label>
           <input
             type="text"
-            className="form-input auto-fill"
+            className={`form-input auto-fill${validMachine && autoCluster ? ' has-value' : ''}`}
             value={autoCluster}
             readOnly
             placeholder="Otomatis dari mesin"
@@ -163,7 +163,7 @@ export default function AddBreakdownModal() {
           </label>
           <input
             type="text"
-            className="form-input auto-fill"
+            className={`form-input auto-fill${validMachine && autoLine ? ' has-value' : ''}`}
             value={autoLine}
             readOnly
             placeholder="Otomatis dari mesin"

@@ -133,7 +133,7 @@ export default function CloseWOModal({ payload }) {
       {/* ── Footer ────────────────────────────────── */}
       <div className="modal-footer">
         <button className="btn" onClick={closeModal}>Batal</button>
-        <button ref={submitRef} className="btn primary" disabled={busy} onClick={submit}>
+        <button ref={submitRef} className="btn blue" disabled={busy} onClick={submit}>
           {busy ? 'Menyimpan…' : 'Tutup WO'}
         </button>
       </div>

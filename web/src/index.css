@@ -288,13 +288,16 @@ textarea.form-input{resize:vertical;min-height:64px}
 .rmo-form .form-error{font-size:11px;margin-top:5px}
 .rmo-form select.form-input{padding-right:28px}
 /* Close WO modal specifics */
-.cwo-info-banner{background:rgba(68,136,255,.08);border:1px solid rgba(68,136,255,.2);border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:14px}
-.cwo-machine{font-weight:700;font-size:15px}
-.cwo-sep{color:var(--muted)}
-.cwo-cause{color:var(--muted)}
+.cwo-info-banner{background:linear-gradient(135deg,rgba(26,111,212,.18),rgba(99,102,241,.18));border:1px solid rgba(99,102,241,.4);border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:14px}
+.cwo-machine{font-weight:700;font-size:15px;color:#7eb8ff}
+.cwo-sep{color:rgba(126,184,255,.45)}
+.cwo-cause{color:rgba(200,210,255,.7)}
 .cwo-textarea{min-height:90px;resize:vertical}
 .form-input.auto-fill{background:var(--s3);cursor:default}
 .form-input.auto-fill:not(:placeholder-shown){color:var(--text)}
+.form-input.auto-fill.has-value{background:rgba(255,107,0,.10);border-color:rgba(255,150,0,.45);color:#ff9a00}
+.btn.blue{background:linear-gradient(135deg,#1a6fd4,#6366f1);color:#fff;border-color:transparent;font-weight:600}
+.btn.blue:hover,.btn.blue:active{opacity:.88}
 @media(max-width:767px){
   .rmo-form{grid-template-columns:1fr}
   .rmo-form .rmo-full{grid-column:1}

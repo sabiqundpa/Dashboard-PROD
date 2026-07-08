@@ -1,4 +1,4 @@
-import { X, Pencil, Play, Square, Wrench, Clock, AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, Pencil, Clock, AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useUI } from '../UIContext.jsx';
 import { useApp } from '../AppContext.jsx';
 import { useToast } from '../ToastContext.jsx';
@@ -28,10 +28,13 @@ export default function DetailPanel() {
   function navPrev() { if (hasPrev) showDetail(navList[navIdx - 1], navList); }
   function navNext() { if (hasNext) showDetail(navList[navIdx + 1], navList); }
 
-  async function setStatus(status) {
+  async function toggleActive() {
     if (!m) return;
-    try { await apiSend('/machines-status', 'POST', { machine: m.name, status }, logout); } catch {}
-    showToast(`${m.name} → ${status}`, status === 'running' ? 'green' : status === 'down' ? 'red' : 'yellow');
+    const next = !m.active;
+    try {
+      await apiSend('/machines-active', 'POST', { machine: m.name, active: next }, logout);
+      showToast(`${m.name} → ${next ? 'Aktif' : 'Nonaktif'}`, next ? 'green' : 'yellow');
+    } catch {}
     loadAll();
   }
 
@@ -39,8 +42,6 @@ export default function DetailPanel() {
 
   const av = m.availability ?? 0;
   const avCol = av >= 90 ? 'var(--green)' : av >= 75 ? 'var(--yellow)' : 'var(--red)';
-  const statusCol = m.status === 'running' ? '#00d084' : m.status === 'down' ? '#ff4455' : '#f0a500';
-  const statusBg  = m.status === 'running' ? 'rgba(0,208,132,.12)' : m.status === 'down' ? 'rgba(255,68,85,.12)' : 'rgba(240,165,0,.12)';
   const rBDs = breakdowns.filter((b) => b.machine === m.name).slice(0, 6);
 
   return (
@@ -66,16 +67,10 @@ export default function DetailPanel() {
       </div>
 
       <div className="detail-body">
-        {/* ── Edit button + Status badge ─────── */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <button className="btn" style={{ flex: 1 }} onClick={() => openModal('editMachine', m)}>
-            <Pencil size={12} /> Edit Info Mesin
-          </button>
-          <span className="detail-status-pill" style={{ background: statusBg, color: statusCol }}>
-            <span style={{ width: 7, height: 7, borderRadius: '50%', background: statusCol, display: 'inline-block', flexShrink: 0 }}></span>
-            {m.status}
-          </span>
-        </div>
+        {/* ── Edit button ─────────────────────── */}
+        <button className="btn" style={{ width: '100%' }} onClick={() => openModal('editMachine', m)}>
+          <Pencil size={12} /> Edit Info Mesin
+        </button>
 
         {/* ── KPI Stats grid ──────────────────── */}
         <div className="detail-stats-grid">
@@ -170,18 +165,13 @@ export default function DetailPanel() {
           })}
         </div>
 
-        {/* ── Status action buttons ────────────── */}
-        <div className="detail-action-row">
-          <button className="btn detail-action-btn running" onClick={() => setStatus('running')}>
-            <Play size={13} fill="currentColor" /> Running
-          </button>
-          <button className="btn detail-action-btn down" onClick={() => setStatus('down')}>
-            <Square size={13} fill="currentColor" /> Down
-          </button>
-          <button className="btn detail-action-btn pm" onClick={() => setStatus('maintenance')}>
-            <Wrench size={13} /> PM
-          </button>
-        </div>
+        {/* ── Aktif / Nonaktif toggle ──────────── */}
+        <button
+          className={`btn detail-active-toggle ${m.active ? 'is-aktif' : 'is-nonaktif'}`}
+          onClick={toggleActive}>
+          <span className="detail-active-dot"></span>
+          {m.active ? 'Aktif' : 'Nonaktif'}
+        </button>
       </div>
     </div>
   );

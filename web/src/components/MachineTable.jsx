@@ -26,7 +26,7 @@ export default function MachineTable({ machines, limit, search: controlledSearch
     const q = (search || '').toLowerCase();
     let d = machines.filter((m) => !q ||
       m.name.toLowerCase().includes(q) || m.cluster.toLowerCase().includes(q) ||
-      m.line.toLowerCase().includes(q) || m.status.toLowerCase().includes(q) ||
+      m.line.toLowerCase().includes(q) ||
       (m.last_incident || '').toLowerCase().includes(q));
     d.sort((a, b) => {
       const av = a[sortKey] ?? '', bv = b[sortKey] ?? '';
@@ -56,7 +56,7 @@ export default function MachineTable({ machines, limit, search: controlledSearch
               <th className={thCls('name')} onClick={() => sortBy('name')}>Mesin {arrow('name')}</th>
               <th className={thCls('cluster')} onClick={() => sortBy('cluster')}>Cluster {arrow('cluster')}</th>
               <th className={thCls('line')} onClick={() => sortBy('line')}>Line {arrow('line')}</th>
-              <th className={thCls('status')} style={{ textAlign: 'center' }} onClick={() => sortBy('status')}>Status {arrow('status')}</th>
+              <th className={thCls('active')} style={{ textAlign: 'center' }} onClick={() => sortBy('active')}>Aktif {arrow('active')}</th>
               <th className={thCls('availability')} onClick={() => sortBy('availability')} style={{ textAlign: 'center' }}>Avail % {arrow('availability')}</th>
               <th className={thCls('breakdowns')} onClick={() => sortBy('breakdowns')} style={{ textAlign: 'center' }}>BD {arrow('breakdowns')}</th>
               <th className={thCls('downtime_hrs')} onClick={() => sortBy('downtime_hrs')} style={{ textAlign: 'right' }}>DT Jam {arrow('downtime_hrs')}</th>
@@ -75,7 +75,7 @@ export default function MachineTable({ machines, limit, search: controlledSearch
                   <td><strong style={{ fontSize: 12 }}>{m.name}</strong></td>
                   <td style={{ color: 'var(--muted)' }}>{m.cluster || '—'}</td>
                   <td style={{ color: 'var(--muted)' }}>{m.line || '—'}</td>
-                  <td style={{ textAlign: 'center' }}><span className={'status-pill ' + m.status}><span className="status-dot"></span>{m.status}</span></td>
+                  <td style={{ textAlign: 'center' }}><span className={`aktif-pill ${m.active ? 'aktif' : 'nonaktif'}`}><span className="aktif-dot"></span>{m.active ? 'Aktif' : 'Nonaktif'}</span></td>
                   <td style={{ textAlign: 'center' }}>
                     <span style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>{av.toFixed(1)}%</span>
                     <span className="pct-bar"><span className="pct-fill" style={{ width: `${av}%`, background: bc }}></span></span>

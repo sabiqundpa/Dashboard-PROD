@@ -349,8 +349,19 @@ textarea.form-input{resize:vertical;min-height:64px}
 .detail-img-wrap{width:100%;height:150px;background:var(--s2);border:2px dashed var(--border);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--muted);font-size:11.5px;font-weight:500;cursor:default}
 .detail-img-hint{font-size:9.5px;color:var(--dim);font-weight:400}
 
-/* Status pill */
-.detail-status-pill{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:99px;font-size:10.5px;font-weight:600;text-transform:capitalize;flex-shrink:0}
+/* Aktif / Nonaktif pill (machine tables + detail panel) */
+.aktif-pill{display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:2px 8px;border-radius:20px;font-weight:600;white-space:nowrap}
+.aktif-pill.aktif{background:rgba(0,208,132,.12);color:var(--green)}
+.aktif-pill.nonaktif{background:rgba(90,90,120,.15);color:var(--muted)}
+.aktif-dot{width:5px;height:5px;border-radius:50%;background:currentColor;flex-shrink:0}
+
+/* Aktif/Nonaktif toggle button in detail panel */
+.detail-active-toggle{width:100%;justify-content:center;gap:8px;font-size:13px;font-weight:600;padding:10px 0;border-radius:10px;margin-top:4px}
+.detail-active-toggle.is-aktif{background:rgba(0,208,132,.14);color:var(--green);border:1px solid rgba(0,208,132,.3)}
+.detail-active-toggle.is-aktif:hover{background:rgba(0,208,132,.22)}
+.detail-active-toggle.is-nonaktif{background:rgba(90,90,120,.15);color:var(--muted);border:1px solid var(--border)}
+.detail-active-toggle.is-nonaktif:hover{background:rgba(90,90,120,.25)}
+.detail-active-dot{width:8px;height:8px;border-radius:50%;background:currentColor;flex-shrink:0}
 
 /* Stats grid */
 .detail-stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}

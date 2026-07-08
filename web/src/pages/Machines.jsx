@@ -54,7 +54,7 @@ export default function Machines() {
         </div>
         <div className="table-scroll">
           <table className="machine-table" style={{ minWidth: 1020 }}>
-            <thead><tr><th>Mesin</th><th>Nomor Asset</th><th>Type</th><th>Merk</th><th>Tahun</th><th>Daya</th><th>Cluster</th><th>Line</th><th>Shift</th><th style={{ textAlign: 'center' }}>Status</th><th style={{ textAlign: 'center' }}>Avail %</th><th style={{ textAlign: 'center' }}>Freq</th><th style={{ textAlign: 'right' }}>Waktu DT</th></tr></thead>
+            <thead><tr><th>Mesin</th><th>Nomor Asset</th><th>Type</th><th>Merk</th><th>Tahun</th><th>Daya</th><th>Cluster</th><th>Line</th><th>Shift</th><th style={{ textAlign: 'center' }}>Aktif</th><th style={{ textAlign: 'center' }}>Avail %</th><th style={{ textAlign: 'center' }}>Freq</th><th style={{ textAlign: 'right' }}>Waktu DT</th></tr></thead>
             <tbody>
               {!data.length ? (
                 <tr><td colSpan={13} style={{ textAlign: 'center', padding: 20, color: 'var(--muted)' }}>No machines match</td></tr>
@@ -73,7 +73,7 @@ export default function Machines() {
                     <td style={{ color: 'var(--muted)' }}>{m.cluster || '—'}</td>
                     <td style={{ color: 'var(--muted)' }}>{m.line || '—'}</td>
                     <td style={{ color: 'var(--muted)' }}>{m.shift || '—'}</td>
-                    <td style={{ textAlign: 'center' }}><span className={'status-pill ' + m.status}><span className="status-dot"></span>{m.status}</span></td>
+                    <td style={{ textAlign: 'center' }}><span className={`aktif-pill ${m.active ? 'aktif' : 'nonaktif'}`}><span className="aktif-dot"></span>{m.active ? 'Aktif' : 'Nonaktif'}</span></td>
                     <td style={{ textAlign: 'center' }}>
                       <span style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>{av.toFixed(1)}%</span>
                       <span className="pct-bar"><span className="pct-fill" style={{ width: `${av}%`, background: bc }}></span></span>

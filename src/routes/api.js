@@ -61,7 +61,6 @@ router.get('/machines', async (req, res, next) => {
     const machines = await prisma.machine.findMany({
       orderBy: { name: 'asc' },
       include: {
-        machineStatus: true,
         breakdowns: {
           where: { date: { gte: start, lte: end } },
           orderBy: { date: 'desc' },
@@ -87,7 +86,7 @@ router.get('/machines', async (req, res, next) => {
         cluster: m.cluster,
         line: m.line,
         shift: m.shift,
-        status: m.machineStatus?.status ?? 'idle',
+        active: m.active,
         plannedHours: m.plannedHours,
         availability,
         breakdowns: m.breakdowns.length,
@@ -105,7 +104,11 @@ router.get('/kpi', async (req, res, next) => {
   try {
     const { start, end } = getPeriodRange(req.query.period, req.query.date, req.query.start, req.query.end);
     const days = daysInRange(start, end);
-    const machineFilter = req.query.machine ? { name: req.query.machine } : {};
+    // Only active machines contribute to planned hours (and thus availability).
+    // When a specific machine is requested by name, honour that regardless of active flag.
+    const machineFilter = req.query.machine
+      ? { name: req.query.machine }
+      : { active: true };
 
     const machines = await prisma.machine.findMany({ where: machineFilter });
     const breakdowns = await prisma.breakdown.findMany({
@@ -375,7 +378,7 @@ router.get('/mtbf-mttr-trend', async (req, res, next) => {
     const now = req.query.date ? new Date(req.query.date) : new Date();
     const MTTR_TARGET_HOURS = 1; // fixed org-wide target: repair within 1 jam
 
-    const machines = await prisma.machine.findMany({ where: req.query.machine ? { name: req.query.machine } : {} });
+    const machines = await prisma.machine.findMany({ where: req.query.machine ? { name: req.query.machine } : { active: true } });
     const plannedPerDay = machines.reduce((s, m) => s + m.plannedHours, 0);
     const mttrTarget = MTTR_TARGET_HOURS;
 
@@ -554,14 +557,6 @@ router.post('/breakdown', async (req, res, next) => {
       },
     });
 
-    // A new work order means the machine just went down -- reflect that
-    // immediately in MachineStatus (status is now separate from master data).
-    await prisma.machineStatus.upsert({
-      where: { machineId: machine.id },
-      update: { status: 'down' },
-      create: { machineId: machine.id, status: 'down' },
-    });
-
     res.status(201).json(breakdown);
   } catch (err) { next(err); }
 });
@@ -636,28 +631,19 @@ router.post('/machines', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// ── POST /api/machines-status ──────────────────────────
-// (Flat path -- see the comment on /breakdown-close above. The machine's
-// current name is passed in the body instead of as a URL param.)
-router.post('/machines-status', async (req, res, next) => {
+// ── POST /api/machines-active ──────────────────────────
+// Toggle aktif/nonaktif flag. Only active machines contribute to KPI.
+router.post('/machines-active', async (req, res, next) => {
   try {
-    const { machine: machineName, status } = req.body;
-    const allowed = ['running', 'down', 'idle', 'maintenance'];
-    if (!allowed.includes(status)) {
-      return res.status(400).json({ error: `status must be one of: ${allowed.join(', ')}` });
+    const { machine: machineName, active } = req.body;
+    if (typeof active !== 'boolean') {
+      return res.status(400).json({ error: 'active must be a boolean' });
     }
-
     const existing = await prisma.machine.findUnique({ where: { name: machineName } });
     if (!existing) return res.status(404).json({ error: `Machine "${machineName}" not found` });
 
-    // Upsert ke MachineStatus — satu baris per mesin
-    const ms = await prisma.machineStatus.upsert({
-      where: { machineId: existing.id },
-      update: { status },
-      create: { machineId: existing.id, status },
-    });
-
-    res.json({ ...existing, status: ms.status });
+    await prisma.machine.update({ where: { name: machineName }, data: { active } });
+    res.json({ ok: true, active });
   } catch (err) { next(err); }
 });
 
@@ -742,20 +728,20 @@ router.get('/export-work-orders', async (req, res, next) => {
 router.get('/export-machines', async (req, res, next) => {
   try {
     const machines = await prisma.machine.findMany({
-      include: { machineStatus: true, breakdowns: { orderBy: { date: 'desc' } } },
+      include: { breakdowns: { orderBy: { date: 'desc' } } },
       orderBy: { name: 'asc' },
     });
 
     const headers = [
       'Nama Mesin', 'Nomor Asset', 'Type', 'Merk', 'Tahun Mesin', 'Daya', 'Cluster', 'Line', 'Shift',
-      'Jam Kerja Harian', 'Status Saat Ini',
+      'Jam Kerja Harian', 'Aktif',
       'Tanggal', 'Waktu Mulai', 'Jenis Problem', 'Problem Identifikasi', 'PIC GH',
       'Tanggal Selesai', 'Waktu Selesai', 'Penyelesaian', 'Action', 'PIC MTN', 'Durasi (jam)',
     ];
 
     const rows = [];
     for (const m of machines) {
-      const base = [m.name, m.assetNumber, m.type, m.brand, m.yearMachine ?? '', m.power, m.cluster, m.line, m.shift, m.plannedHours, m.machineStatus?.status ?? 'idle'];
+      const base = [m.name, m.assetNumber, m.type, m.brand, m.yearMachine ?? '', m.power, m.cluster, m.line, m.shift, m.plannedHours, m.active ? 'Ya' : 'Tidak'];
       if (!m.breakdowns.length) {
         rows.push([...base, '', '', '', '', '', '', '', '', '', '', '']);
         continue;
@@ -934,7 +920,7 @@ router.post('/import-machines', upload.single('file'), async (req, res, next) =>
           prisma.machine.upsert({
             where: { name },
             update: { ...data, ...(plannedHours != null ? { plannedHours } : {}) },
-            create: { name, ...data, plannedHours: plannedHours ?? 16 },
+            create: { name, ...data, plannedHours: plannedHours ?? 16, active: false },
           })
         )
       );

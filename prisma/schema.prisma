@@ -28,6 +28,7 @@ model Machine {
   line           String         @default("")
   shift          String         @default("")                         // Shift kerja
   plannedHours   Float          @default(16) @map("worktime_machine") // Jam Waktu Kerja harian
+  active         Boolean        @default(false)                        // Hanya mesin aktif yang dihitung di KPI
   createdAt      DateTime       @default(now())
   breakdowns     Breakdown[]
   machineStatus  MachineStatus?

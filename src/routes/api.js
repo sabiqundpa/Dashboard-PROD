@@ -56,7 +56,7 @@ router.get('/me', (req, res) => {
 // ── GET /api/machines ──────────────────────────────
 router.get('/machines', async (req, res, next) => {
   try {
-    const { start, end } = getPeriodRange(req.query.period, req.query.date);
+    const { start, end } = getPeriodRange(req.query.period, req.query.date, req.query.start, req.query.end);
     const days = daysInRange(start, end);
     const machines = await prisma.machine.findMany({
       orderBy: { name: 'asc' },
@@ -103,7 +103,7 @@ router.get('/machines', async (req, res, next) => {
 // ── GET /api/kpi ────────────────────────────────────
 router.get('/kpi', async (req, res, next) => {
   try {
-    const { start, end } = getPeriodRange(req.query.period, req.query.date);
+    const { start, end } = getPeriodRange(req.query.period, req.query.date, req.query.start, req.query.end);
     const days = daysInRange(start, end);
     const machineFilter = req.query.machine ? { name: req.query.machine } : {};
 
@@ -152,7 +152,7 @@ router.get('/kpi', async (req, res, next) => {
 // ── GET /api/breakdowns ─────────────────────────────
 router.get('/breakdowns', async (req, res, next) => {
   try {
-    const { start, end } = getPeriodRange(req.query.period, req.query.date);
+    const { start, end } = getPeriodRange(req.query.period, req.query.date, req.query.start, req.query.end);
     const breakdowns = await prisma.breakdown.findMany({
       where: {
         date: { gte: start, lte: end },
@@ -189,7 +189,7 @@ router.get('/breakdowns', async (req, res, next) => {
 // ── GET /api/pareto ──────────────────────────────────
 router.get('/pareto', async (req, res, next) => {
   try {
-    const { start, end } = getPeriodRange(req.query.period, req.query.date);
+    const { start, end } = getPeriodRange(req.query.period, req.query.date, req.query.start, req.query.end);
     const breakdowns = await prisma.breakdown.findMany({
       where: {
         date: { gte: start, lte: end },
@@ -220,7 +220,7 @@ router.get('/pareto', async (req, res, next) => {
 // Top 10 machines by breakdown frequency within the period.
 router.get('/pareto-machines', async (req, res, next) => {
   try {
-    const { start, end } = getPeriodRange(req.query.period, req.query.date);
+    const { start, end } = getPeriodRange(req.query.period, req.query.date, req.query.start, req.query.end);
     const breakdowns = await prisma.breakdown.findMany({
       where: {
         date: { gte: start, lte: end },
@@ -307,6 +307,25 @@ router.get('/downtime-by-day', async (req, res, next) => {
       }
 
       return res.json(hours.map(({ day, hrs }) => ({ day, hrs })));
+    }
+
+    // range: custom date range, one bucket per day
+    if (period === 'range' && req.query.start && req.query.end) {
+      const rangeStart = new Date(req.query.start); rangeStart.setHours(0, 0, 0, 0);
+      const rangeEnd   = new Date(req.query.end);   rangeEnd.setHours(23, 59, 59, 999);
+      const breakdowns = await prisma.breakdown.findMany({
+        where: { date: { gte: rangeStart, lte: rangeEnd }, ...machineWhere(req) },
+      });
+      const days = [];
+      for (let d = new Date(rangeStart); d <= rangeEnd; d.setDate(d.getDate() + 1)) {
+        days.push({ key: d.toISOString().slice(0, 10), day: `${d.getDate()}/${d.getMonth()+1}`, hrs: 0 });
+      }
+      for (const b of breakdowns) {
+        const key = b.date.toISOString().slice(0, 10);
+        const entry = days.find((d) => d.key === key);
+        if (entry) entry.hrs += b.durationHrs;
+      }
+      return res.json(days.map(({ day, hrs }) => ({ day, hrs })));
     }
 
     // week: Monday through Sunday of the current calendar week
@@ -443,6 +462,28 @@ router.get('/mtbf-mttr-trend', async (req, res, next) => {
       const totalPlanned = hours.reduce((s, h) => s + h.plannedHrs, 0);
       rows.push(totalRow(totalDowntime, totalCount, totalPlanned, hours.map((h) => h.plannedHrs)));
       return res.json(rows);
+    }
+
+    // range: custom start–end, one bucket per day
+    if (period === 'range' && req.query.start && req.query.end) {
+      const rs = new Date(req.query.start); rs.setHours(0, 0, 0, 0);
+      const re = new Date(req.query.end);   re.setHours(23, 59, 59, 999);
+      const rBreakdowns = await prisma.breakdown.findMany({ where: { date: { gte: rs, lte: re }, ...machineWhere(req) } });
+      const rDays = [];
+      for (let d = new Date(rs); d <= re; d.setDate(d.getDate() + 1)) {
+        rDays.push({ key: d.toISOString().slice(0, 10), day: `${d.getDate()}/${d.getMonth()+1}`, downtimeHrs: 0, count: 0, plannedHrs: plannedPerDay });
+      }
+      for (const b of rBreakdowns) {
+        const key = b.date.toISOString().slice(0, 10);
+        const entry = rDays.find((d) => d.key === key);
+        if (entry) { entry.downtimeHrs += b.durationHrs; entry.count += 1; }
+      }
+      const rRows = rDays.map((d) => ({ day: d.day, ...bucket(d.downtimeHrs, d.count, d.plannedHrs) }));
+      const rTotalDT = rDays.reduce((s, d) => s + d.downtimeHrs, 0);
+      const rTotalC  = rDays.reduce((s, d) => s + d.count, 0);
+      const rTotalP  = rDays.reduce((s, d) => s + d.plannedHrs, 0);
+      rRows.push(totalRow(rTotalDT, rTotalC, rTotalP, rDays.map((d) => d.plannedHrs)));
+      return res.json(rRows);
     }
 
     // week: Monday through Sunday of the current calendar week
@@ -666,7 +707,7 @@ router.get('/export-work-orders', async (req, res, next) => {
   try {
     let rows;
     if (req.query.period) {
-      const { start, end } = getPeriodRange(req.query.period, req.query.date);
+      const { start, end } = getPeriodRange(req.query.period, req.query.date, req.query.start, req.query.end);
       rows = await prisma.$queryRaw`SELECT * FROM "work_order_export" WHERE "tanggal" BETWEEN ${start} AND ${end}`;
     } else {
       rows = await prisma.$queryRaw`SELECT * FROM "work_order_export"`;

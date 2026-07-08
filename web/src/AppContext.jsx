@@ -14,6 +14,11 @@ export function AppProvider({ children }) {
   const { logout } = useAuth();
   const [period, setPeriod] = useState('month');
   const [refDate, setRefDate] = useState(todayStr());
+  const [rangeStart, setRangeStart] = useState(() => {
+    const d = new Date(); d.setDate(1);
+    return d.toISOString().slice(0, 10);
+  });
+  const [rangeEnd, setRangeEnd] = useState(todayStr());
   const [selectedMachine, setSelectedMachine] = useState('');
   const [kpi, setKpi] = useState(EMPTY_KPI);
   const [machines, setMachines] = useState([]);
@@ -26,8 +31,8 @@ export function AppProvider({ children }) {
   const [lastUpdate, setLastUpdate] = useState('—');
   const [notifications, setNotifications] = useState([]);
   const requestIdRef = useRef(0);
-  const stateRef = useRef({ period, refDate, selectedMachine });
-  stateRef.current = { period, refDate, selectedMachine };
+  const stateRef = useRef({ period, refDate, rangeStart, rangeEnd, selectedMachine });
+  stateRef.current = { period, refDate, rangeStart, rangeEnd, selectedMachine };
 
   const addNotif = useCallback((text, color = 'yellow') => {
     setNotifications((n) => [{ text, color, time: new Date(), unread: true, id: Math.random() }, ...n]);
@@ -49,7 +54,11 @@ export function AppProvider({ children }) {
     // clobbering fresher state.
     const myId = ++requestIdRef.current;
     setLastUpdate('Updating…');
-    const qs = `period=${usePeriod}&date=${useDate}`;
+    const useRangeStart = stateRef.current.rangeStart;
+    const useRangeEnd   = stateRef.current.rangeEnd;
+    const qs = usePeriod === 'range' && useRangeStart && useRangeEnd
+      ? `period=range&start=${useRangeStart}&end=${useRangeEnd}`
+      : `period=${usePeriod}&date=${useDate}`;
     const machineQs = useMachine ? `${qs}&machine=${encodeURIComponent(useMachine)}` : qs;
     const [k, m, b, pr, pm, dt, mt] = await Promise.all([
       apiFetch(`/kpi?${machineQs}`, EMPTY_KPI, logout),
@@ -68,7 +77,9 @@ export function AppProvider({ children }) {
 
   return (
     <AppContext.Provider value={{
-      period, setPeriod, refDate, setRefDate, selectedMachine, setSelectedMachine,
+      period, setPeriod, refDate, setRefDate,
+      rangeStart, setRangeStart, rangeEnd, setRangeEnd,
+      selectedMachine, setSelectedMachine,
       kpi, machines, breakdowns, pareto, paretoMachines, downtime, mtbfMttrTrend,
       connected, lastUpdate, loadAll, notifications, addNotif, markAllRead, clearNotifs,
     }}>

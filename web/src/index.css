@@ -659,7 +659,7 @@ textarea.form-input{resize:vertical;min-height:64px}
 /* ═══════════════════════════════════════
    PERIOD PICKER (dropdown + nav + calendar popup)
 ═══════════════════════════════════════ */
-.period-picker{position:relative;display:flex;align-items:center;gap:3px;flex-shrink:0}
+.period-picker{position:relative;display:flex;align-items:center;gap:3px;flex-shrink:0;z-index:20}
 .pp-select{background:var(--s2);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:5px 8px;font-size:12px;cursor:pointer;font-family:var(--font);outline:none;min-width:66px;transition:border-color .12s}
 .pp-select:hover{border-color:var(--dim)}
 .pp-nav{background:var(--s2);border:1px solid var(--border);border-radius:6px;color:var(--muted);padding:5px 8px;cursor:pointer;display:inline-flex;align-items:center;transition:background .12s,color .12s;flex-shrink:0}
@@ -667,7 +667,8 @@ textarea.form-input{resize:vertical;min-height:64px}
 .pp-label{display:flex;align-items:center;gap:8px;background:var(--s2);border:1px solid var(--border);border-radius:7px;padding:5px 10px;font-size:12.5px;color:var(--text);cursor:pointer;white-space:nowrap;min-width:140px;justify-content:space-between;font-family:var(--mono);transition:border-color .12s}
 .pp-label:hover{border-color:var(--accent)}
 /* Calendar popup */
-.dp-popup{position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%);background:var(--s1);border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.35);padding:13px 14px;z-index:300;min-width:256px}
+.dp-popup{position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%);background:var(--s1);border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.35);padding:13px 14px;z-index:500;min-width:256px}
+.dp-range-popup{min-width:272px}
 .dp-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:2px}
 .dp-nav{background:none;border:none;color:var(--muted);cursor:pointer;padding:4px 5px;border-radius:5px;display:inline-flex;align-items:center;transition:color .12s,background .12s}
 .dp-nav:hover{color:var(--text);background:var(--s2)}
@@ -682,14 +683,21 @@ textarea.form-input{resize:vertical;min-height:64px}
 .dp-dow{text-align:center;font-size:10px;font-weight:600;color:var(--muted);padding:3px 0}
 .dp-day-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:0}
 .dp-day{width:100%;border:none;border-radius:50%;padding:7px 2px;font-size:12px;color:var(--text);cursor:pointer;transition:background .1s;text-align:center;background:transparent;font-family:var(--font)}
-.dp-day:hover:not(.sel,.in-wk){background:var(--s3)}
+.dp-day:hover:not(.sel,.in-wk,.range-s,.range-e,.in-range){background:var(--s3)}
 .dp-day.other{color:var(--dim)}
 .dp-day.sel{background:var(--blue);color:#fff;font-weight:600}
-.dp-day.today:not(.sel){color:var(--blue);font-weight:700;outline:1.5px solid var(--blue);outline-offset:-3px}
+.dp-day.today:not(.sel,.range-s,.range-e){color:var(--blue);font-weight:700;outline:1.5px solid var(--blue);outline-offset:-3px}
 .dp-day.in-wk{background:rgba(68,136,255,.13);border-radius:0}
 .dp-day.in-wk:hover{background:rgba(68,136,255,.22)}
 .dp-day.wk-s{border-radius:50% 0 0 50%}
 .dp-day.wk-e{border-radius:0 50% 50% 0}
+/* Range calendar */
+.dp-range-hint{font-size:10.5px;color:var(--blue);text-align:center;margin-bottom:7px;font-weight:500;letter-spacing:.02em}
+.dp-day.in-range{background:rgba(68,136,255,.13);border-radius:0}
+.dp-day.in-range:hover{background:rgba(68,136,255,.22)}
+.dp-day.range-s{background:var(--blue);color:#fff;font-weight:600;border-radius:50% 0 0 50%}
+.dp-day.range-e{background:var(--blue);color:#fff;font-weight:600;border-radius:0 50% 50% 0}
+.dp-day.range-s.range-e{border-radius:50%}
 .dp-today-row{text-align:center;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
 .dp-today-btn{background:none;border:none;color:var(--blue);font-size:12px;cursor:pointer;font-weight:500;font-family:var(--font);padding:3px 12px;border-radius:5px;transition:background .12s}
 .dp-today-btn:hover{background:var(--s2)}

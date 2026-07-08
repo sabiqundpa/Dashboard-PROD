@@ -2,7 +2,13 @@
 // (defaults to now). Aligned with the bucketing used by /downtime-by-day
 // and /mtbf-mttr-trend so every endpoint agrees on what "this week"/
 // "this month" means.
-function getPeriodRange(period, refDateStr) {
+function getPeriodRange(period, refDateStr, rangeStartStr, rangeEndStr) {
+  if (period === 'range' && rangeStartStr && rangeEndStr) {
+    const s = new Date(rangeStartStr); s.setHours(0, 0, 0, 0);
+    const e = new Date(rangeEndStr); e.setHours(23, 59, 59, 999);
+    return { start: s, end: e };
+  }
+
   const ref = refDateStr ? new Date(refDateStr) : new Date();
   let start, end;
 

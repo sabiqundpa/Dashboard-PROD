@@ -20,6 +20,7 @@ export default function Maintenance() {
   const {
     breakdowns, kpi,
     period, setPeriod, refDate, setRefDate,
+    rangeStart, setRangeStart, rangeEnd, setRangeEnd,
     loadAll,
   } = useApp();
   const { openModal, showDetail } = useUI();
@@ -30,7 +31,7 @@ export default function Maintenance() {
   const [sortKey, setSortKey]         = useState('date');
   const [sortDir, setSortDir]         = useState(-1);
 
-  useEffect(() => { loadAll(); }, [period, refDate]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { loadAll(); }, [period, refDate, rangeStart, rangeEnd]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const machineOptions = useMemo(() =>
     [...new Set(breakdowns.map((b) => b.machine).filter(Boolean))].sort()
@@ -119,7 +120,12 @@ export default function Maintenance() {
           </select>
 
           {/* Period picker + refresh */}
-          <PeriodPicker period={period} setPeriod={setPeriod} refDate={refDate} setRefDate={setRefDate} />
+          <PeriodPicker
+            period={period} setPeriod={setPeriod}
+            refDate={refDate} setRefDate={setRefDate}
+            rangeStart={rangeStart} setRangeStart={setRangeStart}
+            rangeEnd={rangeEnd} setRangeEnd={setRangeEnd}
+          />
           <button className="btn-icon" title="Refresh data" onClick={() => loadAll()}>
             <RefreshCw size={14} />
           </button>
@@ -135,14 +141,14 @@ export default function Maintenance() {
           <table className="wo-table">
             <thead>
               <tr>
-                <th className="wo-th">STATUS</th>
+                <th className={thCls('status')} onClick={() => sortBy('status')}>STATUS {arrow('status')}</th>
                 <th className={thCls('machine')} onClick={() => sortBy('machine')}>MESIN {arrow('machine')}</th>
                 <th className={thCls('date')} onClick={() => sortBy('date')}>TANGGAL LAPOR {arrow('date')}</th>
-                <th className="wo-th">PROBLEM</th>
-                <th className="wo-th">PENYELESAIAN</th>
+                <th className={thCls('cause')} onClick={() => sortBy('cause')}>PROBLEM {arrow('cause')}</th>
+                <th className={thCls('resolution')} onClick={() => sortBy('resolution')}>PENYELESAIAN {arrow('resolution')}</th>
                 <th className={thCls('durationHrs')} onClick={() => sortBy('durationHrs')} style={{ textAlign: 'right' }}>DURASI {arrow('durationHrs')}</th>
-                <th className="wo-th" style={{ textAlign: 'center' }}>PIC MTN</th>
-                <th className="wo-th" style={{ textAlign: 'center' }}>AKSI</th>
+                <th className={thCls('pic_mtn')} onClick={() => sortBy('pic_mtn')} style={{ textAlign: 'center' }}>PIC MTN {arrow('pic_mtn')}</th>
+                <th className="wo-th" style={{ textAlign: 'center', cursor: 'default' }}>AKSI</th>
               </tr>
             </thead>
             <tbody>

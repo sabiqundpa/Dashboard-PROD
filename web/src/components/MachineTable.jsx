@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Search } from 'lucide-react';
+import { Search, ChevronUp, ChevronDown } from 'lucide-react';
 import { useUI } from '../UIContext.jsx';
 
 export default function MachineTable({ machines, limit, search: controlledSearch, onSearchChange }) {
@@ -15,6 +15,12 @@ export default function MachineTable({ machines, limit, search: controlledSearch
     setSortDir(sortKey === k ? -sortDir : 1);
     setSortKey(k);
   }
+  const arrow = (k) => sortKey === k
+    ? (sortDir === 1
+        ? <ChevronUp size={10} style={{ verticalAlign: 'middle', marginLeft: 2 }} />
+        : <ChevronDown size={10} style={{ verticalAlign: 'middle', marginLeft: 2 }} />)
+    : null;
+  const thCls = (k) => sortKey === k ? 'sorted' : '';
 
   const data = useMemo(() => {
     const q = (search || '').toLowerCase();
@@ -47,14 +53,14 @@ export default function MachineTable({ machines, limit, search: controlledSearch
         <table className="machine-table" style={{ minWidth: 400 }}>
           <thead>
             <tr>
-              <th onClick={() => sortBy('name')}>Mesin</th>
-              <th onClick={() => sortBy('cluster')}>Cluster</th>
-              <th onClick={() => sortBy('line')}>Line</th>
-              <th style={{ textAlign: 'center' }}>Status</th>
-              <th onClick={() => sortBy('availability')} style={{ textAlign: 'center' }}>Avail %</th>
-              <th onClick={() => sortBy('breakdowns')} style={{ textAlign: 'center' }}>BD</th>
-              <th onClick={() => sortBy('downtime_hrs')} style={{ textAlign: 'right' }}>DT Jam</th>
-              <th>Last Incident</th>
+              <th className={thCls('name')} onClick={() => sortBy('name')}>Mesin {arrow('name')}</th>
+              <th className={thCls('cluster')} onClick={() => sortBy('cluster')}>Cluster {arrow('cluster')}</th>
+              <th className={thCls('line')} onClick={() => sortBy('line')}>Line {arrow('line')}</th>
+              <th className={thCls('status')} style={{ textAlign: 'center' }} onClick={() => sortBy('status')}>Status {arrow('status')}</th>
+              <th className={thCls('availability')} onClick={() => sortBy('availability')} style={{ textAlign: 'center' }}>Avail % {arrow('availability')}</th>
+              <th className={thCls('breakdowns')} onClick={() => sortBy('breakdowns')} style={{ textAlign: 'center' }}>BD {arrow('breakdowns')}</th>
+              <th className={thCls('downtime_hrs')} onClick={() => sortBy('downtime_hrs')} style={{ textAlign: 'right' }}>DT Jam {arrow('downtime_hrs')}</th>
+              <th className={thCls('last_incident')} onClick={() => sortBy('last_incident')}>Last Incident {arrow('last_incident')}</th>
             </tr>
           </thead>
           <tbody>

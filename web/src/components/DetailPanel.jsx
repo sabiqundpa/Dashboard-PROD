@@ -1,4 +1,4 @@
-import { X, Pencil, Play, Square, Wrench, Camera, Clock, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { X, Pencil, Play, Square, Wrench, Clock, AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useUI } from '../UIContext.jsx';
 import { useApp } from '../AppContext.jsx';
 import { useToast } from '../ToastContext.jsx';
@@ -13,12 +13,20 @@ function fmtHrs(hrs) {
 }
 
 export default function DetailPanel() {
-  const { detailMachine, closeDetail, openModal } = useUI();
+  const { detailMachine, detailList, closeDetail, showDetail, openModal } = useUI();
   const { machines, breakdowns, loadAll } = useApp();
   const showToast = useToast();
   const { logout } = useAuth();
 
   const m = machines.find((x) => x.name === detailMachine);
+
+  // Navigation within the list that triggered showDetail
+  const navList = detailList.length > 0 ? detailList : machines.map((x) => x.name);
+  const navIdx  = navList.indexOf(detailMachine);
+  const hasPrev = navIdx > 0;
+  const hasNext = navIdx < navList.length - 1;
+  function navPrev() { if (hasPrev) showDetail(navList[navIdx - 1], navList); }
+  function navNext() { if (hasNext) showDetail(navList[navIdx + 1], navList); }
 
   async function setStatus(status) {
     if (!m) return;
@@ -39,7 +47,15 @@ export default function DetailPanel() {
     <div className={'detail-panel' + (detailMachine ? ' show' : '')} id="detailPanel">
       {/* ── Header ──────────────────────────── */}
       <div className="detail-header">
-        <div style={{ minWidth: 0 }}>
+        <div className="detail-nav-arrows">
+          <button className="detail-nav-btn" onClick={navPrev} disabled={!hasPrev} title="Mesin sebelumnya">
+            <ChevronLeft size={16} />
+          </button>
+          <button className="detail-nav-btn" onClick={navNext} disabled={!hasNext} title="Mesin berikutnya">
+            <ChevronRight size={16} />
+          </button>
+        </div>
+        <div style={{ minWidth: 0, flex: 1 }}>
           <div className="detail-title">{m.name}</div>
           <div className="detail-subtitle">
             {[m.cluster, m.line].filter(Boolean).join(' · ') || '—'}
@@ -50,13 +66,6 @@ export default function DetailPanel() {
       </div>
 
       <div className="detail-body">
-        {/* ── Image placeholder ───────────────── */}
-        <div className="detail-img-wrap">
-          <Camera size={28} strokeWidth={1.2} />
-          <span>Foto mesin belum tersedia</span>
-          <span className="detail-img-hint">Akan ditampilkan di sini</span>
-        </div>
-
         {/* ── Edit button + Status badge ─────── */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <button className="btn" style={{ flex: 1 }} onClick={() => openModal('editMachine', m)}>

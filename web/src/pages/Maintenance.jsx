@@ -94,7 +94,7 @@ export default function Maintenance() {
       </div>
 
       {/* ── Table card ───────────────────────── */}
-      <div className="card">
+      <div className="card" style={{ overflow: 'visible' }}>
         {/* ── Unified filter bar ─────────────── */}
         <div className="wo-filter-bar">
           {/* Search */}
@@ -159,7 +159,7 @@ export default function Maintenance() {
               ) : data.map((b, i) => {
                 const isOpen = b.status === 'open';
                 return (
-                  <tr key={b.id ?? i} className="wo-row" onClick={() => showDetail(b.machine)}>
+                  <tr key={b.id ?? i} className="wo-row" onClick={() => showDetail(b.machine, machineOptions)}>
                     {/* STATUS */}
                     <td>
                       <span className={`wo-badge ${isOpen ? 'open' : 'closed'}`}>

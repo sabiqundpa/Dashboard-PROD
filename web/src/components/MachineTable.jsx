@@ -69,8 +69,9 @@ export default function MachineTable({ machines, limit, search: controlledSearch
             ) : data.map((m) => {
               const av = m.availability ?? 0;
               const bc = av >= 90 ? 'var(--green)' : av >= 75 ? 'var(--yellow)' : 'var(--red)';
+              const nameList = data.map((d) => d.name);
               return (
-                <tr key={m.name} onClick={() => showDetail(m.name)}>
+                <tr key={m.name} onClick={() => showDetail(m.name, nameList)}>
                   <td><strong style={{ fontSize: 12 }}>{m.name}</strong></td>
                   <td style={{ color: 'var(--muted)' }}>{m.cluster || '—'}</td>
                   <td style={{ color: 'var(--muted)' }}>{m.line || '—'}</td>

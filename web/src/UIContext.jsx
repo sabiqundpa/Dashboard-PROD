@@ -12,6 +12,7 @@ export function UIProvider({ children }) {
   const [activeModal, setActiveModal] = useState(null);
   const [modalPayload, setModalPayload] = useState(null);
   const [detailMachine, setDetailMachine] = useState(null);
+  const [detailList, setDetailList] = useState([]);
 
   const navigate = useCallback((p) => {
     setPage(p);
@@ -34,8 +35,11 @@ export function UIProvider({ children }) {
     setModalPayload(null);
   }, []);
 
-  const showDetail = useCallback((name) => setDetailMachine(name), []);
-  const closeDetail = useCallback(() => setDetailMachine(null), []);
+  const showDetail = useCallback((name, list = []) => {
+    setDetailMachine(name);
+    if (list.length > 0) setDetailList(list);
+  }, []);
+  const closeDetail = useCallback(() => { setDetailMachine(null); setDetailList([]); }, []);
 
   return (
     <UIContext.Provider value={{
@@ -46,7 +50,7 @@ export function UIProvider({ children }) {
       notifOpen, toggleNotif, setNotifOpen,
       todoOpen, toggleTodo, setTodoOpen,
       activeModal, modalPayload, openModal, closeModal,
-      detailMachine, showDetail, closeDetail,
+      detailMachine, detailList, showDetail, closeDetail,
     }}>
       {children}
     </UIContext.Provider>

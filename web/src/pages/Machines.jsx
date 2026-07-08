@@ -54,15 +54,16 @@ export default function Machines() {
         </div>
         <div className="table-scroll">
           <table className="machine-table" style={{ minWidth: 1020 }}>
-            <thead><tr><th>Mesin</th><th>Nomor Asset</th><th>Type</th><th>Merk</th><th>Tahun</th><th>Daya</th><th>Cluster</th><th>Line</th><th>Shift</th><th style={{ textAlign: 'center' }}>Status</th><th style={{ textAlign: 'center' }}>Avail %</th><th style={{ textAlign: 'center' }}>Freq</th><th style={{ textAlign: 'right' }}>Waktu DT</th><th style={{ textAlign: 'center' }}>Action</th></tr></thead>
+            <thead><tr><th>Mesin</th><th>Nomor Asset</th><th>Type</th><th>Merk</th><th>Tahun</th><th>Daya</th><th>Cluster</th><th>Line</th><th>Shift</th><th style={{ textAlign: 'center' }}>Status</th><th style={{ textAlign: 'center' }}>Avail %</th><th style={{ textAlign: 'center' }}>Freq</th><th style={{ textAlign: 'right' }}>Waktu DT</th></tr></thead>
             <tbody>
               {!data.length ? (
-                <tr><td colSpan={14} style={{ textAlign: 'center', padding: 20, color: 'var(--muted)' }}>No machines match</td></tr>
+                <tr><td colSpan={13} style={{ textAlign: 'center', padding: 20, color: 'var(--muted)' }}>No machines match</td></tr>
               ) : data.map((m) => {
                 const av = m.availability ?? 0;
                 const bc = av >= 90 ? 'var(--green)' : av >= 75 ? 'var(--yellow)' : 'var(--red)';
+                const nameList = data.map((d) => d.name);
                 return (
-                  <tr key={m.name} onClick={() => showDetail(m.name)}>
+                  <tr key={m.name} onClick={() => showDetail(m.name, nameList)}>
                     <td><strong>{m.name}</strong></td>
                     <td style={{ color: 'var(--muted)' }}>{m.assetNumber || '—'}</td>
                     <td style={{ color: 'var(--muted)' }}>{m.type || '—'}</td>
@@ -79,7 +80,6 @@ export default function Machines() {
                     </td>
                     <td style={{ fontFamily: 'var(--mono)', textAlign: 'center' }}>{m.breakdowns}</td>
                     <td style={{ fontFamily: 'var(--mono)', textAlign: 'right' }}>{m.downtime_hrs?.toFixed(1)}</td>
-                    <td style={{ textAlign: 'center' }}><button className="btn" style={{ padding: '3px 8px', fontSize: 11 }} onClick={(e) => { e.stopPropagation(); showDetail(m.name); }}>Details</button></td>
                   </tr>
                 );
               })}

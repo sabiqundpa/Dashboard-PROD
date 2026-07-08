@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import Modal from '../Modal.jsx';
 import { useUI } from '../../UIContext.jsx';
 import { useApp } from '../../AppContext.jsx';
@@ -6,11 +6,15 @@ import { useToast } from '../../ToastContext.jsx';
 import { useAuth } from '../../AuthContext.jsx';
 import { apiSend } from '../../api.js';
 
-const CATEGORIES = ['Mechanical', 'Electrical', 'Hydraulic', 'Operator', 'Preventive'];
-const SEVERITIES = [
-  { key: 'critical', label: 'Kritis' },
-  { key: 'warning',  label: 'Waspada' },
-  { key: 'info',     label: 'Info' },
+const CATEGORIES = [
+  'Perbaikan MTN',
+  'Rusak / Mesin Trouble',
+  'Penggantian Spare Part',
+  'Penggantian Oli dan Coolant',
+  'Problem Oli / Coolant',
+  'Problem Qualitas',
+  'Preventive MTN',
+  'Problem Angin',
 ];
 
 function nowTime() {
@@ -24,14 +28,25 @@ export default function CloseWOModal({ payload }) {
   const showToast = useToast();
   const { logout } = useAuth();
 
-  const [endDate, setEndDate] = useState(new Date().toISOString().slice(0, 10));
-  const [endTime, setEndTime] = useState(nowTime());
-  const [picMtn, setPicMtn] = useState('');
-  const [category, setCategory] = useState('Mechanical');
-  const [severity, setSeverity] = useState('warning');
+  const [endDate, setEndDate]     = useState(new Date().toISOString().slice(0, 10));
+  const [endTime, setEndTime]     = useState(nowTime());
+  const [picMtn, setPicMtn]       = useState('');
+  const [category, setCategory]   = useState(CATEGORIES[0]);
   const [resolution, setResolution] = useState('');
-  const [action, setAction] = useState('');
-  const [busy, setBusy] = useState(false);
+  const [action, setAction]       = useState('');
+  const [busy, setBusy]           = useState(false);
+
+  // Refs for keyboard navigation
+  const timeRef       = useRef(null);
+  const picRef        = useRef(null);
+  const catRef        = useRef(null);
+  const resolutionRef = useRef(null);
+  const actionRef     = useRef(null);
+  const submitRef     = useRef(null);
+
+  function onEnter(nextRef) {
+    return (e) => { if (e.key === 'Enter') { e.preventDefault(); nextRef.current?.focus(); } };
+  }
 
   async function submit() {
     setBusy(true);
@@ -44,9 +59,9 @@ export default function CloseWOModal({ payload }) {
         action,
         pic_mtn: picMtn,
         failure_category: category,
-        severity,
+        severity: 'warning',
       }, logout);
-      showToast('Work order ditutup', 'green');
+      showToast('Work order berhasil ditutup', 'green');
       closeModal();
       loadAll();
     } catch (e) {
@@ -56,60 +71,71 @@ export default function CloseWOModal({ payload }) {
   }
 
   return (
-    <Modal title="Tutup Work Order" onClose={closeModal}>
-      {/* WO info header */}
-      <div style={{ background: 'var(--s2)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 13px', marginBottom: 14, fontSize: 13 }}>
-        <span style={{ fontWeight: 600 }}>{payload.machine}</span>
-        <span style={{ color: 'var(--muted)', marginLeft: 8 }}>— {payload.cause}</span>
-      </div>
+    <Modal title="Tutup Work Order" onClose={closeModal} fullscreen headerVariant="blue">
+      <div className="rmo-form">
 
-      <div className="form-grid">
-        {/* Tanggal + Waktu Selesai */}
+        {/* ── WO info banner ─────────────────────── */}
+        <div className="rmo-full cwo-info-banner">
+          <span className="cwo-machine">{payload.machine}</span>
+          <span className="cwo-sep">—</span>
+          <span className="cwo-cause">{payload.cause}</span>
+        </div>
+
+        {/* ── Tanggal + Waktu Selesai ────────────── */}
         <div className="form-group">
           <label className="form-label">Tanggal Selesai *</label>
-          <input type="date" className="form-input" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+          <input type="date" className="form-input" value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            onKeyDown={onEnter(timeRef)} />
         </div>
         <div className="form-group">
           <label className="form-label">Waktu Selesai *</label>
-          <input type="time" className="form-input" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+          <input ref={timeRef} type="time" className="form-input" value={endTime}
+            onChange={(e) => setEndTime(e.target.value)}
+            onKeyDown={onEnter(picRef)} />
         </div>
 
-        {/* PIC MTN */}
+        {/* ── PIC MTN + Jenis Problem ────────────── */}
         <div className="form-group">
           <label className="form-label">PIC MTN</label>
-          <input type="text" className="form-input" placeholder="Nama PIC MTN" value={picMtn} onChange={(e) => setPicMtn(e.target.value)} />
+          <input ref={picRef} type="text" className="form-input" placeholder="Nama PIC MTN"
+            value={picMtn} onChange={(e) => setPicMtn(e.target.value)}
+            onKeyDown={onEnter(catRef)} />
         </div>
-
-        {/* Jenis Problem (dipindah dari RMO — diisi MTN saat tutup WO) */}
         <div className="form-group">
           <label className="form-label">Jenis Problem</label>
-          <select className="form-input" value={category} onChange={(e) => setCategory(e.target.value)}>
-            {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+          <select ref={catRef} className="form-input" value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            onKeyDown={onEnter(resolutionRef)}>
+            {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
 
-        {/* Level Bahaya (dipindah dari RMO — diisi MTN saat tutup WO) */}
-        <div className="form-group">
-          <label className="form-label">Level Bahaya</label>
-          <select className="form-input" value={severity} onChange={(e) => setSeverity(e.target.value)}>
-            {SEVERITIES.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
-          </select>
-        </div>
-
-        {/* Penyelesaian + Action */}
-        <div className="form-group full">
+        {/* ── Penyelesaian Problem ───────────────── */}
+        <div className="form-group rmo-full">
           <label className="form-label">Penyelesaian Problem</label>
-          <textarea className="form-input" placeholder="Bagaimana problem diselesaikan…" value={resolution} onChange={(e) => setResolution(e.target.value)} />
+          <textarea ref={resolutionRef} className="form-input cwo-textarea"
+            placeholder="Bagaimana problem diselesaikan…"
+            value={resolution} onChange={(e) => setResolution(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Tab') { e.preventDefault(); actionRef.current?.focus(); } }} />
         </div>
-        <div className="form-group full">
-          <label className="form-label">Action</label>
-          <textarea className="form-input" placeholder="Tindakan yang dilakukan…" value={action} onChange={(e) => setAction(e.target.value)} />
+
+        {/* ── Action ────────────────────────────── */}
+        <div className="form-group rmo-full">
+          <label className="form-label">Action / Tindakan</label>
+          <textarea ref={actionRef} className="form-input cwo-textarea"
+            placeholder="Tindakan yang dilakukan…"
+            value={action} onChange={(e) => setAction(e.target.value)} />
         </div>
+
       </div>
 
+      {/* ── Footer ────────────────────────────────── */}
       <div className="modal-footer">
         <button className="btn" onClick={closeModal}>Batal</button>
-        <button className="btn primary" disabled={busy} onClick={submit}>{busy ? 'Menyimpan…' : 'Tutup WO'}</button>
+        <button ref={submitRef} className="btn primary" disabled={busy} onClick={submit}>
+          {busy ? 'Menyimpan…' : 'Tutup WO'}
+        </button>
       </div>
     </Modal>
   );

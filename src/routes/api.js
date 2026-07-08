@@ -829,8 +829,11 @@ router.post('/import-machines', upload.single('file'), async (req, res, next) =>
 
     const rows = parseCsv(req.file.buffer.toString('utf-8'));
 
-    let imported = 0;
+    // Parse every row first, collect valid upsert payloads
+    const upserts = [];
     let skipped = 0;
+    const seenNames = new Set(); // deduplicate within the file itself
+
     for (const row of rows) {
       const lookup = {};
       Object.keys(row).forEach((k) => { lookup[k.trim().toLowerCase()] = row[k]; });
@@ -842,9 +845,9 @@ router.post('/import-machines', upload.single('file'), async (req, res, next) =>
         return '';
       };
 
-      // Accept many column name variants (case-insensitive via lookup)
       const name = field('Nama Mesin', 'Mesin', 'Machine Name', 'name', 'machine_name');
-      if (!name) { skipped++; continue; }
+      if (!name || seenNames.has(name)) { skipped++; continue; }
+      seenNames.add(name);
 
       const plannedHoursRaw = field('Jam Waktu Kerja', 'Jam Kerja', 'Planned Hours', 'plannedHours');
       const plannedHours = plannedHoursRaw !== '' && !isNaN(Number(plannedHoursRaw)) ? Number(plannedHoursRaw) : null;
@@ -861,15 +864,27 @@ router.post('/import-machines', upload.single('file'), async (req, res, next) =>
         shift: field('Shift'),
       };
 
-      await prisma.machine.upsert({
-        where: { name },
-        update: { ...data, ...(plannedHours != null ? { plannedHours } : {}) },
-        create: { name, ...data, plannedHours: plannedHours ?? 16 },
-      });
-      imported++;
+      upserts.push({ name, data, plannedHours });
     }
 
-    res.json({ imported, skipped, total: rows.length });
+    // Batch into chunks of 50 and run each chunk as a single transaction.
+    // This replaces N sequential round-trips (one per row) with ceil(N/50)
+    // round-trips, keeping total time well inside the serverless timeout.
+    const CHUNK = 50;
+    for (let i = 0; i < upserts.length; i += CHUNK) {
+      const chunk = upserts.slice(i, i + CHUNK);
+      await prisma.$transaction(
+        chunk.map(({ name, data, plannedHours }) =>
+          prisma.machine.upsert({
+            where: { name },
+            update: { ...data, ...(plannedHours != null ? { plannedHours } : {}) },
+            create: { name, ...data, plannedHours: plannedHours ?? 16 },
+          })
+        )
+      );
+    }
+
+    res.json({ imported: upserts.length, skipped, total: rows.length });
   } catch (err) { next(err); }
 });
 

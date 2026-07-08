@@ -1,14 +1,16 @@
 import { CheckCircle2 } from 'lucide-react';
 import InfoTip from './InfoTip.jsx';
+import { useTargets } from '../TargetsContext.jsx';
 
 export default function AvailabilityCard({ kpi }) {
+  const { availabilityTarget } = useTargets();
   const av      = kpi.availability ?? 0;
   const planned = kpi.planned_hours ?? 0;
   const downtime = kpi.downtime_hrs ?? 0;
   const uptime  = Math.max(0, planned - downtime);
 
-  const isOk   = av >= 90;
-  const isWarn = av >= 75 && av < 90;
+  const isOk   = av >= availabilityTarget;
+  const isWarn = av >= (availabilityTarget * 0.85) && !isOk;
   const colVar = isOk ? 'var(--green)' : isWarn ? 'var(--yellow)' : 'var(--red)';
   const colHex = isOk ? '#00d084'      : isWarn ? '#f0a500'        : '#ff4455';
 
@@ -21,7 +23,7 @@ export default function AvailabilityCard({ kpi }) {
       <div className="card-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <div className="card-title">Availability</div>
-          <InfoTip text="Persentase waktu mesin siap digunakan dalam periode ini: (Jam Kerja − Downtime) ÷ Jam Kerja × 100%. Target ≥ 90%." />
+          <InfoTip text={`Persentase waktu mesin siap digunakan dalam periode ini: (Jam Kerja − Downtime) ÷ Jam Kerja × 100%. Target ≥ ${availabilityTarget}%.`} />
         </div>
       </div>
 
@@ -55,10 +57,10 @@ export default function AvailabilityCard({ kpi }) {
         {isOk ? (
           <>
             <CheckCircle2 size={13} style={{ color: colVar, flexShrink: 0 }} />
-            <span style={{ color: colVar }}>Target 90% — terlampaui</span>
+            <span style={{ color: colVar }}>Target {availabilityTarget}% — terlampaui</span>
           </>
         ) : (
-          <span style={{ color: 'var(--muted)' }}>Target 90% — belum tercapai</span>
+          <span style={{ color: 'var(--muted)' }}>Target {availabilityTarget}% — belum tercapai</span>
         )}
       </div>
 

@@ -2,6 +2,7 @@ import { Zap, Timer, RefreshCw, Wrench } from 'lucide-react';
 import { useUI } from '../UIContext.jsx';
 import { useAnimatedNumber } from '../hooks/useAnimatedNumber.js';
 import InfoTip from './InfoTip.jsx';
+import { useTargets } from '../TargetsContext.jsx';
 
 const MONTH_ABBR = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
 
@@ -65,6 +66,7 @@ function KpiCard({ icon: Icon, label, value, unit, color, delta, sparkData, spar
 
 export default function KpiRow({ kpi, downtime, mtbfMttrTrend, period, refDate }) {
   const { navigate } = useUI();
+  const { mttrTarget } = useTargets();
   const breakdownsNum = useAnimatedNumber(kpi.breakdowns, 0);
   const downtimeNum   = useAnimatedNumber(kpi.downtime_hrs, 1);
   const mtbf          = useAnimatedNumber(kpi.mtbf, 1);
@@ -124,8 +126,8 @@ export default function KpiRow({ kpi, downtime, mtbfMttrTrend, period, refDate }
     label: `${mttrAbs >= 0 ? '▲' : '▼'} ${Math.abs(mttrAbs).toFixed(1)} jam vs ${prevMonthName}`,
     isGood: mttrAbs <= 0,
   } : {
-    label: `${(kpi.mttr ?? 0).toFixed(1)} jam · target ≤4`,
-    isGood: (kpi.mttr ?? 0) <= 4,
+    label: `${(kpi.mttr ?? 0).toFixed(1)} jam · target ≤${mttrTarget}`,
+    isGood: (kpi.mttr ?? 0) <= mttrTarget,
   };
 
   return (

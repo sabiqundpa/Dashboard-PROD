@@ -5,6 +5,8 @@ import { ThemeProvider } from './ThemeContext.jsx';
 import { ToastProvider } from './ToastContext.jsx';
 import { AppProvider, useApp } from './AppContext.jsx';
 import { UIProvider, useUI } from './UIContext.jsx';
+import { TargetsProvider } from './TargetsContext.jsx';
+import TargetsModal from './components/TargetsModal.jsx';
 import Login from './pages/Login.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import Machines from './pages/Machines.jsx';
@@ -55,6 +57,7 @@ function Shell() {
       <TodoPanel />
       <DetailPanel />
       <ModalRoot />
+      <TargetsModal />
       {presentMode && (
         <button className="pres-fab" onClick={togglePresentMode} title="Keluar mode layar penuh">
           <Minimize2 size={14} /> Keluar
@@ -78,12 +81,14 @@ function AuthGate() {
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <ToastProvider>
-          <AuthGate />
-        </ToastProvider>
-      </AuthProvider>
-    </ThemeProvider>
+    <TargetsProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <ToastProvider>
+            <AuthGate />
+          </ToastProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </TargetsProvider>
   );
 }

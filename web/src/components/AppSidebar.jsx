@@ -1,5 +1,7 @@
+import { useRef } from 'react';
 import { LayoutDashboard, Cog, AlertTriangle, FileText, BarChart2 } from 'lucide-react';
 import { useUI } from '../UIContext.jsx';
+import { useTargets } from '../TargetsContext.jsx';
 
 const NAV_ITEMS = [
   { page: 'dashboard',   label: 'Dashboard',  icon: LayoutDashboard },
@@ -11,6 +13,20 @@ const NAV_ITEMS = [
 
 export default function AppSidebar() {
   const { page, navigate } = useUI();
+  const { openAdmin } = useTargets();
+  const clickCount = useRef(0);
+  const clickTimer = useRef(null);
+
+  function onVersionClick() {
+    clickCount.current += 1;
+    clearTimeout(clickTimer.current);
+    clickTimer.current = setTimeout(() => { clickCount.current = 0; }, 600);
+    if (clickCount.current >= 3) {
+      clickCount.current = 0;
+      openAdmin();
+    }
+  }
+
   return (
     <aside className="app-sidebar">
       <div className="asb-section">Navigasi</div>
@@ -24,6 +40,7 @@ export default function AppSidebar() {
           {n.label}
         </div>
       ))}
+      <div className="asb-version" onClick={onVersionClick} title="">v1.0</div>
     </aside>
   );
 }

@@ -76,10 +76,11 @@ function ChartCanvas({
     const barX = (i) => pad.l + i * slot + (slot - barW) / 2;
     const yOf = (v) => pad.t + (1 - v / maxV) * iH;
     const isTotal = visibleData[m - 1]?.day === 'TOTAL';
+    const fontSize = Math.min(13, Math.max(9, Math.floor(slot * 0.38)));
 
     ctx.clearRect(0, 0, W, H);
 
-    ctx.font = '9px Inter, sans-serif';
+    ctx.font = `${fontSize}px Inter, sans-serif`;
     ctx.fillStyle = muted;
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
@@ -167,7 +168,7 @@ function ChartCanvas({
       if (i % step !== 0 && i !== m - 1) return;
       const isT = d.day === 'TOTAL';
       ctx.fillStyle = isT ? accent2 : muted;
-      ctx.font = isT ? 'bold 9px Inter, sans-serif' : '9px Inter, sans-serif';
+      ctx.font = isT ? `bold ${fontSize}px Inter, sans-serif` : `${fontSize}px Inter, sans-serif`;
       ctx.fillText(d.day, xOf(i), labelY);
     });
 

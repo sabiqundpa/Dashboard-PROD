@@ -59,10 +59,11 @@ function ChartCanvas({ days, year, expanded }) {
     const barW = Math.max(3, Math.min(slot * 0.55, 40));
     const xOf = (i) => pad.l + i * slot + (slot - barW) / 2;
     const yOf = (v) => pad.t + (1 - v / maxV) * iH;
+    const fontSize = Math.min(13, Math.max(9, Math.floor(slot * 0.38)));
 
     ctx.clearRect(0, 0, W, H);
 
-    ctx.font = '9px Inter, sans-serif';
+    ctx.font = `${fontSize}px Inter, sans-serif`;
     ctx.fillStyle = muted;
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
@@ -127,7 +128,7 @@ function ChartCanvas({ days, year, expanded }) {
       const cx = pad.l + i * slot + slot / 2;
       const isCurrent = d.day === currentMonthAbbr;
       ctx.fillStyle = isCurrent ? '#4488ff' : muted;
-      ctx.font = isCurrent ? 'bold 9px Inter, sans-serif' : '9px Inter, sans-serif';
+      ctx.font = isCurrent ? `bold ${fontSize}px Inter, sans-serif` : `${fontSize}px Inter, sans-serif`;
       ctx.fillText(d.day, cx, labelY);
     });
 

@@ -131,7 +131,7 @@ export default function Dashboard() {
 
         {/* Left: main charts */}
         <div className="dash-main">
-          <KpiRow kpi={kpi} />
+          <KpiRow kpi={kpi} downtime={downtime} mtbfMttrTrend={mtbfMttrTrend} period={period} refDate={refDate} />
           <DowntimeTrend days={downtime} year={year} />
           <div className="row2-equal">
             <MtbfMttrChart data={mtbfMttrTrend} lineLabel={selectedMachineObj?.line} year={year} />

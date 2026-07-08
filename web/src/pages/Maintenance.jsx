@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Search, Circle, CheckCircle2, ChevronUp, ChevronDown, RefreshCw } from 'lucide-react';
+import { Search, RefreshCw, ChevronUp, ChevronDown } from 'lucide-react';
 import { useApp } from '../AppContext.jsx';
 import { useUI } from '../UIContext.jsx';
 import PeriodPicker from '../components/PeriodPicker.jsx';
@@ -10,14 +10,16 @@ const STATUS_FILTERS = [
   { key: 'resolved', label: 'Close' },
 ];
 
-const center = { textAlign: 'center' };
-const right = { textAlign: 'right' };
-
 function fmtHrs(hrs) {
   if (!hrs && hrs !== 0) return '—';
   const h = Math.floor(hrs);
   const m = Math.round((hrs - h) * 60);
   return m > 0 ? `${h}j ${m}m` : `${h}j`;
+}
+
+function fmtDateTime(date, time) {
+  if (!date) return '—';
+  return time ? `${date} · ${time}` : date;
 }
 
 export default function Maintenance() {
@@ -26,22 +28,21 @@ export default function Maintenance() {
     period, setPeriod, refDate, setRefDate,
     loadAll,
   } = useApp();
-  const { openModal } = useUI();
+  const { openModal, showDetail } = useUI();
 
-  const [search, setSearch] = useState('');
+  const [search, setSearch]           = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [machineFilter, setMachineFilter] = useState('');
-  const [sortKey, setSortKey] = useState('date');
-  const [sortDir, setSortDir] = useState(-1);
+  const [sortKey, setSortKey]         = useState('date');
+  const [sortDir, setSortDir]         = useState(-1);
 
   useEffect(() => { loadAll(); }, [period, refDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Unique machine names from all loaded breakdowns
   const machineOptions = useMemo(() =>
     [...new Set(breakdowns.map((b) => b.machine).filter(Boolean))].sort()
   , [breakdowns]);
 
-  const open = breakdowns.filter((b) => b.status === 'open').length;
+  const open     = breakdowns.filter((b) => b.status === 'open').length;
   const resolved = breakdowns.filter((b) => b.status === 'resolved').length;
 
   function sortBy(k) {
@@ -63,18 +64,20 @@ export default function Maintenance() {
     });
   }, [breakdowns, search, statusFilter, machineFilter, sortKey, sortDir]);
 
-  const arrow = (k) => (sortKey === k ? (sortDir === 1 ? <ChevronUp size={12} style={{ verticalAlign: 'middle' }} /> : <ChevronDown size={12} style={{ verticalAlign: 'middle' }} />) : null);
-  const thCls = (k) => (sortKey === k ? 'sorted' : '');
+  const arrow = (k) => sortKey === k
+    ? (sortDir === 1
+        ? <ChevronUp size={11} style={{ verticalAlign: 'middle' }} />
+        : <ChevronDown size={11} style={{ verticalAlign: 'middle' }} />)
+    : null;
+  const thCls = (k) => 'wo-th' + (sortKey === k ? ' sorted' : '');
 
   return (
     <div className="page-view active">
+      {/* ── Header ───────────────────────────── */}
       <div className="page-header">
         <div><div className="page-title">Log Work Order Maintenance</div></div>
         <div className="header-actions">
-          <PeriodPicker
-            period={period} setPeriod={setPeriod}
-            refDate={refDate} setRefDate={setRefDate}
-          />
+          <PeriodPicker period={period} setPeriod={setPeriod} refDate={refDate} setRefDate={setRefDate} />
           <button className="btn-icon" title="Refresh data" onClick={() => loadAll()}>
             <RefreshCw size={14} />
           </button>
@@ -82,27 +85,31 @@ export default function Maintenance() {
         </div>
       </div>
 
+      {/* ── Summary cards ────────────────────── */}
       <div className="maint-grid">
         <div className="maint-card">
-          <div style={{ fontSize: 9.5, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 5 }}>OPEN</div>
-          <div style={{ fontFamily: 'var(--display)', fontSize: 26, fontWeight: 700, color: 'var(--red)' }}>{open}</div>
+          <div className="maint-card-lbl">OPEN</div>
+          <div className="maint-card-val" style={{ color: 'var(--red)' }}>{open}</div>
         </div>
         <div className="maint-card">
-          <div style={{ fontSize: 9.5, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 5 }}>Rata-rata Repair</div>
-          <div style={{ fontFamily: 'var(--display)', fontSize: 26, fontWeight: 700, color: 'var(--yellow)' }}>{kpi.mttr ?? '—'}</div>
-          <div style={{ fontSize: 9.5, color: 'var(--muted)' }}>Jam</div>
+          <div className="maint-card-lbl">Rata-rata Repair</div>
+          <div className="maint-card-val" style={{ color: 'var(--yellow)' }}>{kpi.mttr ?? '—'}</div>
+          <div className="maint-card-unit">Jam</div>
         </div>
         <div className="maint-card">
-          <div style={{ fontSize: 9.5, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 5 }}>CLOSE</div>
-          <div style={{ fontFamily: 'var(--display)', fontSize: 26, fontWeight: 700, color: 'var(--green)' }}>{resolved}</div>
+          <div className="maint-card-lbl">CLOSE</div>
+          <div className="maint-card-val" style={{ color: 'var(--green)' }}>{resolved}</div>
         </div>
       </div>
 
+      {/* ── Table card ───────────────────────── */}
       <div className="card">
-        <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+        {/* Filter bar */}
+        <div className="wo-filter-bar">
           <div className="search-wrap" style={{ flex: 1, minWidth: 140 }}>
             <span className="search-icon"><Search size={14} /></span>
-            <input className="search-input" placeholder="Cari log…" value={search} onChange={(e) => setSearch(e.target.value)} />
+            <input className="search-input" placeholder="Cari mesin atau problem…"
+              value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
           <select className="btn" style={{ padding: '6px 10px' }} value={machineFilter}
             onChange={(e) => setMachineFilter(e.target.value)}>
@@ -111,66 +118,105 @@ export default function Maintenance() {
           </select>
           <div className="filter-row">
             {STATUS_FILTERS.map((f) => (
-              <span key={f.key} className={'filter-chip' + (statusFilter === f.key ? ' active' : '')}
+              <span key={f.key}
+                className={'filter-chip' + (statusFilter === f.key ? ' active' : '')}
                 onClick={() => setStatusFilter(f.key)}>{f.label}</span>
             ))}
           </div>
         </div>
 
+        {/* Result count */}
+        <div className="wo-result-count">
+          {data.length > 0 ? `Menampilkan ${data.length} hasil` : ''}
+        </div>
+
+        {/* Table */}
         <div className="table-scroll">
-          <table className="machine-table" style={{ minWidth: 1400 }}>
+          <table className="wo-table">
             <thead>
               <tr>
-                <th style={center}>NO</th>
-                <th className={thCls('date')} onClick={() => sortBy('date')}>Tanggal Lapor{arrow('date')}</th>
-                <th style={center}>Waktu Lapor</th>
-                <th className={thCls('machine')} onClick={() => sortBy('machine')}>Nama Mesin{arrow('machine')}</th>
-                <th className={thCls('cluster')} onClick={() => sortBy('cluster')}>Cluster{arrow('cluster')}</th>
-                <th className={thCls('line')} onClick={() => sortBy('line')}>Line{arrow('line')}</th>
-                <th>Problem Identifikasi</th>
-                <th>Penyelesaian</th>
-                <th style={center}>Tanggal Mulai</th>
-                <th style={center}>Waktu Mulai</th>
-                <th style={center}>Tanggal Selesai</th>
-                <th style={center}>Waktu Selesai</th>
-                <th style={right}>Waktu Pengerjaan</th>
-                <th style={right}>Breakdown Time</th>
-                <th style={center}>Status</th>
-                <th style={center}>PIC MTN</th>
-                <th style={center}>Aksi</th>
+                <th className="wo-th">STATUS</th>
+                <th className={thCls('machine')} onClick={() => sortBy('machine')}>MESIN {arrow('machine')}</th>
+                <th className={thCls('date')} onClick={() => sortBy('date')}>TANGGAL LAPOR {arrow('date')}</th>
+                <th className="wo-th">PROBLEM</th>
+                <th className="wo-th">PENYELESAIAN</th>
+                <th className={thCls('durationHrs')} onClick={() => sortBy('durationHrs')} style={{ textAlign: 'right' }}>DURASI {arrow('durationHrs')}</th>
+                <th className="wo-th" style={{ textAlign: 'center' }}>PIC MTN</th>
+                <th className="wo-th" style={{ textAlign: 'center' }}>AKSI</th>
               </tr>
             </thead>
             <tbody>
               {!data.length ? (
-                <tr><td colSpan={17} style={{ textAlign: 'center', padding: 20, color: 'var(--muted)' }}>Tidak Ada Kasus</td></tr>
+                <tr>
+                  <td colSpan={8} className="wo-empty">Tidak ada kasus yang cocok</td>
+                </tr>
               ) : data.map((b, i) => {
                 const isOpen = b.status === 'open';
                 return (
-                  <tr key={b.id ?? i}>
-                    <td style={center}>{i + 1}</td>
-                    <td>{b.date || '—'}</td>
-                    <td style={center}>{b.start || '—'}</td>
-                    <td>{b.machine}</td>
-                    <td style={{ color: 'var(--muted)' }}>{b.cluster || '—'}</td>
-                    <td style={{ color: 'var(--muted)' }}>{b.line || '—'}</td>
-                    <td>{b.cause}</td>
-                    <td>{b.resolution || '—'}</td>
-                    <td style={center}>{b.date || '—'}</td>
-                    <td style={center}>{b.start || '—'}</td>
-                    <td style={center}>{b.end_date || '—'}</td>
-                    <td style={center}>{b.end_time || '—'}</td>
-                    <td style={right}>{fmtHrs(b.durationHrs)}</td>
-                    <td style={right}>{b.durationHrs != null ? `${b.durationHrs.toFixed(1)} jam` : '—'}</td>
-                    <td style={center}>
-                      {isOpen
-                        ? <span style={{ color: 'var(--red)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}><Circle size={9} fill="var(--red)" stroke="none" />OPEN</span>
-                        : <span style={{ color: 'var(--green)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}><CheckCircle2 size={13} />CLOSE</span>}
+                  <tr key={b.id ?? i} className="wo-row" onClick={() => showDetail(b.machine)}>
+                    {/* STATUS */}
+                    <td>
+                      <span className={`wo-badge ${isOpen ? 'open' : 'closed'}`}>
+                        <span className="wo-badge-dot"></span>
+                        {isOpen ? 'OPEN' : 'CLOSE'}
+                      </span>
                     </td>
-                    <td style={center}>{b.pic_mtn || '—'}</td>
-                    <td style={center}>
+
+                    {/* MESIN */}
+                    <td>
+                      <div className="wo-machine-name">{b.machine}</div>
+                      {(b.cluster || b.line) && (
+                        <div className="wo-machine-sub">
+                          {[b.cluster, b.line].filter(Boolean).join(' · ')}
+                        </div>
+                      )}
+                    </td>
+
+                    {/* TANGGAL */}
+                    <td>
+                      <div className="wo-date">{b.date || '—'}</div>
+                      {b.start && <div className="wo-time">{b.start}</div>}
+                    </td>
+
+                    {/* PROBLEM */}
+                    <td className="wo-problem">{b.cause || '—'}</td>
+
+                    {/* PENYELESAIAN */}
+                    <td className="wo-resolution">{b.resolution || '—'}</td>
+
+                    {/* DURASI */}
+                    <td style={{ textAlign: 'right' }}>
+                      {b.durationHrs != null ? (
+                        <div>
+                          <span className="wo-dur-main">{fmtHrs(b.durationHrs)}</span>
+                          {b.end_date && (
+                            <div className="wo-time" style={{ textAlign: 'right' }}>
+                              s/d {b.end_date}{b.end_time ? ' ' + b.end_time : ''}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span style={{ color: 'var(--muted)', fontSize: 11 }}>—</span>
+                      )}
+                    </td>
+
+                    {/* PIC */}
+                    <td style={{ textAlign: 'center' }}>
+                      {b.pic_mtn
+                        ? <span className="wo-pic-chip">{b.pic_mtn}</span>
+                        : <span style={{ color: 'var(--muted)', fontSize: 11 }}>—</span>}
+                    </td>
+
+                    {/* AKSI */}
+                    <td style={{ textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
                       {isOpen && b.id ? (
-                        <button className="btn" style={{ padding: '4px 8px', fontSize: 11 }} onClick={() => openModal('closeWO', { id: b.id, machine: b.machine, cause: b.cause })}>Tutup WO</button>
-                      ) : '—'}
+                        <button className="btn wo-action-btn"
+                          onClick={() => openModal('closeWO', { id: b.id, machine: b.machine, cause: b.cause })}>
+                          Tutup WO
+                        </button>
+                      ) : (
+                        <span className="wo-done-mark">✓</span>
+                      )}
                     </td>
                   </tr>
                 );

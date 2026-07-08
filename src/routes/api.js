@@ -760,30 +760,42 @@ router.post('/import', upload.single('file'), async (req, res, next) => {
 
     const rows = parseCsv(req.file.buffer.toString('utf-8'));
 
-    let imported = 0;
+    // ── Phase 1: parse all rows, collect valid entries ──────────
+    const validRows = [];
     for (const row of rows) {
-      // Support both new Indonesian column names and legacy English names
-      const name = String(row['Nama Mesin'] ?? row.machine_name ?? '').trim();
+      const name  = String(row['Nama Mesin'] ?? row.machine_name ?? '').trim();
       const cause = String(row['Problem Identifikasi'] ?? row.failure_cause ?? '').trim();
       if (!name || !cause) continue;
+      validRows.push({ row, name, cause });
+    }
 
-      const machine = await prisma.machine.upsert({
-        where: { name },
-        update: {},
-        create: {
-          name,
-          cluster: String(row['Cluster'] ?? row.machine_cluster ?? ''),
-          line: String(row['Line'] ?? row.machine_line ?? ''),
-        },
-      });
+    // ── Phase 2: batch-upsert unique machines, build name→id map ─
+    const uniqueNames = [...new Set(validRows.map((r) => r.name))];
+    const nameToId = new Map();
+    const CHUNK = 50;
+    for (let i = 0; i < uniqueNames.length; i += CHUNK) {
+      const chunk = uniqueNames.slice(i, i + CHUNK);
+      const results = await prisma.$transaction(
+        chunk.map((name) =>
+          prisma.machine.upsert({
+            where: { name },
+            update: {},
+            create: { name, cluster: '', line: '' },
+            select: { id: true, name: true },
+          })
+        )
+      );
+      results.forEach((m) => nameToId.set(m.name, m.id));
+    }
 
-      const startTime = parseTimeValue(row['Waktu Mulai'] ?? row['Waktu Lapor'] ?? row.start_time);
-      const endTime   = parseTimeValue(row['Waktu Selesai'] ?? row.end_time);
+    // ── Phase 3: batch-create all breakdowns ────────────────────
+    const breakdownData = validRows.map(({ row, name, cause }) => {
+      const startTime  = parseTimeValue(row['Waktu Mulai'] ?? row['Waktu Lapor'] ?? row.start_time);
+      const endTime    = parseTimeValue(row['Waktu Selesai'] ?? row.end_time);
       const reportDate = parseDateValue(row['Tanggal Lapor'] ?? row.breakdown_date);
       const startDate  = parseDateValue(row['Tanggal Mulai'] ?? row['Tanggal Lapor'] ?? row.breakdown_date);
       const endDate    = parseDateValue(row['Tanggal Selesai']);
 
-      // Prefer explicit "Breakdown Time" (hrs) if provided, else compute from times
       const btRaw = row['Breakdown Time'] ?? row['Waktu Pengerjaan'];
       let durationHrs = computeDurationHrs(startTime, endTime);
       if (btRaw !== undefined && btRaw !== '' && !isNaN(parseFloat(btRaw))) {
@@ -795,28 +807,31 @@ router.post('/import', upload.single('file'), async (req, res, next) => {
         : ['resolved', 'close', 'closed', 'selesai'].includes(statusRaw) ? 'resolved'
         : (endTime ? 'resolved' : 'open');
 
-      await prisma.breakdown.create({
-        data: {
-          machineId: machine.id,
-          cause,
-          category: row['category'] ? String(row['category']) : 'Mechanical',
-          severity: 'warning',
-          status,
-          date: startDate ?? reportDate ?? new Date(),
-          startTime,
-          endDate: endDate ?? (endTime ? (startDate ?? reportDate ?? new Date()) : null),
-          endTime,
-          durationHrs,
-          picMtn: (row['PIC MTN'] ? String(row['PIC MTN']).trim() : null)
-                  ?? (row.technician ? String(row.technician).trim() : null),
-          resolution: row['Penyelesaian'] ? String(row['Penyelesaian']).trim() : null,
-          notes: row.notes ? String(row.notes) : null,
-        },
-      });
-      imported++;
+      return {
+        machineId: nameToId.get(name),
+        cause,
+        category: row['category'] ? String(row['category']) : 'Mechanical',
+        severity: 'warning',
+        status,
+        date: startDate ?? reportDate ?? new Date(),
+        startTime,
+        endDate: endDate ?? (endTime ? (startDate ?? reportDate ?? new Date()) : null),
+        endTime,
+        durationHrs,
+        picMtn: (row['PIC MTN'] ? String(row['PIC MTN']).trim() : null)
+                ?? (row.technician ? String(row.technician).trim() : null),
+        resolution: row['Penyelesaian'] ? String(row['Penyelesaian']).trim() : null,
+        notes: row.notes ? String(row.notes) : null,
+      };
+    });
+
+    for (let i = 0; i < breakdownData.length; i += CHUNK) {
+      await prisma.$transaction(
+        breakdownData.slice(i, i + CHUNK).map((data) => prisma.breakdown.create({ data }))
+      );
     }
 
-    res.json({ imported, total: rows.length });
+    res.json({ imported: breakdownData.length, total: rows.length });
   } catch (err) { next(err); }
 });
 

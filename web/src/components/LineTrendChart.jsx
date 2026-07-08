@@ -62,21 +62,24 @@ function ChartCanvas({
     const muted = styles.getPropertyValue('--muted').trim() || '#5a5a78';
     const accent2 = styles.getPropertyValue('--accent2').trim() || '#ff6b35';
 
-    // pad.b = 18 to reserve space for X-axis labels drawn on canvas
-    const pad = { t: 10, b: 18, l: 30, r: 4 };
+    const m = visibleData.length;
+    const prelimSlot = (W - (expanded ? 52 : 34)) / Math.max(m, 1);
+    const fontSize = expanded
+      ? Math.min(16, Math.max(12, Math.floor(prelimSlot * 0.45)))
+      : Math.min(11, Math.max(9, Math.floor(prelimSlot * 0.38)));
+    const padL = expanded ? Math.max(44, Math.ceil(fontSize * 3)) : 30;
+    const pad = { t: expanded ? 14 : 10, b: expanded ? fontSize + 10 : 18, l: padL, r: expanded ? 8 : 4 };
     const iW = W - pad.l - pad.r;
     const iH = H - pad.t - pad.b;
     const vals = visibleData.map((d) => d[valueKey] ?? 0);
     const targets = targetKey ? visibleData.map((d) => d[targetKey] ?? 0) : [];
     const maxV = Math.max(...vals, ...(targetKey ? targets : []), 1) * 1.15;
-    const m = visibleData.length;
     const slot = iW / m;
-    const barW = Math.max(3, Math.min(slot * 0.5, 40));
+    const barW = Math.max(3, Math.min(slot * 0.5, expanded ? 100 : 40));
     const xOf = (i) => pad.l + i * slot + slot / 2;
     const barX = (i) => pad.l + i * slot + (slot - barW) / 2;
     const yOf = (v) => pad.t + (1 - v / maxV) * iH;
     const isTotal = visibleData[m - 1]?.day === 'TOTAL';
-    const fontSize = Math.min(13, Math.max(9, Math.floor(slot * 0.38)));
 
     ctx.clearRect(0, 0, W, H);
 
@@ -88,8 +91,10 @@ function ChartCanvas({
       const y = pad.t + iH * (i / 3);
       ctx.beginPath();
       ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y);
-      ctx.strokeStyle = 'rgba(150,150,180,.08)';
+      ctx.strokeStyle = 'rgba(150,150,180,.18)';
+      ctx.setLineDash([2, 5]);
       ctx.lineWidth = 1; ctx.stroke();
+      ctx.setLineDash([]);
       const tickVal = maxV * (1 - i / 3);
       ctx.fillText(tickVal.toFixed(tickVal < 10 ? 1 : 0), pad.l - 6, y);
     }
@@ -106,7 +111,7 @@ function ChartCanvas({
       const x = barX(i);
       const y = yOf(v);
       const h = (pad.t + iH) - y;
-      const r = Math.min(4, barW / 2);
+      const r = Math.min(expanded ? barW / 2 : 4, barW / 2);
       let barColor = color;
       if (overTargetColor && targetKey && v > targets[i] && targets[i] > 0) barColor = overTargetColor;
       else if (isTotal && i === m - 1) barColor = color;
@@ -141,7 +146,7 @@ function ChartCanvas({
     if (showMovingAvg && vals.length >= 2) {
       const mavg = calcMovingAvg(vals.map((v) => (typeof v === 'number' ? v : 0)));
       ctx.beginPath();
-      ctx.lineWidth = 2;
+      ctx.lineWidth = expanded ? 3 : 2;
       ctx.strokeStyle = movingAvgColor;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
@@ -152,14 +157,13 @@ function ChartCanvas({
       ctx.stroke();
       mavg.forEach((v, i) => {
         ctx.beginPath();
-        ctx.arc(xOf(i), yOf(v), 2.5, 0, Math.PI * 2);
+        ctx.arc(xOf(i), yOf(v), expanded ? 4 : 2.5, 0, Math.PI * 2);
         ctx.fillStyle = movingAvgColor;
         ctx.fill();
       });
     }
 
-    // X-axis labels on canvas — auto-step to avoid overlap
-    const minGap = 22;
+    const minGap = expanded ? fontSize * 2.5 : 22;
     const step = Math.max(1, Math.ceil(minGap / slot));
     const labelY = pad.t + iH + 4;
     ctx.textAlign = 'center';

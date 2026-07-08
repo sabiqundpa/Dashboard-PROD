@@ -48,18 +48,21 @@ function ChartCanvas({ days, year, expanded }) {
     const styles = getComputedStyle(document.documentElement);
     const muted = styles.getPropertyValue('--muted').trim() || '#5a5a78';
 
-    // pad.b = 18 to reserve space for X-axis labels drawn on canvas
-    const pad = { t: 8, b: 18, l: 30, r: 4 };
+    const m = visible.length;
+    const prelimSlot = (W - (expanded ? 52 : 34)) / Math.max(m, 1);
+    const fontSize = expanded
+      ? Math.min(16, Math.max(12, Math.floor(prelimSlot * 0.45)))
+      : Math.min(11, Math.max(9, Math.floor(prelimSlot * 0.38)));
+    const padL = expanded ? Math.max(44, Math.ceil(fontSize * 3)) : 30;
+    const pad = { t: expanded ? 14 : 8, b: expanded ? fontSize + 10 : 18, l: padL, r: expanded ? 8 : 4 };
     const iW = W - pad.l - pad.r;
     const iH = H - pad.t - pad.b;
     const vals = visible.map((d) => d.hrs ?? 0);
     const maxV = Math.max(...vals, 1);
-    const m = visible.length;
     const slot = iW / m;
-    const barW = Math.max(3, Math.min(slot * 0.55, 40));
+    const barW = Math.max(3, Math.min(slot * 0.55, expanded ? 100 : 40));
     const xOf = (i) => pad.l + i * slot + (slot - barW) / 2;
     const yOf = (v) => pad.t + (1 - v / maxV) * iH;
-    const fontSize = Math.min(13, Math.max(9, Math.floor(slot * 0.38)));
 
     ctx.clearRect(0, 0, W, H);
 
@@ -71,8 +74,10 @@ function ChartCanvas({ days, year, expanded }) {
       const y = pad.t + iH * (i / 3);
       ctx.beginPath();
       ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y);
-      ctx.strokeStyle = 'rgba(150,150,180,.08)';
+      ctx.strokeStyle = 'rgba(150,150,180,.18)';
+      ctx.setLineDash([2, 5]);
       ctx.lineWidth = 1; ctx.stroke();
+      ctx.setLineDash([]);
       const tickVal = maxV * (1 - i / 3);
       ctx.fillText(tickVal.toFixed(tickVal < 10 ? 1 : 0), pad.l - 6, y);
     }
@@ -92,7 +97,7 @@ function ChartCanvas({ days, year, expanded }) {
       }
 
       const x = xOf(i);
-      const r = Math.min(5, barW / 2);
+      const r = Math.min(expanded ? barW / 2 : 5, barW / 2);
 
       if (noData) {
         const stubH = 4;
@@ -117,8 +122,7 @@ function ChartCanvas({ days, year, expanded }) {
       }
     });
 
-    // X-axis labels on canvas — auto-step to avoid overlap
-    const minGap = 22;
+    const minGap = expanded ? fontSize * 2.5 : 22;
     const step = Math.max(1, Math.ceil(minGap / slot));
     const labelY = pad.t + iH + 4;
     ctx.textAlign = 'center';

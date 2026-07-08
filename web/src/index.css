@@ -400,6 +400,7 @@ textarea.form-input{resize:vertical;min-height:64px}
 
 /* ── Work Order table ──────────────────── */
 .wo-filter-bar{display:flex;gap:8px;margin-bottom:6px;flex-wrap:wrap;align-items:center}
+.wo-filter-select{padding:6px 10px;flex-shrink:0}
 .wo-result-count{font-size:10.5px;color:var(--muted);padding:0 2px 8px;border-bottom:1px solid var(--border);margin-bottom:2px}
 .wo-table{width:100%;border-collapse:collapse;font-size:12.5px}
 .wo-th{padding:9px 12px;font-size:9.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700;text-align:left;white-space:nowrap;cursor:pointer;user-select:none;border-bottom:2px solid var(--border)}

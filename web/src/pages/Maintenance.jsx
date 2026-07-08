@@ -4,12 +4,6 @@ import { useApp } from '../AppContext.jsx';
 import { useUI } from '../UIContext.jsx';
 import PeriodPicker from '../components/PeriodPicker.jsx';
 
-const STATUS_FILTERS = [
-  { key: 'all', label: 'Semua' },
-  { key: 'open', label: 'Open' },
-  { key: 'resolved', label: 'Close' },
-];
-
 function fmtHrs(hrs) {
   if (!hrs && hrs !== 0) return '—';
   const h = Math.floor(hrs);
@@ -77,10 +71,6 @@ export default function Maintenance() {
       <div className="page-header">
         <div><div className="page-title">Log Work Order Maintenance</div></div>
         <div className="header-actions">
-          <PeriodPicker period={period} setPeriod={setPeriod} refDate={refDate} setRefDate={setRefDate} />
-          <button className="btn-icon" title="Refresh data" onClick={() => loadAll()}>
-            <RefreshCw size={14} />
-          </button>
           <button className="btn primary" onClick={() => openModal('addBreakdown')}>+ RMO</button>
         </div>
       </div>
@@ -104,25 +94,35 @@ export default function Maintenance() {
 
       {/* ── Table card ───────────────────────── */}
       <div className="card">
-        {/* Filter bar */}
+        {/* ── Unified filter bar ─────────────── */}
         <div className="wo-filter-bar">
-          <div className="search-wrap" style={{ flex: 1, minWidth: 140 }}>
+          {/* Search */}
+          <div className="search-wrap" style={{ flex: '1 1 180px', minWidth: 140 }}>
             <span className="search-icon"><Search size={14} /></span>
             <input className="search-input" placeholder="Cari mesin atau problem…"
               value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
-          <select className="btn" style={{ padding: '6px 10px' }} value={machineFilter}
+
+          {/* Machine filter */}
+          <select className="btn wo-filter-select" value={machineFilter}
             onChange={(e) => setMachineFilter(e.target.value)}>
             <option value="">Semua Mesin</option>
             {machineOptions.map((name) => <option key={name} value={name}>{name}</option>)}
           </select>
-          <div className="filter-row">
-            {STATUS_FILTERS.map((f) => (
-              <span key={f.key}
-                className={'filter-chip' + (statusFilter === f.key ? ' active' : '')}
-                onClick={() => setStatusFilter(f.key)}>{f.label}</span>
-            ))}
-          </div>
+
+          {/* Status filter — dropdown instead of chips */}
+          <select className="btn wo-filter-select" value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}>
+            <option value="all">Semua Status</option>
+            <option value="open">Open</option>
+            <option value="resolved">Close</option>
+          </select>
+
+          {/* Period picker + refresh */}
+          <PeriodPicker period={period} setPeriod={setPeriod} refDate={refDate} setRefDate={setRefDate} />
+          <button className="btn-icon" title="Refresh data" onClick={() => loadAll()}>
+            <RefreshCw size={14} />
+          </button>
         </div>
 
         {/* Result count */}

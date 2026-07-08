@@ -842,19 +842,20 @@ router.post('/import-machines', upload.single('file'), async (req, res, next) =>
         return '';
       };
 
-      const name = field('Nama Mesin', 'name');
+      // Accept many column name variants (case-insensitive via lookup)
+      const name = field('Nama Mesin', 'Mesin', 'Machine Name', 'name', 'machine_name');
       if (!name) { skipped++; continue; }
 
-      const plannedHoursRaw = field('Jam Waktu Kerja', 'plannedHours');
+      const plannedHoursRaw = field('Jam Waktu Kerja', 'Jam Kerja', 'Planned Hours', 'plannedHours');
       const plannedHours = plannedHoursRaw !== '' && !isNaN(Number(plannedHoursRaw)) ? Number(plannedHoursRaw) : null;
 
-      const yearRaw = field('Tahun Mesin', 'year_machine', 'Tahun');
+      const yearRaw = field('Tahun Mesin', 'Tahun', 'year_machine', 'Year');
       const data = {
-        assetNumber: field('Nomor Asset', 'id_asset_machine'),
-        type: field('Type', 'type_machine'),
-        brand: field('Merk', 'Merk tahun', 'Merk Tahun', 'brand_machine'),
+        assetNumber: field('Nomor Asset', 'No Asset', 'Asset Number', 'id_asset_machine'),
+        type: field('Type', 'Tipe', 'type_machine'),
+        brand: field('Merk', 'Brand', 'Merk tahun', 'Merk Tahun', 'brand_machine'),
         yearMachine: yearRaw || null,
-        power: field('Daya', 'power_machine'),
+        power: field('Daya', 'Power', 'power_machine'),
         cluster: field('Cluster'),
         line: field('Line'),
         shift: field('Shift'),
@@ -974,6 +975,13 @@ module.exports = router;
 
 // Minimal CSV parser supporting quoted fields with embedded commas/newlines.
 function parseCsv(text) {
+  // Auto-detect delimiter from the header line (comma, semicolon, or tab)
+  const firstLine = text.split(/\r?\n/)[0] || '';
+  const commas = (firstLine.match(/,/g) || []).length;
+  const semis  = (firstLine.match(/;/g) || []).length;
+  const tabs   = (firstLine.match(/\t/g) || []).length;
+  const delim  = tabs > commas && tabs > semis ? '\t' : semis > commas ? ';' : ',';
+
   const rows = [];
   let row = [];
   let field = '';
@@ -990,7 +998,7 @@ function parseCsv(text) {
       }
     } else if (char === '"') {
       inQuotes = true;
-    } else if (char === ',') {
+    } else if (char === delim) {
       row.push(field); field = '';
     } else if (char === '\n' || char === '\r') {
       if (char === '\r' && text[i + 1] === '\n') i++;

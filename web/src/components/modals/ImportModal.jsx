@@ -16,7 +16,8 @@ const MODES = {
   machines: {
     label: 'Master Data Mesin',
     endpoint: '/import-machines',
-    columns: 'NO · Nomor Asset · Nama Mesin · Type · Merk · Tahun Mesin · Daya · Cluster · Line · Shift · Jam Waktu Kerja',
+    columns: 'NO · Nomor Asset · Nama Mesin (atau: Mesin) · Type · Merk · Tahun Mesin · Daya · Cluster · Line · Shift · Jam Waktu Kerja',
+    notes: 'Delimiter , atau ; atau Tab otomatis terdeteksi. Nama kolom tidak case-sensitive.',
   },
 };
 
@@ -78,6 +79,11 @@ export default function ImportModal() {
       <div style={{ marginTop: 12, background: 'var(--s2)', borderRadius: 8, padding: 11, fontSize: 11, color: 'var(--muted)', lineHeight: 1.8 }}>
         <strong style={{ color: 'var(--text)' }}>Required columns:</strong><br />
         <span style={{ fontFamily: 'var(--mono)' }}>{MODES[mode].columns}</span>
+        {MODES[mode].notes && (
+          <div style={{ marginTop: 6, fontSize: 10.5, color: 'var(--green)', fontStyle: 'italic' }}>
+            ✓ {MODES[mode].notes}
+          </div>
+        )}
       </div>
       <div className="modal-footer">
         <button className="btn" onClick={closeModal}>Cancel</button>

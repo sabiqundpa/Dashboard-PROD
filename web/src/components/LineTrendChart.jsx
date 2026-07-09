@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import { Maximize2, X } from 'lucide-react';
 
 const MIN_VISIBLE = 3;
 
@@ -13,7 +12,7 @@ function calcMovingAvg(arr, window = 3) {
 
 function ChartCanvas({
   data, valueKey, targetKey, color, unit,
-  showMovingAvg, movingAvgColor, overTargetColor, expanded,
+  showMovingAvg, movingAvgColor, overTargetColor,
 }) {
   const canvasRef = useRef(null);
   const tipRef    = useRef(null);
@@ -52,9 +51,7 @@ function ChartCanvas({
     if (!visibleData?.length || !canvasRef.current) return;
     const canvas = canvasRef.current;
     const W = canvas.parentElement.offsetWidth || 360;
-    const H = expanded
-      ? Math.max(100, canvas.parentElement.offsetHeight || Math.round(window.innerHeight * 0.7))
-      : 130;
+    const H = 130;
     canvas.width = W; canvas.height = H;
     const ctx = canvas.getContext('2d');
 
@@ -63,19 +60,16 @@ function ChartCanvas({
     const accent2 = styles.getPropertyValue('--accent2').trim() || '#ff6b35';
 
     const m = visibleData.length;
-    const prelimSlot = (W - (expanded ? 52 : 34)) / Math.max(m, 1);
-    const fontSize = expanded
-      ? Math.min(16, Math.max(12, Math.floor(prelimSlot * 0.45)))
-      : Math.min(11, Math.max(9, Math.floor(prelimSlot * 0.38)));
-    const padL = expanded ? Math.max(44, Math.ceil(fontSize * 3)) : 30;
-    const pad = { t: expanded ? 14 : 10, b: expanded ? fontSize + 10 : 18, l: padL, r: expanded ? 8 : 4 };
+    const fontSize = Math.min(11, Math.max(9, Math.floor(((W - 34) / Math.max(m, 1)) * 0.38)));
+    const padL = 30;
+    const pad = { t: 10, b: 18, l: padL, r: 4 };
     const iW = W - pad.l - pad.r;
     const iH = H - pad.t - pad.b;
     const vals = visibleData.map((d) => d[valueKey] ?? 0);
     const targets = targetKey ? visibleData.map((d) => d[targetKey] ?? 0) : [];
     const maxV = Math.max(...vals, ...(targetKey ? targets : []), 1) * 1.15;
     const slot = iW / m;
-    const barW = Math.max(3, Math.min(slot * 0.5, expanded ? 100 : 40));
+    const barW = Math.max(3, Math.min(slot * 0.5, 40));
     const xOf = (i) => pad.l + i * slot + slot / 2;
     const barX = (i) => pad.l + i * slot + (slot - barW) / 2;
     const yOf = (v) => pad.t + (1 - v / maxV) * iH;
@@ -111,7 +105,7 @@ function ChartCanvas({
       const x = barX(i);
       const y = yOf(v);
       const h = (pad.t + iH) - y;
-      const r = Math.min(expanded ? barW / 2 : 4, barW / 2);
+      const r = Math.min(4, barW / 2);
       let barColor = color;
       if (overTargetColor && targetKey && v > targets[i] && targets[i] > 0) barColor = overTargetColor;
       else if (isTotal && i === m - 1) barColor = color;
@@ -146,7 +140,7 @@ function ChartCanvas({
     if (showMovingAvg && vals.length >= 2) {
       const mavg = calcMovingAvg(vals.map((v) => (typeof v === 'number' ? v : 0)));
       ctx.beginPath();
-      ctx.lineWidth = expanded ? 3 : 2;
+      ctx.lineWidth = 2;
       ctx.strokeStyle = movingAvgColor;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
@@ -157,13 +151,13 @@ function ChartCanvas({
       ctx.stroke();
       mavg.forEach((v, i) => {
         ctx.beginPath();
-        ctx.arc(xOf(i), yOf(v), expanded ? 4 : 2.5, 0, Math.PI * 2);
+        ctx.arc(xOf(i), yOf(v), 2.5, 0, Math.PI * 2);
         ctx.fillStyle = movingAvgColor;
         ctx.fill();
       });
     }
 
-    const minGap = expanded ? fontSize * 2.5 : 22;
+    const minGap = 22;
     const step = Math.max(1, Math.ceil(minGap / slot));
     const labelY = pad.t + iH + 4;
     ctx.textAlign = 'center';
@@ -198,36 +192,19 @@ function ChartCanvas({
       showTip(e.touches[0].clientX, canvas.getBoundingClientRect());
     };
     canvas.ontouchend = () => setTimeout(() => { tip.style.display = 'none'; }, 1500);
-  }, [visibleData, valueKey, targetKey, color, unit, showMovingAvg, movingAvgColor, overTargetColor, expanded, tick]);
+  }, [visibleData, valueKey, targetKey, color, unit, showMovingAvg, movingAvgColor, overTargetColor, tick]);
 
   useEffect(() => {
     const id = requestAnimationFrame(() => setTick(t => t + 1));
     return () => cancelAnimationFrame(id);
-  }, [expanded]);
-
-  const chartH = expanded ? undefined : 130;
+  }, []);
 
   return (
     <>
-      <div className="trend-wrap" style={chartH ? { height: chartH } : undefined} ref={wrapRef}>
+      <div className="trend-wrap" style={{ height: 130 }} ref={wrapRef}>
         <canvas ref={canvasRef}></canvas>
         <div className="trend-tooltip" ref={tipRef}></div>
       </div>
-
-      {visibleCount < n && (
-        <input
-          type="range" min={0} max={maxStart} value={start}
-          onChange={(e) => setPanStart(Number(e.target.value))}
-          style={{ width: '100%', marginTop: 4 }}
-        />
-      )}
-
-      {visibleCount < n && (
-        <button className="card-action" style={{ marginTop: 6 }}
-          onClick={() => { setZoom(1); setPanStart(0); }}>
-          Reset zoom
-        </button>
-      )}
     </>
   );
 }
@@ -238,15 +215,6 @@ export default function LineTrendChart({
   overTargetColor = null,
   legendItems = null,
 }) {
-  const [expanded, setExpanded] = useState(false);
-
-  useEffect(() => {
-    if (!expanded) return;
-    const fn = (e) => { if (e.key === 'Escape') setExpanded(false); };
-    window.addEventListener('keydown', fn);
-    return () => window.removeEventListener('keydown', fn);
-  }, [expanded]);
-
   const legend = legendItems || (() => {
     const items = [{ type: 'dot', color, label: `${unit} (nilai)` }];
     if (showMovingAvg) items.push({ type: 'line', color: movingAvgColor, label: 'Rata-rata bergerak' });
@@ -254,67 +222,32 @@ export default function LineTrendChart({
     return items;
   })();
 
-  const header = (
-    <div className="card-header">
-      <div><div className="card-title">{title}</div></div>
-      {!expanded && (
-        <button className="chart-expand" onClick={() => setExpanded(true)}
-          title="Perbesar grafik">
-          <Maximize2 size={12}/>
-        </button>
-      )}
-    </div>
-  );
-
-  const legendEl = (
-    <div className="chart-legend">
-      {legend.map((l, i) => (
-        <div key={i} className="legend-item">
-          {l.type === 'dot' && <span className="legend-swatch" style={{ background: l.color }}></span>}
-          {(l.type === 'line' || l.type === 'dash') && (
-            <span className="legend-dash" style={{
-              background: l.color,
-              ...(l.type === 'dash' ? { borderTop: `2px dashed ${l.color}`, background: 'none', height: 0 } : {}),
-            }}></span>
-          )}
-          {l.label}
-        </div>
-      ))}
-    </div>
-  );
-
-  const canvasEl = (
-    <ChartCanvas
-      data={data} valueKey={valueKey} targetKey={targetKey}
-      color={color} unit={unit}
-      showMovingAvg={showMovingAvg} movingAvgColor={movingAvgColor}
-      overTargetColor={overTargetColor}
-      expanded={expanded}
-    />
-  );
-
-  if (expanded) {
-    return (
-      <div className="chart-expand-overlay" onClick={() => setExpanded(false)}>
-        <div className="card chart-expand-modal" onClick={e => e.stopPropagation()}>
-          {header}
-          {legendEl}
-          <div className="axis-unit-label">Waktu (Jam)</div>
-          {canvasEl}
-          <button className="chart-expand-close" onClick={() => setExpanded(false)} title="Tutup">
-            <X size={16}/>
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="card">
-      {header}
-      {legendEl}
+      <div className="card-header">
+        <div><div className="card-title">{title}</div></div>
+      </div>
       <div className="axis-unit-label">Waktu (Jam)</div>
-      {canvasEl}
+      <ChartCanvas
+        data={data} valueKey={valueKey} targetKey={targetKey}
+        color={color} unit={unit}
+        showMovingAvg={showMovingAvg} movingAvgColor={movingAvgColor}
+        overTargetColor={overTargetColor}
+      />
+      <div className="chart-legend" style={{ marginTop: 8 }}>
+        {legend.map((l, i) => (
+          <div key={i} className="legend-item">
+            {l.type === 'dot' && <span className="legend-swatch" style={{ background: l.color }}></span>}
+            {(l.type === 'line' || l.type === 'dash') && (
+              <span className="legend-dash" style={{
+                background: l.color,
+                ...(l.type === 'dash' ? { borderTop: `2px dashed ${l.color}`, background: 'none', height: 0 } : {}),
+              }}></span>
+            )}
+            {l.label}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

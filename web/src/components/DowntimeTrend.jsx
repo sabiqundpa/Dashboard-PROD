@@ -1,10 +1,21 @@
 import { useEffect, useRef, useState } from 'react';
-import { Maximize2, X } from 'lucide-react';
 
 const MIN_VISIBLE = 3;
 const MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 
-function ChartCanvas({ days, year, expanded }) {
+function formatAxisLabel(label) {
+  const s = String(label ?? '').trim();
+  const h = parseInt(s, 10);
+  if (!isNaN(h) && h >= 0 && h <= 23 && /^\d{1,2}$/.test(s)) {
+    if (h === 0)  return '12AM';
+    if (h < 12)   return `${h}AM`;
+    if (h === 12) return '12PM';
+    return `${h - 12}PM`;
+  }
+  return s;
+}
+
+function ChartCanvas({ days, year }) {
   const canvasRef = useRef(null);
   const tipRef    = useRef(null);
   const wrapRef   = useRef(null);
@@ -39,9 +50,7 @@ function ChartCanvas({ days, year, expanded }) {
     if (!visible.length || !canvasRef.current) return;
     const canvas = canvasRef.current;
     const W = canvas.parentElement.offsetWidth || 360;
-    const H = expanded
-      ? Math.max(100, canvas.parentElement.offsetHeight || Math.round(window.innerHeight * 0.7))
-      : 130;
+    const H = 130;
     canvas.width = W; canvas.height = H;
     const ctx = canvas.getContext('2d');
 
@@ -49,18 +58,15 @@ function ChartCanvas({ days, year, expanded }) {
     const muted = styles.getPropertyValue('--muted').trim() || '#5a5a78';
 
     const m = visible.length;
-    const prelimSlot = (W - (expanded ? 52 : 34)) / Math.max(m, 1);
-    const fontSize = expanded
-      ? Math.min(16, Math.max(12, Math.floor(prelimSlot * 0.45)))
-      : Math.min(11, Math.max(9, Math.floor(prelimSlot * 0.38)));
-    const padL = expanded ? Math.max(44, Math.ceil(fontSize * 3)) : 30;
-    const pad = { t: expanded ? 14 : 8, b: expanded ? fontSize + 10 : 18, l: padL, r: expanded ? 8 : 4 };
+    const fontSize = Math.min(11, Math.max(9, Math.floor(((W - 34) / Math.max(m, 1)) * 0.38)));
+    const padL = 30;
+    const pad = { t: 8, b: 18, l: padL, r: 4 };
     const iW = W - pad.l - pad.r;
     const iH = H - pad.t - pad.b;
     const vals = visible.map((d) => d.hrs ?? 0);
     const maxV = Math.max(...vals, 1);
     const slot = iW / m;
-    const barW = Math.max(3, Math.min(slot * 0.55, expanded ? 100 : 40));
+    const barW = Math.max(3, Math.min(slot * 0.55, 40));
     const xOf = (i) => pad.l + i * slot + (slot - barW) / 2;
     const yOf = (v) => pad.t + (1 - v / maxV) * iH;
 
@@ -97,7 +103,7 @@ function ChartCanvas({ days, year, expanded }) {
       }
 
       const x = xOf(i);
-      const r = Math.min(expanded ? barW / 2 : 5, barW / 2);
+      const r = Math.min(5, barW / 2);
 
       if (noData) {
         const stubH = 4;
@@ -122,7 +128,7 @@ function ChartCanvas({ days, year, expanded }) {
       }
     });
 
-    const minGap = expanded ? fontSize * 2.5 : 22;
+    const minGap = 22;
     const step = Math.max(1, Math.ceil(minGap / slot));
     const labelY = pad.t + iH + 4;
     ctx.textAlign = 'center';
@@ -133,7 +139,7 @@ function ChartCanvas({ days, year, expanded }) {
       const isCurrent = d.day === currentMonthAbbr;
       ctx.fillStyle = isCurrent ? '#4488ff' : muted;
       ctx.font = isCurrent ? `bold ${fontSize}px Inter, sans-serif` : `${fontSize}px Inter, sans-serif`;
-      ctx.fillText(d.day, cx, labelY);
+      ctx.fillText(formatAxisLabel(d.day), cx, labelY);
     });
 
     const tip = tipRef.current;
@@ -144,7 +150,7 @@ function ChartCanvas({ days, year, expanded }) {
       tip.style.display = 'block';
       tip.style.left = Math.min(xOf(cl), W - 90) + 'px';
       tip.style.top = (yOf(vals[cl]) - 30) + 'px';
-      tip.textContent = `${visible[cl].day}: ${vals[cl].toFixed(1)} jam`;
+      tip.textContent = `${formatAxisLabel(visible[cl].day)}: ${vals[cl].toFixed(1)} jam`;
     };
     canvas.onmousemove = (e) => showTip(e.clientX, canvas.getBoundingClientRect());
     canvas.onmouseleave = () => { tip.style.display = 'none'; };
@@ -153,19 +159,24 @@ function ChartCanvas({ days, year, expanded }) {
       showTip(e.touches[0].clientX, canvas.getBoundingClientRect());
     };
     canvas.ontouchend = () => setTimeout(() => { tip.style.display = 'none'; }, 1500);
-  }, [visible, currentMonthAbbr, expanded, tick]);
+  }, [visible, currentMonthAbbr, tick]);
 
   useEffect(() => {
     const id = requestAnimationFrame(() => setTick(t => t + 1));
     return () => cancelAnimationFrame(id);
-  }, [expanded]);
+  }, []);
 
   const hasNoData = visible.some((d) => (d.hrs ?? 0) === 0);
-  const chartH = expanded ? undefined : 130;
 
   return (
     <>
-      <div className="chart-legend">
+      <div className="axis-unit-label">Waktu (Jam)</div>
+      <div className="trend-wrap" style={{ height: 130 }} ref={wrapRef}>
+        <canvas ref={canvasRef}></canvas>
+        <div className="trend-tooltip" ref={tipRef}></div>
+      </div>
+
+      <div className="chart-legend" style={{ marginTop: 8 }}>
         <div className="legend-item">
           <span className="legend-swatch" style={{ background: '#4488ff' }}></span>
           Downtime (jam)
@@ -177,74 +188,20 @@ function ChartCanvas({ days, year, expanded }) {
           </div>
         )}
       </div>
-
-      <div className="axis-unit-label">Waktu (Jam)</div>
-      <div className="trend-wrap" style={chartH ? { height: chartH } : undefined} ref={wrapRef}>
-        <canvas ref={canvasRef}></canvas>
-        <div className="trend-tooltip" ref={tipRef}></div>
-      </div>
-
-      {visibleCount < n && (
-        <input
-          type="range" min={0} max={maxStart} value={start}
-          onChange={(e) => setPanStart(Number(e.target.value))}
-          style={{ width: '100%', marginTop: 4 }}
-        />
-      )}
-
-      {zoom < 1 && (
-        <button className="card-action" style={{ marginTop: 6 }}
-          onClick={() => { setZoom(1); setPanStart(0); }}>
-          Reset zoom
-        </button>
-      )}
     </>
   );
 }
 
 export default function DowntimeTrend({ days, year }) {
-  const [expanded, setExpanded] = useState(false);
-
-  useEffect(() => {
-    if (!expanded) return;
-    const fn = (e) => { if (e.key === 'Escape') setExpanded(false); };
-    window.addEventListener('keydown', fn);
-    return () => window.removeEventListener('keydown', fn);
-  }, [expanded]);
-
-  const header = (
-    <div className="card-header">
-      <div>
-        <div className="card-title">Tren Downtime {year}</div>
-        <div className="card-sub">Arahkan kursor ke bar · scroll untuk zoom</div>
-      </div>
-      {!expanded && (
-        <button className="chart-expand" onClick={() => setExpanded(true)}
-          title="Perbesar grafik">
-          <Maximize2 size={12}/>
-        </button>
-      )}
-    </div>
-  );
-
-  if (expanded) {
-    return (
-      <div className="chart-expand-overlay" onClick={() => setExpanded(false)}>
-        <div className="card chart-expand-modal" onClick={e => e.stopPropagation()}>
-          {header}
-          <ChartCanvas days={days} year={year} expanded />
-          <button className="chart-expand-close" onClick={() => setExpanded(false)} title="Tutup">
-            <X size={16}/>
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="card">
-      {header}
-      <ChartCanvas days={days} year={year} expanded={false} />
+      <div className="card-header">
+        <div>
+          <div className="card-title">Tren Downtime {year}</div>
+          <div className="card-sub">Arahkan kursor ke bar untuk detail</div>
+        </div>
+      </div>
+      <ChartCanvas days={days} year={year} />
     </div>
   );
 }

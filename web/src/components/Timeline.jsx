@@ -1,10 +1,17 @@
+import { useState } from 'react';
+import { ChevronUp, ChevronDown } from 'lucide-react';
 import { useUI } from '../UIContext.jsx';
+import { fmtDate } from '../utils/fmt.js';
 
 export default function Timeline({ items, limit = 999 }) {
   const { openModal } = useUI();
-  const data = items.slice(0, limit);
+  const [sortDir, setSortDir] = useState(-1); // -1 = terbaru dulu
 
-  if (!data.length) {
+  const data = [...items]
+    .sort((a, b) => sortDir * String(a.date).localeCompare(String(b.date)))
+    .slice(0, limit);
+
+  if (!items.length) {
     return <div style={{ color: 'var(--muted)', fontSize: 12, padding: 8 }}>Tidak Ada Kasus</div>;
   }
 
@@ -15,7 +22,15 @@ export default function Timeline({ items, limit = 999 }) {
           <tr>
             <th style={{ textAlign: 'center' }}>Status</th>
             <th>Mesin</th>
-            <th>Tanggal</th>
+            <th
+              style={{ cursor: 'pointer', userSelect: 'none' }}
+              onClick={() => setSortDir((d) => -d)}
+            >
+              Tanggal{' '}
+              {sortDir === 1
+                ? <ChevronUp size={10} style={{ verticalAlign: 'middle' }} />
+                : <ChevronDown size={10} style={{ verticalAlign: 'middle' }} />}
+            </th>
             <th>Waktu</th>
             <th style={{ textAlign: 'center' }}>Aksi</th>
           </tr>
@@ -34,7 +49,7 @@ export default function Timeline({ items, limit = 999 }) {
                   <div style={{ fontWeight: 600 }}>{b.machine}</div>
                   <div style={{ fontSize: 11, color: 'var(--muted)' }}>{b.cause}</div>
                 </td>
-                <td style={{ fontFamily: 'var(--mono)' }}>{b.date}</td>
+                <td style={{ fontFamily: 'var(--mono)' }}>{fmtDate(b.date)}</td>
                 <td style={{ fontFamily: 'var(--mono)' }}>{b.start || '—'}</td>
                 <td style={{ textAlign: 'center' }}>
                   {isOpen && b.id ? (

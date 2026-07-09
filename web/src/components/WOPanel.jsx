@@ -5,6 +5,7 @@ import { useApp } from '../AppContext.jsx';
 import { useToast } from '../ToastContext.jsx';
 import { useAuth } from '../AuthContext.jsx';
 import { apiSend } from '../api.js';
+import { fmtDate } from '../utils/fmt.js';
 
 const CATEGORIES = [
   'Perbaikan MTN', 'Rusak / Mesin Trouble', 'Penggantian Spare Part',
@@ -66,7 +67,7 @@ export default function WOPanel() {
   }
 
   async function deleteWO() {
-    if (!window.confirm(`Hapus work order ini?\n\n"${wo.cause}"\n${wo.machine} · ${wo.date}\n\nData tidak bisa dikembalikan.`)) return;
+    if (!window.confirm(`Hapus work order ini?\n\n"${wo.cause}"\n${wo.machine} · ${fmtDate(wo.date)}\n\nData tidak bisa dikembalikan.`)) return;
     try {
       await apiSend(`/breakdown/${wo.id}`, 'DELETE', {}, logout);
       showToast('Work order dihapus', 'yellow');
@@ -175,18 +176,18 @@ export default function WOPanel() {
             <div className="wo-detail-grid">
               <div className="wo-detail-row">
                 <span className="wo-detail-key">Tanggal Lapor</span>
-                <span className="wo-detail-val">{wo.date || '—'}{wo.start ? ' · ' + wo.start : ''}</span>
+                <span className="wo-detail-val">{fmtDate(wo.date)}{wo.start ? ' · ' + wo.start : ''}</span>
               </div>
               {(wo.repair_date || wo.repair_time) && (
                 <div className="wo-detail-row">
                   <span className="wo-detail-key">Tanggal Mulai</span>
-                  <span className="wo-detail-val">{wo.repair_date || '—'}{wo.repair_time ? ' · ' + wo.repair_time : ''}</span>
+                  <span className="wo-detail-val">{fmtDate(wo.repair_date)}{wo.repair_time ? ' · ' + wo.repair_time : ''}</span>
                 </div>
               )}
               {(wo.end_date || wo.end_time) && (
                 <div className="wo-detail-row">
                   <span className="wo-detail-key">Tanggal Selesai</span>
-                  <span className="wo-detail-val">{wo.end_date || '—'}{wo.end_time ? ' · ' + wo.end_time : ''}</span>
+                  <span className="wo-detail-val">{fmtDate(wo.end_date)}{wo.end_time ? ' · ' + wo.end_time : ''}</span>
                 </div>
               )}
               <div className="wo-detail-row">

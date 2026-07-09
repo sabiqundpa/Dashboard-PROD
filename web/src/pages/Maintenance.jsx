@@ -3,6 +3,7 @@ import { Search, RefreshCw, ChevronUp, ChevronDown } from 'lucide-react';
 import { useApp } from '../AppContext.jsx';
 import { useUI } from '../UIContext.jsx';
 import PeriodPicker from '../components/PeriodPicker.jsx';
+import { fmtDate } from '../utils/fmt.js';
 
 function fmtHrs(hrs) {
   if (hrs == null || hrs === '') return '—';
@@ -184,14 +185,14 @@ export default function Maintenance() {
 
                     {/* TANGGAL LAPOR */}
                     <td>
-                      <div className="wo-date">{b.date || '—'}</div>
+                      <div className="wo-date">{fmtDate(b.date)}</div>
                       {b.start && <div className="wo-time">{b.start}</div>}
                     </td>
 
                     {/* TANGGAL MULAI */}
                     <td>
                       {b.repair_date
-                        ? <><div className="wo-date">{b.repair_date}</div>{b.repair_time && <div className="wo-time">{b.repair_time}</div>}</>
+                        ? <><div className="wo-date">{fmtDate(b.repair_date)}</div>{b.repair_time && <div className="wo-time">{b.repair_time}</div>}</>
                         : <span style={{ color: 'var(--muted)', fontSize: 11 }}>—</span>}
                     </td>
 
@@ -208,7 +209,7 @@ export default function Maintenance() {
                           <span className="wo-dur-main">{fmtHrs(b.durationHrs)}</span>
                           {b.end_date && (
                             <div className="wo-time" style={{ textAlign: 'right' }}>
-                              s/d {b.end_date}{b.end_time ? ' ' + b.end_time : ''}
+                              s/d {fmtDate(b.end_date)}{b.end_time ? ' ' + b.end_time : ''}
                             </div>
                           )}
                         </div>

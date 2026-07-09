@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { AlertCircle, CheckCircle2, CalendarCheck, RefreshCw, Maximize2, Minimize2 } from 'lucide-react';
 import { useApp } from '../AppContext.jsx';
 import { useUI } from '../UIContext.jsx';
+import { fmtDate } from '../utils/fmt.js';
 import KpiRow from '../components/KpiRow.jsx';
 import AvailabilityCard from '../components/AvailabilityCard.jsx';
 import MtbfMttrChart from '../components/MtbfMttrChart.jsx';
@@ -44,7 +45,7 @@ function BreakdownSidebarCard({ items, onMore }) {
                   {b.machine} — {b.cause}
                 </div>
                 <div style={{ fontSize: 9.5, color: 'var(--muted)', whiteSpace: 'nowrap', fontFamily: 'var(--mono)', flexShrink: 0 }}>
-                  {b.date}
+                  {fmtDate(b.date)}
                 </div>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 4 }}>

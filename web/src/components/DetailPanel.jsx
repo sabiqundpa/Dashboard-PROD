@@ -4,6 +4,7 @@ import { useApp } from '../AppContext.jsx';
 import { useToast } from '../ToastContext.jsx';
 import { apiSend } from '../api.js';
 import { useAuth } from '../AuthContext.jsx';
+import { fmtDate } from '../utils/fmt.js';
 
 function fmtHrs(hrs) {
   if (!hrs && hrs !== 0) return '—';
@@ -150,7 +151,7 @@ export default function DetailPanel() {
                   <div className="detail-bd-cause">{b.cause}</div>
                   <div className="detail-bd-meta">
                     <Clock size={9} />
-                    {b.date}{b.start ? ' · ' + b.start : ''}
+                    {fmtDate(b.date)}{b.start ? ' · ' + b.start : ''}
                   </div>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>

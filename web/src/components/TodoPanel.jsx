@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useUI } from '../UIContext.jsx';
 import { useApp } from '../AppContext.jsx';
+import { fmtDate } from '../utils/fmt.js';
 
 const SEVERITY_LABEL = { critical: 'Kritis', warning: 'Waspada', info: 'Info' };
 const SEVERITY_DOT = { critical: 'red', warning: 'yellow', info: 'blue' };
@@ -42,7 +43,7 @@ export default function TodoPanel() {
               <div className={'notif-dot ' + (SEVERITY_DOT[b.severity] || 'yellow')}></div>
               <div>
                 <div className="notif-text"><strong>{b.machine}</strong> — {b.cause}</div>
-                <div className="notif-time">{SEVERITY_LABEL[b.severity] || 'Waspada'} · {b.date}{b.start ? ' · ' + b.start : ''}</div>
+                <div className="notif-time">{SEVERITY_LABEL[b.severity] || 'Waspada'} · {fmtDate(b.date)}{b.start ? ' · ' + b.start : ''}</div>
               </div>
             </div>
           ))

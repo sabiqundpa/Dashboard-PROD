@@ -166,26 +166,34 @@ router.get('/breakdowns', async (req, res, next) => {
       take: 50,
     });
 
-    res.json(breakdowns.map((b) => ({
-      id: b.id,
-      machine: b.machine.name,
-      cluster: b.machine.cluster,
-      line: b.machine.line,
-      cause: b.cause,
-      category: b.category,
-      severity: b.severity,
-      status: b.status,
-      start: b.startTime ?? '',
-      end_date: b.endDate ? b.endDate.toISOString().slice(0, 10) : '',
-      end_time: b.endTime ?? '',
-      duration: `${b.durationHrs.toFixed(1)} hrs`,
-      durationHrs: b.durationHrs,
-      date: b.date.toISOString().slice(0, 10),
-      pic_gh: b.picGh ?? '',
-      pic_mtn: b.picMtn ?? '',
-      resolution: b.resolution ?? '',
-      action: b.action ?? '',
-    })));
+    res.json(breakdowns.map((b) => {
+      const akumulasiRepair = (b.repairDate && b.repairTime && b.endDate && b.endTime)
+        ? computeDurationBetween(b.repairDate, b.repairTime, b.endDate, b.endTime)
+        : null;
+      return {
+        id: b.id,
+        machine: b.machine.name,
+        cluster: b.machine.cluster,
+        line: b.machine.line,
+        cause: b.cause,
+        category: b.category,
+        severity: b.severity,
+        status: b.status,
+        start: b.startTime ?? '',
+        end_date: b.endDate ? b.endDate.toISOString().slice(0, 10) : '',
+        end_time: b.endTime ?? '',
+        duration: `${b.durationHrs.toFixed(1)} hrs`,
+        durationHrs: b.durationHrs,
+        date: b.date.toISOString().slice(0, 10),
+        pic_gh: b.picGh ?? '',
+        pic_mtn: b.picMtn ?? '',
+        resolution: b.resolution ?? '',
+        action: b.action ?? '',
+        repair_date: b.repairDate ? b.repairDate.toISOString().slice(0, 10) : '',
+        repair_time: b.repairTime ?? '',
+        akumulasiRepair,
+      };
+    }));
   } catch (err) { next(err); }
 });
 
@@ -571,7 +579,7 @@ router.post('/breakdown', async (req, res, next) => {
 router.post('/breakdown-close', async (req, res, next) => {
   try {
     const id = Number(req.body.id);
-    const { end_date, end_time, resolution, action, pic_mtn, failure_category, severity } = req.body;
+    const { end_date, end_time, repair_date, repair_time, resolution, action, pic_mtn, failure_category, severity } = req.body;
 
     const existing = await prisma.breakdown.findUnique({ where: { id } });
     if (!existing) return res.status(404).json({ error: `Work order #${id} not found` });
@@ -593,6 +601,8 @@ router.post('/breakdown-close', async (req, res, next) => {
         picMtn: pic_mtn || null,
         category: failure_category || existing.category,
         severity: allowedSeverity.includes(severity) ? severity : existing.severity,
+        repairDate: repair_date ? new Date(repair_date) : null,
+        repairTime: repair_time || null,
       },
     });
 
@@ -650,18 +660,20 @@ router.put('/breakdown/:id', async (req, res, next) => {
   try {
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) return res.status(400).json({ error: 'Invalid id' });
-    const { cause, resolution, action, category, pic_mtn, date, start_time, end_date, end_time, duration_hrs } = req.body;
+    const { cause, resolution, action, category, pic_mtn, date, start_time, end_date, end_time, duration_hrs, repair_date, repair_time } = req.body;
     const data = {};
-    if (cause      !== undefined) data.cause       = String(cause);
-    if (resolution !== undefined) data.resolution  = resolution ? String(resolution) : null;
-    if (action     !== undefined) data.action      = action ? String(action) : null;
-    if (category   !== undefined) data.category    = String(category);
-    if (pic_mtn    !== undefined) data.picMtn      = pic_mtn ? String(pic_mtn) : null;
-    if (date       !== undefined) data.date        = new Date(date);
-    if (start_time !== undefined) data.startTime   = start_time || null;
-    if (end_date   !== undefined) data.endDate     = end_date ? new Date(end_date) : null;
-    if (end_time   !== undefined) data.endTime     = end_time || null;
+    if (cause        !== undefined) data.cause       = String(cause);
+    if (resolution   !== undefined) data.resolution  = resolution ? String(resolution) : null;
+    if (action       !== undefined) data.action      = action ? String(action) : null;
+    if (category     !== undefined) data.category    = String(category);
+    if (pic_mtn      !== undefined) data.picMtn      = pic_mtn ? String(pic_mtn) : null;
+    if (date         !== undefined) data.date        = new Date(date);
+    if (start_time   !== undefined) data.startTime   = start_time || null;
+    if (end_date     !== undefined) data.endDate     = end_date ? new Date(end_date) : null;
+    if (end_time     !== undefined) data.endTime     = end_time || null;
     if (duration_hrs !== undefined) data.durationHrs = parseFloat(duration_hrs) || 0;
+    if (repair_date  !== undefined) data.repairDate  = repair_date ? new Date(repair_date) : null;
+    if (repair_time  !== undefined) data.repairTime  = repair_time || null;
     await prisma.breakdown.update({ where: { id }, data });
     res.json({ ok: true });
   } catch (err) { next(err); }
@@ -738,28 +750,39 @@ router.post('/machines-edit', async (req, res, next) => {
 // (Flat path, no nested segments -- see the comment on /breakdown-close.)
 router.get('/export-work-orders', async (req, res, next) => {
   try {
-    let rows;
-    if (req.query.period) {
-      const { start, end } = getPeriodRange(req.query.period, req.query.date, req.query.start, req.query.end);
-      rows = await prisma.$queryRaw`SELECT * FROM "work_order_export" WHERE "tanggal" BETWEEN ${start} AND ${end}`;
-    } else {
-      rows = await prisma.$queryRaw`SELECT * FROM "work_order_export"`;
-    }
-    if (!rows.length) {
-      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-      res.setHeader('Content-Disposition', 'attachment; filename="work-orders.csv"');
-      return res.send('');
-    }
+    const whereClause = req.query.period
+      ? (() => { const { start, end } = getPeriodRange(req.query.period, req.query.date, req.query.start, req.query.end); return { date: { gte: start, lte: end } }; })()
+      : {};
+    const bs = await prisma.breakdown.findMany({
+      where: whereClause,
+      include: { machine: true },
+      orderBy: [{ date: 'asc' }, { id: 'asc' }],
+    });
 
-    const headers = Object.keys(rows[0]);
-    const csvLines = [headers.join(',')];
-    for (const row of rows) {
-      csvLines.push(headers.map((h) => {
-        const v = row[h];
-        const s = v instanceof Date ? v.toISOString().slice(0, 10) : (v ?? '');
-        return `"${String(s).replace(/"/g, '""')}"`;
-      }).join(','));
-    }
+    const HEADERS = ['NO', 'Status', 'Tanggal Lapor', 'Waktu Lapor', 'Nama Mesin', 'Problem', 'Penyelesaian', 'Tanggal Mulai', 'Waktu Mulai', 'Tanggal Selesai', 'Waktu Selesai', 'Waktu Pengerjaan', 'Downtime', 'PIC MTN'];
+    const csvLines = [HEADERS.join(',')];
+    bs.forEach((b, i) => {
+      const akumulasi = (b.repairDate && b.repairTime && b.endDate && b.endTime)
+        ? computeDurationBetween(b.repairDate, b.repairTime, b.endDate, b.endTime)
+        : '';
+      const row = [
+        i + 1,
+        b.status === 'resolved' ? 'Close' : 'Open',
+        b.date.toISOString().slice(0, 10),
+        b.startTime ?? '',
+        b.machine.name,
+        b.cause,
+        b.resolution ?? '',
+        b.repairDate ? b.repairDate.toISOString().slice(0, 10) : '',
+        b.repairTime ?? '',
+        b.endDate ? b.endDate.toISOString().slice(0, 10) : '',
+        b.endTime ?? '',
+        akumulasi,
+        b.durationHrs,
+        b.picMtn ?? '',
+      ];
+      csvLines.push(row.map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`).join(','));
+    });
 
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="work-orders-${new Date().toISOString().slice(0, 10)}.csv"`);
@@ -774,50 +797,17 @@ router.get('/export-work-orders', async (req, res, next) => {
 // breakdowns at all still get a single row with the history columns blank.
 router.get('/export-machines', async (req, res, next) => {
   try {
-    const machines = await prisma.machine.findMany({
-      include: { breakdowns: { orderBy: { date: 'desc' } } },
-      orderBy: { name: 'asc' },
-    });
+    const machines = await prisma.machine.findMany({ orderBy: { name: 'asc' } });
 
-    const headers = [
-      'Nama Mesin', 'Nomor Asset', 'Type', 'Merk', 'Tahun Mesin', 'Daya', 'Cluster', 'Line', 'Shift',
-      'Jam Kerja Harian', 'Aktif',
-      'Tanggal', 'Waktu Mulai', 'Jenis Problem', 'Problem Identifikasi', 'PIC GH',
-      'Tanggal Selesai', 'Waktu Selesai', 'Penyelesaian', 'Action', 'PIC MTN', 'Durasi (jam)',
-    ];
-
-    const rows = [];
-    for (const m of machines) {
-      const base = [m.name, m.assetNumber, m.type, m.brand, m.yearMachine ?? '', m.power, m.cluster, m.line, m.shift, m.plannedHours, m.active ? 'Ya' : 'Tidak'];
-      if (!m.breakdowns.length) {
-        rows.push([...base, '', '', '', '', '', '', '', '', '', '', '']);
-        continue;
-      }
-      for (const b of m.breakdowns) {
-        rows.push([
-          ...base,
-          b.date.toISOString().slice(0, 10),
-          b.startTime ?? '',
-          b.category,
-          b.cause,
-          b.picGh ?? '',
-          b.endDate ? b.endDate.toISOString().slice(0, 10) : '',
-          b.endTime ?? '',
-          b.resolution ?? '',
-          b.action ?? '',
-          b.picMtn ?? '',
-          b.durationHrs,
-        ]);
-      }
-    }
-
+    const headers = ['Nama Mesin', 'Nomor Asset', 'Type', 'Merk', 'Tahun Mesin', 'Daya', 'Cluster', 'Line', 'Shift', 'Jam Kerja Harian', 'Aktif'];
     const csvLines = [headers.join(',')];
-    for (const row of rows) {
+    for (const m of machines) {
+      const row = [m.name, m.assetNumber, m.type, m.brand, m.yearMachine ?? '', m.power, m.cluster, m.line, m.shift, m.plannedHours, m.active ? 'Ya' : 'Tidak'];
       csvLines.push(row.map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`).join(','));
     }
 
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="mesin-history-${new Date().toISOString().slice(0, 10)}.csv"`);
+    res.setHeader('Content-Disposition', `attachment; filename="mesin-${new Date().toISOString().slice(0, 10)}.csv"`);
     res.send(csvLines.join('\n'));
   } catch (err) { next(err); }
 });

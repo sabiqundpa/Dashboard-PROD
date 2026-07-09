@@ -5,9 +5,11 @@ import { useUI } from '../UIContext.jsx';
 import PeriodPicker from '../components/PeriodPicker.jsx';
 
 function fmtHrs(hrs) {
-  if (!hrs && hrs !== 0) return '—';
-  const h = Math.floor(hrs);
-  const m = Math.round((hrs - h) * 60);
+  if (hrs == null || hrs === '') return '—';
+  const n = Number(hrs);
+  if (isNaN(n)) return '—';
+  const h = Math.floor(n);
+  const m = Math.round((n - h) * 60);
   return m > 0 ? `${h}j ${m}m` : `${h}j`;
 }
 
@@ -144,9 +146,11 @@ export default function Maintenance() {
                 <th className={thCls('status')} onClick={() => sortBy('status')}>STATUS {arrow('status')}</th>
                 <th className={thCls('machine')} onClick={() => sortBy('machine')}>MESIN {arrow('machine')}</th>
                 <th className={thCls('date')} onClick={() => sortBy('date')}>TANGGAL LAPOR {arrow('date')}</th>
+                <th className={thCls('repair_date')} onClick={() => sortBy('repair_date')}>TANGGAL MULAI {arrow('repair_date')}</th>
                 <th className={thCls('cause')} onClick={() => sortBy('cause')}>PROBLEM {arrow('cause')}</th>
                 <th className={thCls('resolution')} onClick={() => sortBy('resolution')}>PENYELESAIAN {arrow('resolution')}</th>
-                <th className={thCls('durationHrs')} onClick={() => sortBy('durationHrs')} style={{ textAlign: 'right' }}>DURASI {arrow('durationHrs')}</th>
+                <th className={thCls('durationHrs')} onClick={() => sortBy('durationHrs')} style={{ textAlign: 'right' }}>DOWNTIME {arrow('durationHrs')}</th>
+                <th className={thCls('akumulasiRepair')} onClick={() => sortBy('akumulasiRepair')} style={{ textAlign: 'right' }}>AKUMULASI REPAIR {arrow('akumulasiRepair')}</th>
                 <th className={thCls('pic_mtn')} onClick={() => sortBy('pic_mtn')} style={{ textAlign: 'center' }}>PIC MTN {arrow('pic_mtn')}</th>
                 <th className="wo-th" style={{ textAlign: 'center', cursor: 'default' }}>AKSI</th>
               </tr>
@@ -154,7 +158,7 @@ export default function Maintenance() {
             <tbody>
               {!data.length ? (
                 <tr>
-                  <td colSpan={8} className="wo-empty">Tidak ada kasus yang cocok</td>
+                  <td colSpan={10} className="wo-empty">Tidak ada kasus yang cocok</td>
                 </tr>
               ) : data.map((b, i) => {
                 const isOpen = b.status === 'open';
@@ -178,10 +182,17 @@ export default function Maintenance() {
                       )}
                     </td>
 
-                    {/* TANGGAL */}
+                    {/* TANGGAL LAPOR */}
                     <td>
                       <div className="wo-date">{b.date || '—'}</div>
                       {b.start && <div className="wo-time">{b.start}</div>}
+                    </td>
+
+                    {/* TANGGAL MULAI */}
+                    <td>
+                      {b.repair_date
+                        ? <><div className="wo-date">{b.repair_date}</div>{b.repair_time && <div className="wo-time">{b.repair_time}</div>}</>
+                        : <span style={{ color: 'var(--muted)', fontSize: 11 }}>—</span>}
                     </td>
 
                     {/* PROBLEM */}
@@ -190,7 +201,7 @@ export default function Maintenance() {
                     {/* PENYELESAIAN */}
                     <td className="wo-resolution">{b.resolution || '—'}</td>
 
-                    {/* DURASI */}
+                    {/* DOWNTIME (waktu selesai - waktu lapor) */}
                     <td style={{ textAlign: 'right' }}>
                       {b.durationHrs != null ? (
                         <div>
@@ -204,6 +215,13 @@ export default function Maintenance() {
                       ) : (
                         <span style={{ color: 'var(--muted)', fontSize: 11 }}>—</span>
                       )}
+                    </td>
+
+                    {/* AKUMULASI REPAIR (waktu selesai - waktu mulai perbaikan) */}
+                    <td style={{ textAlign: 'right' }}>
+                      {b.akumulasiRepair != null
+                        ? <span className="wo-dur-main">{fmtHrs(b.akumulasiRepair)}</span>
+                        : <span style={{ color: 'var(--muted)', fontSize: 11 }}>—</span>}
                     </td>
 
                     {/* PIC */}

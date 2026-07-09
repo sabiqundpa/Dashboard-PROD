@@ -28,15 +28,19 @@ export default function CloseWOModal({ payload }) {
   const showToast = useToast();
   const { logout } = useAuth();
 
-  const [endDate, setEndDate]     = useState(new Date().toISOString().slice(0, 10));
-  const [endTime, setEndTime]     = useState(nowTime());
-  const [picMtn, setPicMtn]       = useState('');
-  const [category, setCategory]   = useState(CATEGORIES[0]);
+  const [repairDate, setRepairDate] = useState(new Date().toISOString().slice(0, 10));
+  const [repairTime, setRepairTime] = useState(nowTime());
+  const [endDate, setEndDate]       = useState(new Date().toISOString().slice(0, 10));
+  const [endTime, setEndTime]       = useState(nowTime());
+  const [picMtn, setPicMtn]         = useState('');
+  const [category, setCategory]     = useState(CATEGORIES[0]);
   const [resolution, setResolution] = useState('');
-  const [action, setAction]       = useState('');
-  const [busy, setBusy]           = useState(false);
+  const [action, setAction]         = useState('');
+  const [busy, setBusy]             = useState(false);
 
   // Refs for keyboard navigation
+  const repairTimeRef = useRef(null);
+  const endDateRef    = useRef(null);
   const timeRef       = useRef(null);
   const picRef        = useRef(null);
   const catRef        = useRef(null);
@@ -53,6 +57,8 @@ export default function CloseWOModal({ payload }) {
     try {
       await apiSend('/breakdown-close', 'POST', {
         id: payload.id,
+        repair_date: repairDate,
+        repair_time: repairTime,
         end_date: endDate,
         end_time: endTime,
         resolution,
@@ -81,10 +87,24 @@ export default function CloseWOModal({ payload }) {
           <span className="cwo-cause">{payload.cause}</span>
         </div>
 
+        {/* ── Tanggal + Waktu Mulai Perbaikan ───── */}
+        <div className="form-group">
+          <label className="form-label">Tanggal Mulai *</label>
+          <input type="date" className="form-input" value={repairDate}
+            onChange={(e) => setRepairDate(e.target.value)}
+            onKeyDown={onEnter(repairTimeRef)} />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Waktu Mulai *</label>
+          <input ref={repairTimeRef} type="time" className="form-input" value={repairTime}
+            onChange={(e) => setRepairTime(e.target.value)}
+            onKeyDown={onEnter(endDateRef)} />
+        </div>
+
         {/* ── Tanggal + Waktu Selesai ────────────── */}
         <div className="form-group">
           <label className="form-label">Tanggal Selesai *</label>
-          <input type="date" className="form-input" value={endDate}
+          <input ref={endDateRef} type="date" className="form-input" value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
             onKeyDown={onEnter(timeRef)} />
         </div>

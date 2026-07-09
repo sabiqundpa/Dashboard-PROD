@@ -41,6 +41,8 @@ export default function WOPanel() {
       pic_mtn:      wo.pic_mtn      || '',
       date:         wo.date         || '',
       start_time:   wo.start        || '',
+      repair_date:  wo.repair_date  || '',
+      repair_time:  wo.repair_time  || '',
       end_date:     wo.end_date     || '',
       end_time:     wo.end_time     || '',
       duration_hrs: wo.durationHrs  ?? 0,
@@ -126,6 +128,14 @@ export default function WOPanel() {
                 <input type="time" className="form-input" value={form.start_time} onChange={set('start_time')} />
               </div>
               <div className="form-group">
+                <label className="form-label">Tanggal Mulai</label>
+                <input type="date" className="form-input" value={form.repair_date} onChange={set('repair_date')} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Waktu Mulai</label>
+                <input type="time" className="form-input" value={form.repair_time} onChange={set('repair_time')} />
+              </div>
+              <div className="form-group">
                 <label className="form-label">Tanggal Selesai</label>
                 <input type="date" className="form-input" value={form.end_date} onChange={set('end_date')} />
               </div>
@@ -167,6 +177,12 @@ export default function WOPanel() {
                 <span className="wo-detail-key">Tanggal Lapor</span>
                 <span className="wo-detail-val">{wo.date || '—'}{wo.start ? ' · ' + wo.start : ''}</span>
               </div>
+              {(wo.repair_date || wo.repair_time) && (
+                <div className="wo-detail-row">
+                  <span className="wo-detail-key">Tanggal Mulai</span>
+                  <span className="wo-detail-val">{wo.repair_date || '—'}{wo.repair_time ? ' · ' + wo.repair_time : ''}</span>
+                </div>
+              )}
               {(wo.end_date || wo.end_time) && (
                 <div className="wo-detail-row">
                   <span className="wo-detail-key">Tanggal Selesai</span>
@@ -179,6 +195,14 @@ export default function WOPanel() {
                   {fmtHrs(wo.durationHrs)}
                 </span>
               </div>
+              {wo.akumulasiRepair != null && (
+                <div className="wo-detail-row">
+                  <span className="wo-detail-key">Akumulasi Repair</span>
+                  <span className="wo-detail-val" style={{ color: 'var(--yellow)', fontFamily: 'var(--mono)' }}>
+                    {fmtHrs(wo.akumulasiRepair)}
+                  </span>
+                </div>
+              )}
               <div className="wo-detail-row">
                 <span className="wo-detail-key">PIC MTN</span>
                 <span className="wo-detail-val">{wo.pic_mtn || '—'}</span>

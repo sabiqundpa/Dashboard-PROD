@@ -79,6 +79,8 @@ model Breakdown {
   endDate     DateTime? // Tanggal Selesai
   endTime     String?
   durationHrs Float    @default(0)
+  repairDate  DateTime? @map("repair_date")  // Tanggal Mulai perbaikan
+  repairTime  String?   @map("repair_time")  // Waktu Mulai perbaikan
   picGh       String?  // PIC GH (pelapor)
   picMtn      String?  // PIC MTN (yang menutup work order)
   resolution  String?  // Penyelesaian Problem

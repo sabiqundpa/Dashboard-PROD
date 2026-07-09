@@ -13,6 +13,7 @@ export function UIProvider({ children }) {
   const [modalPayload, setModalPayload] = useState(null);
   const [detailMachine, setDetailMachine] = useState(null);
   const [detailList, setDetailList] = useState([]);
+  const [detailWO, setDetailWO] = useState(null);
 
   const navigate = useCallback((p) => {
     setPage(p);
@@ -38,8 +39,16 @@ export function UIProvider({ children }) {
   const showDetail = useCallback((name, list = []) => {
     setDetailMachine(name);
     if (list.length > 0) setDetailList(list);
+    setDetailWO(null);
   }, []);
   const closeDetail = useCallback(() => { setDetailMachine(null); setDetailList([]); }, []);
+
+  const showWODetail = useCallback((wo) => {
+    setDetailWO(wo);
+    setDetailMachine(null);
+    setDetailList([]);
+  }, []);
+  const closeWODetail = useCallback(() => setDetailWO(null), []);
 
   return (
     <UIContext.Provider value={{
@@ -51,6 +60,7 @@ export function UIProvider({ children }) {
       todoOpen, toggleTodo, setTodoOpen,
       activeModal, modalPayload, openModal, closeModal,
       detailMachine, detailList, showDetail, closeDetail,
+      detailWO, showWODetail, closeWODetail,
     }}>
       {children}
     </UIContext.Provider>

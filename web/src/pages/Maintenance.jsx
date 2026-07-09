@@ -23,7 +23,7 @@ export default function Maintenance() {
     rangeStart, setRangeStart, rangeEnd, setRangeEnd,
     loadAll,
   } = useApp();
-  const { openModal, showDetail } = useUI();
+  const { openModal, showWODetail } = useUI();
 
   const [search, setSearch]           = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -159,7 +159,7 @@ export default function Maintenance() {
               ) : data.map((b, i) => {
                 const isOpen = b.status === 'open';
                 return (
-                  <tr key={b.id ?? i} className="wo-row" onClick={() => showDetail(b.machine, machineOptions)}>
+                  <tr key={b.id ?? i} className="wo-row" onClick={() => showWODetail(b)}>
                     {/* STATUS */}
                     <td>
                       <span className={`wo-badge ${isOpen ? 'open' : 'closed'}`}>

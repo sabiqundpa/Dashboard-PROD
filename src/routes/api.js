@@ -631,6 +631,53 @@ router.post('/machines', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// ── DELETE /api/machines ───────────────────────────────
+// Permanently delete a machine and all its breakdown records (cascade).
+router.delete('/machines', async (req, res, next) => {
+  try {
+    const { machine: machineName } = req.body;
+    if (!machineName) return res.status(400).json({ error: 'machine name required' });
+    const existing = await prisma.machine.findUnique({ where: { name: machineName } });
+    if (!existing) return res.status(404).json({ error: `Machine "${machineName}" not found` });
+    await prisma.machine.delete({ where: { name: machineName } });
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+// ── PUT /api/breakdown/:id ─────────────────────────────
+// Edit work order fields (cause, resolution, dates, pic_mtn, etc.)
+router.put('/breakdown/:id', async (req, res, next) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) return res.status(400).json({ error: 'Invalid id' });
+    const { cause, resolution, action, category, pic_mtn, date, start_time, end_date, end_time, duration_hrs } = req.body;
+    const data = {};
+    if (cause      !== undefined) data.cause       = String(cause);
+    if (resolution !== undefined) data.resolution  = resolution ? String(resolution) : null;
+    if (action     !== undefined) data.action      = action ? String(action) : null;
+    if (category   !== undefined) data.category    = String(category);
+    if (pic_mtn    !== undefined) data.picMtn      = pic_mtn ? String(pic_mtn) : null;
+    if (date       !== undefined) data.date        = new Date(date);
+    if (start_time !== undefined) data.startTime   = start_time || null;
+    if (end_date   !== undefined) data.endDate     = end_date ? new Date(end_date) : null;
+    if (end_time   !== undefined) data.endTime     = end_time || null;
+    if (duration_hrs !== undefined) data.durationHrs = parseFloat(duration_hrs) || 0;
+    await prisma.breakdown.update({ where: { id }, data });
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+// ── DELETE /api/breakdown/:id ──────────────────────────
+// Permanently delete a single work order record.
+router.delete('/breakdown/:id', async (req, res, next) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) return res.status(400).json({ error: 'Invalid id' });
+    await prisma.breakdown.delete({ where: { id } });
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
 // ── POST /api/machines-active ──────────────────────────
 // Toggle aktif/nonaktif flag. Only active machines contribute to KPI.
 router.post('/machines-active', async (req, res, next) => {
@@ -791,7 +838,7 @@ router.post('/import', upload.single('file'), async (req, res, next) => {
     const validRows = [];
     for (const row of rows) {
       const name  = String(row['Nama Mesin'] ?? row.machine_name ?? '').trim();
-      const cause = String(row['Problem Identifikasi'] ?? row.failure_cause ?? '').trim();
+      const cause = String(row['Problem Identifikasi'] ?? row['Problem'] ?? row.failure_cause ?? '').trim();
       if (!name || !cause) continue;
       validRows.push({ row, name, cause });
     }
@@ -823,7 +870,7 @@ router.post('/import', upload.single('file'), async (req, res, next) => {
       const startDate  = parseDateValue(row['Tanggal Mulai'] ?? row['Tanggal Lapor'] ?? row.breakdown_date);
       const endDate    = parseDateValue(row['Tanggal Selesai']);
 
-      const btRaw = row['Breakdown Time'] ?? row['Waktu Pengerjaan'];
+      const btRaw = row['Downtime'] ?? row['Breakdown Time'] ?? row['Waktu Pengerjaan'];
       let durationHrs = computeDurationHrs(startTime, endTime);
       if (btRaw !== undefined && btRaw !== '' && !isNaN(parseFloat(btRaw))) {
         durationHrs = parseFloat(btRaw);

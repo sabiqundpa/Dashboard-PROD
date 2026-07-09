@@ -1,4 +1,4 @@
-import { X, Pencil, Clock, AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, Pencil, Clock, AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import { useUI } from '../UIContext.jsx';
 import { useApp } from '../AppContext.jsx';
 import { useToast } from '../ToastContext.jsx';
@@ -171,6 +171,22 @@ export default function DetailPanel() {
           onClick={toggleActive}>
           <span className="detail-active-dot"></span>
           {m.active ? 'Aktif' : 'Nonaktif'}
+        </button>
+
+        {/* ── Hapus Mesin ─────────────────────── */}
+        <button
+          className="btn"
+          style={{ color: 'var(--red)', borderColor: 'rgba(255,68,85,.35)', fontSize: 12 }}
+          onClick={async () => {
+            if (!window.confirm(`Hapus mesin "${m.name}"?\n\nSemua data work order mesin ini juga akan ikut terhapus.\nData tidak bisa dikembalikan.`)) return;
+            try {
+              await apiSend('/machines', 'DELETE', { machine: m.name }, logout);
+              showToast(`${m.name} dihapus`, 'yellow');
+              closeDetail();
+              loadAll();
+            } catch (e) { showToast(e.message || 'Gagal menghapus', 'red'); }
+          }}>
+          <Trash2 size={12} /> Hapus Mesin
         </button>
       </div>
     </div>

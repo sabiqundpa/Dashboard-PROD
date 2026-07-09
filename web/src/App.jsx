@@ -20,12 +20,13 @@ import BottomNav from './components/BottomNav.jsx';
 import NotifPanel from './components/NotifPanel.jsx';
 import TodoPanel from './components/TodoPanel.jsx';
 import DetailPanel from './components/DetailPanel.jsx';
+import WOPanel from './components/WOPanel.jsx';
 import ModalRoot from './components/ModalRoot.jsx';
 
 const PAGES = { dashboard: Dashboard, machines: Machines, maintenance: Maintenance, reports: Reports, analytics: Analytics };
 
 function Shell() {
-  const { page, closeModal, setNotifOpen, closeDetail, sidebarOpen, presentMode, togglePresentMode } = useUI();
+  const { page, closeModal, setNotifOpen, closeDetail, closeWODetail, sidebarOpen, presentMode, togglePresentMode } = useUI();
   const { loadAll } = useApp();
   const PageComponent = PAGES[page] || Dashboard;
 
@@ -36,7 +37,7 @@ function Shell() {
 
   useEffect(() => {
     function onKeyDown(e) {
-      if (e.key === 'Escape') { closeModal(); setNotifOpen(false); closeDetail(); }
+      if (e.key === 'Escape') { closeModal(); setNotifOpen(false); closeDetail(); closeWODetail(); }
     }
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
@@ -56,6 +57,7 @@ function Shell() {
       <NotifPanel />
       <TodoPanel />
       <DetailPanel />
+      <WOPanel />
       <ModalRoot />
       <TargetsModal />
       {presentMode && (

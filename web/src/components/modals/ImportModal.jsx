@@ -9,14 +9,15 @@ import { apiSendForm } from '../../api.js';
 
 const MODES = {
   workorder: {
-    label: 'Data Breakdown / Work Order',
+    label: 'Data Downtime Mesin',
     endpoint: '/import',
-    columns: 'machine_name · machine_cluster · machine_line · breakdown_date · start_time · end_time · failure_cause · category · technician',
+    columns: 'NO · Status · Tanggal Lapor · Waktu Lapor · Nama Mesin · Problem · Penyelesaian · Tanggal Mulai · Waktu Mulai · Tanggal Selesai · Waktu Selesai · Waktu Pengerjaan · Downtime · PIC MTN',
+    notes: 'Delimiter , atau ; atau Tab otomatis terdeteksi. Nama kolom tidak case-sensitive.',
   },
   machines: {
     label: 'Master Data Mesin',
     endpoint: '/import-machines',
-    columns: 'NO · Nomor Asset · Nama Mesin (atau: Mesin) · Type · Merk · Tahun Mesin · Daya · Cluster · Line · Shift · Jam Waktu Kerja',
+    columns: 'NO · Nomor Asset · Nama Mesin · Type · Merk · Tahun Mesin · Daya · Cluster · Line · Shift · Jam Waktu Kerja',
     notes: 'Delimiter , atau ; atau Tab otomatis terdeteksi. Nama kolom tidak case-sensitive.',
   },
 };

@@ -32,7 +32,6 @@ export default function Machines() {
         <div className="header-actions">
           <button className="btn" onClick={() => openModal('import')}><FolderUp size={14} /> Import CSV</button>
           <button className="btn" onClick={() => openModal('addMachine')}><Factory size={14} /> Tambah Mesin</button>
-          <button className="btn primary" onClick={() => openModal('addBreakdown')}>+ RMO</button>
         </div>
       </div>
       <div className="card">

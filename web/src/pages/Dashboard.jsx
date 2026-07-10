@@ -123,7 +123,6 @@ export default function Dashboard() {
           >
             {presentMode ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
           </button>
-          <button className="btn primary" onClick={() => openModal('addBreakdown')}>+ RMO</button>
         </div>
       </div>
 

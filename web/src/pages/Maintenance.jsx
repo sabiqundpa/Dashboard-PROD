@@ -74,9 +74,6 @@ export default function Maintenance() {
       {/* ── Header ───────────────────────────── */}
       <div className="page-header">
         <div><div className="page-title">Log Work Order Maintenance</div></div>
-        <div className="header-actions">
-          <button className="btn primary" onClick={() => openModal('addBreakdown')}>+ RMO</button>
-        </div>
       </div>
 
       {/* ── Summary cards ────────────────────── */}

@@ -40,9 +40,11 @@
 :root[data-theme="light"] .mobile-overlay{background:rgba(20,20,30,.35)}
 html{height:100%;-webkit-text-size-adjust:100%}
 body{min-height:100%;background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;overflow-x:hidden}
-::-webkit-scrollbar{width:3px;height:3px}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar{width:7px;height:7px}
+::-webkit-scrollbar-track{background:var(--s2);border-radius:4px}
+::-webkit-scrollbar-thumb{background:var(--dim);border-radius:4px;border:1px solid var(--s2)}
+::-webkit-scrollbar-thumb:hover{background:var(--muted)}
+::-webkit-scrollbar-corner{background:var(--s2)}
 
 /* ═══════════════════════════════════════
    DESKTOP LAYOUT  (≥768px)

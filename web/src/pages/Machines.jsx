@@ -26,16 +26,16 @@ export default function Machines() {
   }, [machines, search, filterCluster, filterLine]);
 
   return (
-    <div className="page-view active">
+    <div className="page-view active" style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
       <div className="page-header">
-        <div><div className="page-title">Semua Mesin</div><div className="page-sub">Tekan baris untuk melihat detail</div></div>
+        <div><div className="page-title">Semua Mesin</div></div>
         <div className="header-actions">
           <button className="btn" onClick={() => openModal('import')}><FolderUp size={14} /> Import CSV</button>
           <button className="btn" onClick={() => openModal('addMachine')}><Factory size={14} /> Tambah Mesin</button>
         </div>
       </div>
-      <div className="card">
-        <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+      <div className="card" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center', flexShrink: 0 }}>
           <div className="search-wrap" style={{ flex: 1, minWidth: 140 }}>
             <span className="search-icon"><Search size={14} /></span>
             <input className="search-input" placeholder="Cari Mesin…" value={search} onChange={(e) => setSearch(e.target.value)} />
@@ -51,7 +51,7 @@ export default function Machines() {
             {lines.map((l) => <option key={l} value={l}>{l}</option>)}
           </select>
         </div>
-        <div className="table-scroll">
+        <div className="table-scroll" style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
           <table className="machine-table" style={{ minWidth: 1020 }}>
             <thead><tr><th>Mesin</th><th>Nomor Asset</th><th>Type</th><th>Merk</th><th>Tahun</th><th>Daya</th><th>Cluster</th><th>Line</th><th>Shift</th><th style={{ textAlign: 'center' }}>Aktif</th><th style={{ textAlign: 'center' }}>Avail %</th><th style={{ textAlign: 'center' }}>Freq</th><th style={{ textAlign: 'right' }}>Waktu DT</th></tr></thead>
             <tbody>
@@ -74,11 +74,11 @@ export default function Machines() {
                     <td style={{ color: 'var(--muted)' }}>{m.shift || '—'}</td>
                     <td style={{ textAlign: 'center' }}><span className={`aktif-pill ${m.active ? 'aktif' : 'nonaktif'}`}><span className="aktif-dot"></span>{m.active ? 'Aktif' : 'Nonaktif'}</span></td>
                     <td style={{ textAlign: 'center' }}>
-                      <span style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>{av.toFixed(1)}%</span>
+                      <span style={{ fontSize: 11, fontVariantNumeric: 'tabular-nums' }}>{av.toFixed(1)}%</span>
                       <span className="pct-bar"><span className="pct-fill" style={{ width: `${av}%`, background: bc }}></span></span>
                     </td>
-                    <td style={{ fontFamily: 'var(--mono)', textAlign: 'center' }}>{m.breakdowns}</td>
-                    <td style={{ fontFamily: 'var(--mono)', textAlign: 'right' }}>{m.downtime_hrs?.toFixed(1)}</td>
+                    <td style={{ textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{m.breakdowns}</td>
+                    <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{m.downtime_hrs?.toFixed(1)}</td>
                   </tr>
                 );
               })}

@@ -1,10 +1,13 @@
+import { useState, useEffect, useMemo } from 'react';
 import { X, Pencil, Clock, AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import { useUI } from '../UIContext.jsx';
 import { useApp } from '../AppContext.jsx';
 import { useToast } from '../ToastContext.jsx';
-import { apiSend } from '../api.js';
+import { apiSend, apiFetch } from '../api.js';
 import { useAuth } from '../AuthContext.jsx';
 import { fmtDate } from '../utils/fmt.js';
+
+const MONTHS = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
 
 function fmtHrs(hrs) {
   if (!hrs && hrs !== 0) return '—';
@@ -15,13 +18,38 @@ function fmtHrs(hrs) {
 
 export default function DetailPanel() {
   const { detailMachine, detailList, closeDetail, showDetail, openModal } = useUI();
-  const { machines, breakdowns, loadAll } = useApp();
+  const { machines, loadAll } = useApp();
   const showToast = useToast();
   const { logout } = useAuth();
 
+  const [history, setHistory]       = useState([]);
+  const [filterYear, setFilterYear]   = useState('');
+  const [filterMonth, setFilterMonth] = useState('');
+
   const m = machines.find((x) => x.name === detailMachine);
 
-  // Navigation within the list that triggered showDetail
+  // Fetch full breakdown history whenever machine changes
+  useEffect(() => {
+    if (!detailMachine) { setHistory([]); return; }
+    setFilterYear(''); setFilterMonth('');
+    apiFetch(`/machine-history?machine=${encodeURIComponent(detailMachine)}`, [], logout)
+      .then(setHistory)
+      .catch(() => {});
+  }, [detailMachine]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Available years from history
+  const years = useMemo(() =>
+    [...new Set(history.map((b) => b.date?.slice(0, 4)).filter(Boolean))].sort().reverse()
+  , [history]);
+
+  // Filtered + limit
+  const rBDs = useMemo(() => history.filter((b) => {
+    if (filterYear  && b.date?.slice(0, 4) !== filterYear)  return false;
+    if (filterMonth && b.date?.slice(5, 7) !== filterMonth) return false;
+    return true;
+  }), [history, filterYear, filterMonth]);
+
+  // Navigation within the list
   const navList = detailList.length > 0 ? detailList : machines.map((x) => x.name);
   const navIdx  = navList.indexOf(detailMachine);
   const hasPrev = navIdx > 0;
@@ -41,9 +69,8 @@ export default function DetailPanel() {
 
   if (!m) return <div className="detail-panel" id="detailPanel"></div>;
 
-  const av = m.availability ?? 0;
+  const av    = m.availability ?? 0;
   const avCol = av >= 90 ? 'var(--green)' : av >= 75 ? 'var(--yellow)' : 'var(--red)';
-  const rBDs = breakdowns.filter((b) => b.machine === m.name).slice(0, 6);
 
   return (
     <div className={'detail-panel' + (detailMachine ? ' show' : '')} id="detailPanel">
@@ -100,53 +127,64 @@ export default function DetailPanel() {
         <div className="detail-section">
           <div className="detail-section-title">Master Data Mesin</div>
           <div className="detail-master-grid">
-            <div className="detail-master-row">
-              <span className="dm-key">Nomor Asset</span>
-              <span className="dm-val">{m.assetNumber || '—'}</span>
-            </div>
-            <div className="detail-master-row">
-              <span className="dm-key">Type</span>
-              <span className="dm-val">{m.type || '—'}</span>
-            </div>
-            <div className="detail-master-row">
-              <span className="dm-key">Merk</span>
-              <span className="dm-val">{m.brand || '—'}</span>
-            </div>
-            <div className="detail-master-row">
-              <span className="dm-key">Tahun</span>
-              <span className="dm-val">{m.yearMachine || '—'}</span>
-            </div>
-            <div className="detail-master-row">
-              <span className="dm-key">Daya</span>
-              <span className="dm-val">{m.power || '—'}</span>
-            </div>
-            <div className="detail-master-row">
-              <span className="dm-key">Shift</span>
-              <span className="dm-val">{m.shift || '—'}</span>
-            </div>
-            <div className="detail-master-row">
-              <span className="dm-key">Cluster</span>
-              <span className="dm-val">{m.cluster || '—'}</span>
-            </div>
-            <div className="detail-master-row">
-              <span className="dm-key">Line</span>
-              <span className="dm-val">{m.line || '—'}</span>
-            </div>
+            {[
+              ['Nomor Asset', m.assetNumber],
+              ['Type',        m.type],
+              ['Merk',        m.brand],
+              ['Tahun',       m.yearMachine],
+              ['Daya',        m.power],
+              ['Shift',       m.shift],
+              ['Cluster',     m.cluster],
+              ['Line',        m.line],
+            ].map(([k, v]) => (
+              <div key={k} className="detail-master-row">
+                <span className="dm-key">{k}</span>
+                <span className="dm-val">{v || '—'}</span>
+              </div>
+            ))}
           </div>
         </div>
 
         {/* ── Riwayat breakdown ───────────────── */}
         <div className="detail-section">
-          <div className="detail-section-title">
-            History Riwayat
-            {rBDs.length > 0 && <span className="detail-history-count">{rBDs.length}</span>}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span className="detail-section-title" style={{ margin: 0 }}>History Riwayat</span>
+              <span className="detail-history-count">{rBDs.length}</span>
+            </div>
+            {/* Filter controls */}
+            <div style={{ display: 'flex', gap: 4 }}>
+              <select
+                className="btn"
+                style={{ padding: '2px 6px', fontSize: 10, height: 24 }}
+                value={filterYear}
+                onChange={(e) => setFilterYear(e.target.value)}
+              >
+                <option value="">Semua Tahun</option>
+                {years.map((y) => <option key={y} value={y}>{y}</option>)}
+              </select>
+              <select
+                className="btn"
+                style={{ padding: '2px 6px', fontSize: 10, height: 24 }}
+                value={filterMonth}
+                onChange={(e) => setFilterMonth(e.target.value)}
+              >
+                <option value="">Semua Bulan</option>
+                {MONTHS.map((mn, i) => (
+                  <option key={i} value={String(i + 1).padStart(2, '0')}>{mn}</option>
+                ))}
+              </select>
+            </div>
           </div>
+
           {rBDs.length === 0 ? (
-            <div className="detail-empty">Tidak ada kasus terbaru</div>
+            <div className="detail-empty">
+              {history.length === 0 ? 'Tidak ada kasus terbaru' : 'Tidak ada kasus pada filter ini'}
+            </div>
           ) : rBDs.map((b, i) => {
             const isOpen = b.status === 'open';
             return (
-              <div key={i} className="detail-bd-item">
+              <div key={b.id ?? i} className="detail-bd-item">
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div className="detail-bd-cause">{b.cause}</div>
                   <div className="detail-bd-meta">

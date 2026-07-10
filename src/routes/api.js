@@ -197,6 +197,27 @@ router.get('/breakdowns', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// ── GET /api/machine-history ─────────────────────────
+// Full breakdown history for one machine — no period limit, no take cap.
+router.get('/machine-history', async (req, res, next) => {
+  try {
+    const machineName = req.query.machine;
+    if (!machineName) return res.status(400).json({ error: 'machine required' });
+    const breakdowns = await prisma.breakdown.findMany({
+      where: { machine: { name: machineName } },
+      orderBy: { date: 'desc' },
+    });
+    res.json(breakdowns.map((b) => ({
+      id: b.id,
+      cause: b.cause,
+      status: b.status,
+      date: b.date.toISOString().slice(0, 10),
+      start: b.startTime ?? '',
+      durationHrs: b.durationHrs,
+    })));
+  } catch (err) { next(err); }
+});
+
 // ── GET /api/pareto ──────────────────────────────────
 router.get('/pareto', async (req, res, next) => {
   try {

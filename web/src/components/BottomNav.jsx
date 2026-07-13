@@ -18,7 +18,7 @@ export default function BottomNav() {
       <div className={'bn-item' + (hasAlert ? ' has-alert' : '') + (page === 'maintenance' ? ' active' : '')} onClick={() => navigate('maintenance')}>
         <div className="bn-dot"></div><span className="bn-icon"><Wrench size={20} /></span><span className="bn-label">Maintenance</span>
       </div>
-      <div className={'bn-item' + (page === 'rmo' ? ' active' : '')} onClick={() => navigate('rmo')}>
+      <div className="bn-item" onClick={() => window.open('/rmo', '_blank')}>
         <span className="bn-icon"><ClipboardList size={20} /></span><span className="bn-label">RMO</span>
       </div>
       <div className={'bn-item' + (page === 'reports' ? ' active' : '')} onClick={() => navigate('reports')}>

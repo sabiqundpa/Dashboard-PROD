@@ -1,6 +1,9 @@
 {
   "buildCommand": "npm run build && npm install --prefix web && npm run build --prefix web",
   "outputDirectory": "web/dist",
+  "rewrites": [
+    { "source": "/rmo", "destination": "/index.html" }
+  ],
   "functions": {
     "api/**/*.js": {
       "maxDuration": 30

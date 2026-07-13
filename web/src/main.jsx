@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
+import RMOPublic from './pages/RMOPublic.jsx';
 
 // Self-hosted fonts (bundled at build time, no runtime call to Google's
 // font CDN). Inter is used for both body text and display/numeric values
@@ -26,8 +27,10 @@ import '@fontsource/dm-mono/latin-ext-500.css';
 
 import './index.css';
 
+const isRMOPage = window.location.pathname === '/rmo';
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <App />
+    {isRMOPage ? <RMOPublic /> : <App />}
   </React.StrictMode>
 );

@@ -45,6 +45,45 @@ router.post('/login', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// ── GET /api/machines-public ─────────────────────────
+// Public — daftar mesin aktif untuk form RMO standalone (tanpa login).
+router.get('/machines-public', async (req, res, next) => {
+  try {
+    const machines = await prisma.machine.findMany({
+      where: { active: true },
+      select: { name: true, cluster: true, line: true },
+      orderBy: { name: 'asc' },
+    });
+    res.json(machines);
+  } catch (err) { next(err); }
+});
+
+// ── POST /api/public-rmo ─────────────────────────────
+// Public — submit RMO dari halaman produksi standalone (tanpa login).
+router.post('/public-rmo', async (req, res, next) => {
+  try {
+    const { machine_code, breakdown_date, start_time, failure_cause, pic_gh } = req.body;
+    if (!machine_code || !failure_cause) {
+      return res.status(400).json({ error: 'machine_code and failure_cause are required' });
+    }
+    const machine = await prisma.machine.findUnique({ where: { name: machine_code } });
+    if (!machine) return res.status(404).json({ error: `Machine "${machine_code}" not found` });
+    const breakdown = await prisma.breakdown.create({
+      data: {
+        machineId: machine.id,
+        cause: failure_cause,
+        category: 'Mechanical',
+        severity: 'warning',
+        status: 'open',
+        date: breakdown_date ? new Date(breakdown_date) : new Date(),
+        startTime: start_time || null,
+        picGh: pic_gh || null,
+      },
+    });
+    res.status(201).json({ id: breakdown.id, machine: machine.name });
+  } catch (err) { next(err); }
+});
+
 // Everything below requires a valid login.
 router.use(requireAuth);
 

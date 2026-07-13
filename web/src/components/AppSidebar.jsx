@@ -7,7 +7,6 @@ const NAV_ITEMS = [
   { page: 'dashboard',   label: 'Dashboard',  icon: LayoutDashboard },
   { page: 'machines',    label: 'Mesin',       icon: Cog },
   { page: 'maintenance', label: 'Breakdown',   icon: AlertTriangle },
-  { page: 'rmo',         label: 'RMO',         icon: ClipboardList },
   { page: 'reports',     label: 'Laporan',     icon: FileText },
   { page: 'analytics',  label: 'Analitik',    icon: BarChart2 },
 ];
@@ -41,6 +40,11 @@ export default function AppSidebar() {
           {n.label}
         </div>
       ))}
+      <div className="asb-section" style={{ marginTop: 8 }}>Produksi</div>
+      <div className="asb-item" onClick={() => window.open('/rmo', '_blank')} title="Buka di tab baru">
+        <ClipboardList size={15} />
+        RMO
+      </div>
       <div className="asb-version" onClick={onVersionClick} title="">v1.0</div>
     </aside>
   );

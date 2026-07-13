@@ -77,11 +77,11 @@ export default function MachineTable({ machines, limit, search: controlledSearch
                   <td style={{ color: 'var(--muted)' }}>{m.line || '—'}</td>
                   <td style={{ textAlign: 'center' }}><span className={`aktif-pill ${m.active ? 'aktif' : 'nonaktif'}`}><span className="aktif-dot"></span>{m.active ? 'Aktif' : 'Nonaktif'}</span></td>
                   <td style={{ textAlign: 'center' }}>
-                    <span style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>{av.toFixed(1)}%</span>
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 11, fontVariantNumeric: 'tabular-nums' }}>{av.toFixed(1)}%</span>
                     <span className="pct-bar"><span className="pct-fill" style={{ width: `${av}%`, background: bc }}></span></span>
                   </td>
-                  <td style={{ fontFamily: 'var(--mono)', textAlign: 'center', color: m.breakdowns > 3 ? 'var(--red)' : 'var(--text)' }}>{m.breakdowns}</td>
-                  <td style={{ fontFamily: 'var(--mono)', textAlign: 'right' }}>{m.downtime_hrs?.toFixed(1)}</td>
+                  <td style={{ fontFamily: 'var(--mono)', fontVariantNumeric: 'tabular-nums', textAlign: 'center', color: m.breakdowns > 3 ? 'var(--red)' : 'var(--text)' }}>{m.breakdowns}</td>
+                  <td style={{ fontFamily: 'var(--mono)', fontVariantNumeric: 'tabular-nums', textAlign: 'right' }}>{m.downtime_hrs?.toFixed(1)}</td>
                   <td style={{ color: 'var(--muted)', fontSize: 11, maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.last_incident}</td>
                 </tr>
               );

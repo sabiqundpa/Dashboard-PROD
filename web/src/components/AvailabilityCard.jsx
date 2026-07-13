@@ -6,6 +6,7 @@ export default function AvailabilityCard({ kpi }) {
   const { availabilityTarget } = useTargets();
   const av      = kpi.availability ?? 0;
   const planned = kpi.planned_hours ?? 0;
+  const plannedMnt = kpi.planned_hours_minutes ?? Math.round(planned * 60);
   const downtime = kpi.downtime_hrs ?? 0;
   const uptime  = Math.max(0, planned - downtime);
 
@@ -46,7 +47,7 @@ export default function AvailabilityCard({ kpi }) {
           {/* percentage in center */}
           <text x={87} y={87} textAnchor="middle" dominantBaseline="middle"
             fill={colHex}
-            style={{ fontSize: 30, fontWeight: 700, fontFamily: 'Inter,sans-serif' }}>
+            style={{ fontSize: 30, fontWeight: 700, fontFamily: 'Inter,sans-serif', letterSpacing: '-0.5px', fontVariantNumeric: 'tabular-nums' }}>
             {av.toFixed(1)}%
           </text>
         </svg>
@@ -67,16 +68,17 @@ export default function AvailabilityCard({ kpi }) {
       {/* stats row */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, borderTop: '1px solid var(--border)', paddingTop: 12 }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 16, fontWeight: 700 }}>{planned.toFixed(1)}</div>
-          <div style={{ fontSize: 9, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.06em', marginTop: 2 }}>Jam Kerja</div>
+          <div style={{ fontVariantNumeric: 'tabular-nums', fontSize: 16, fontWeight: 700 }}>{planned.toFixed(1)}</div>
+          <div style={{ fontSize: 8, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.05em', marginTop: 1 }}>Total Waktu Kerja</div>
+          <div style={{ fontSize: 9, color: 'var(--muted)', marginTop: 1, fontVariantNumeric: 'tabular-nums' }}>{plannedMnt.toLocaleString()} mnt</div>
         </div>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 16, fontWeight: 700, color: 'var(--red)' }}>{downtime.toFixed(1)}</div>
-          <div style={{ fontSize: 9, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.06em', marginTop: 2 }}>Downtime</div>
+          <div style={{ fontVariantNumeric: 'tabular-nums', fontSize: 16, fontWeight: 700, color: 'var(--red)' }}>{downtime.toFixed(1)}</div>
+          <div style={{ fontSize: 9, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.06em', marginTop: 2 }}>Downtime (jam)</div>
         </div>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 16, fontWeight: 700, color: 'var(--green)' }}>{uptime.toFixed(1)}</div>
-          <div style={{ fontSize: 9, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.06em', marginTop: 2 }}>Uptime</div>
+          <div style={{ fontVariantNumeric: 'tabular-nums', fontSize: 16, fontWeight: 700, color: 'var(--green)' }}>{uptime.toFixed(1)}</div>
+          <div style={{ fontSize: 9, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.06em', marginTop: 2 }}>Uptime (jam)</div>
         </div>
       </div>
     </div>

@@ -192,14 +192,14 @@ export default function WOPanel() {
               )}
               <div className="wo-detail-row">
                 <span className="wo-detail-key">Downtime</span>
-                <span className="wo-detail-val" style={{ color: wo.durationHrs > 0 ? 'var(--red)' : 'var(--muted)', fontFamily: 'var(--mono)' }}>
+                <span className="wo-detail-val" style={{ color: wo.durationHrs > 0 ? 'var(--red)' : 'var(--muted)', fontFamily: 'var(--mono)', fontVariantNumeric: 'tabular-nums' }}>
                   {fmtHrs(wo.durationHrs)}
                 </span>
               </div>
               {wo.akumulasiRepair != null && (
                 <div className="wo-detail-row">
-                  <span className="wo-detail-key">Akumulasi Repair</span>
-                  <span className="wo-detail-val" style={{ color: 'var(--yellow)', fontFamily: 'var(--mono)' }}>
+                  <span className="wo-detail-key">Akumulasi Waktu Repair</span>
+                  <span className="wo-detail-val" style={{ color: 'var(--yellow)', fontFamily: 'var(--mono)', fontVariantNumeric: 'tabular-nums' }}>
                     {fmtHrs(wo.akumulasiRepair)}
                   </span>
                 </div>

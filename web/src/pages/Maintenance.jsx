@@ -148,7 +148,7 @@ export default function Maintenance() {
                 <th className={thCls('cause')} onClick={() => sortBy('cause')}>PROBLEM {arrow('cause')}</th>
                 <th className={thCls('resolution')} onClick={() => sortBy('resolution')}>PENYELESAIAN {arrow('resolution')}</th>
                 <th className={thCls('durationHrs')} onClick={() => sortBy('durationHrs')} style={{ textAlign: 'right' }}>DOWNTIME {arrow('durationHrs')}</th>
-                <th className={thCls('akumulasiRepair')} onClick={() => sortBy('akumulasiRepair')} style={{ textAlign: 'right' }}>AKUMULASI REPAIR {arrow('akumulasiRepair')}</th>
+                <th className={thCls('akumulasiRepair')} onClick={() => sortBy('akumulasiRepair')} style={{ textAlign: 'right' }}>AKUMULASI WAKTU REPAIR {arrow('akumulasiRepair')}</th>
                 <th className={thCls('pic_mtn')} onClick={() => sortBy('pic_mtn')} style={{ textAlign: 'center' }}>PIC MTN {arrow('pic_mtn')}</th>
                 <th className="wo-th" style={{ textAlign: 'center', cursor: 'default' }}>AKSI</th>
               </tr>

@@ -126,26 +126,19 @@ router.get('/kpi', async (req, res, next) => {
       ? Math.max(0, Math.min(100, ((plannedHrsTotal - downtimeHrs) / plannedHrsTotal) * 100))
       : 0;
 
-    // performancePct/qualityPct removed from Machine (were always constant
-    // defaults 95/98); OEE still computed but using those fixed values.
-    const performance = 95;
-    const quality = 98;
-    const oee = (availability * performance * quality) / 10000;
-
     const breakdownCount = breakdowns.length;
     const uptimeHrs = Math.max(0, plannedHrsTotal - downtimeHrs);
     const mtbf = breakdownCount > 0 ? uptimeHrs / breakdownCount : uptimeHrs;
     const mttr = breakdownCount > 0 ? downtimeHrs / breakdownCount : 0;
+    const plannedMinutesTotal = plannedHrsTotal * 60;
 
     res.json({
       breakdowns: breakdownCount,
       downtime_hrs: downtimeHrs,
       planned_hours: Number(plannedHrsTotal.toFixed(1)),
       planned_hours_per_day: Number(plannedHrsPerDay.toFixed(1)),
+      planned_hours_minutes: Math.round(plannedMinutesTotal),
       availability,
-      performance,
-      quality,
-      oee,
       mtbf: Number(mtbf.toFixed(1)),
       mttr: Number(mttr.toFixed(1)),
     });
@@ -249,7 +242,7 @@ router.get('/pareto', async (req, res, next) => {
 });
 
 // ── GET /api/pareto-machines ─────────────────────────
-// Top 10 machines by breakdown frequency within the period.
+// Top 10 machines by total downtime within the period.
 router.get('/pareto-machines', async (req, res, next) => {
   try {
     const { start, end } = getPeriodRange(req.query.period, req.query.date, req.query.start, req.query.end);
@@ -261,19 +254,20 @@ router.get('/pareto-machines', async (req, res, next) => {
       include: { machine: true },
     });
 
-    const counts = {};
+    const dtMap = {};
     for (const b of breakdowns) {
-      counts[b.machine.name] = (counts[b.machine.name] ?? 0) + 1;
+      dtMap[b.machine.name] = (dtMap[b.machine.name] ?? 0) + (b.durationHrs ?? 0);
     }
 
-    const total = breakdowns.length;
-    const pareto = Object.entries(counts)
-      .map(([machine, count]) => ({
+    const totalDt = Object.values(dtMap).reduce((s, v) => s + v, 0);
+    const pareto = Object.entries(dtMap)
+      .map(([machine, downtime_hrs]) => ({
         machine,
-        count,
-        pct: total > 0 ? Math.round((count / total) * 100) : 0,
+        downtime_hrs: Number(downtime_hrs.toFixed(2)),
+        count: downtime_hrs,
+        pct: totalDt > 0 ? Math.round((downtime_hrs / totalDt) * 100) : 0,
       }))
-      .sort((a, b) => b.count - a.count)
+      .sort((a, b) => b.downtime_hrs - a.downtime_hrs)
       .slice(0, 10);
 
     res.json(pareto);

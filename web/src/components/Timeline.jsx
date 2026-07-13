@@ -49,13 +49,13 @@ export default function Timeline({ items, limit = 999 }) {
                   <div style={{ fontWeight: 600 }}>{b.machine}</div>
                   <div style={{ fontSize: 11, color: 'var(--muted)' }}>{b.cause}</div>
                 </td>
-                <td style={{ fontFamily: 'var(--mono)' }}>{fmtDate(b.date)}</td>
-                <td style={{ fontFamily: 'var(--mono)' }}>{b.start || '—'}</td>
+                <td style={{ fontFamily: 'var(--mono)', fontVariantNumeric: 'tabular-nums' }}>{fmtDate(b.date)}</td>
+                <td style={{ fontFamily: 'var(--mono)', fontVariantNumeric: 'tabular-nums' }}>{b.start || '—'}</td>
                 <td style={{ textAlign: 'center' }}>
                   {isOpen && b.id ? (
                     <button className="btn" style={{ padding: '4px 9px', fontSize: 11 }} onClick={() => openModal('closeWO', { id: b.id, machine: b.machine, cause: b.cause })}>Tutup WO</button>
                   ) : (
-                    <span style={{ fontSize: 11, color: 'var(--muted)', fontFamily: 'var(--mono)' }}>{b.duration}</span>
+                    <span style={{ fontSize: 11, color: 'var(--muted)', fontFamily: 'var(--mono)', fontVariantNumeric: 'tabular-nums' }}>{b.duration}</span>
                   )}
                 </td>
               </tr>

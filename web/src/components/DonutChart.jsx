@@ -5,7 +5,7 @@ const COLORS = ['#f0a500', '#4488ff', '#a855f7', '#00d084', '#ff6b35', '#ff4455'
 // Donut chart breakdown of the top causes/machines, paired with a colored
 // legend (dot + label + % + count) so the proportions are readable at a
 // glance, same idea as FusionSolar's device-share donut.
-export default function DonutChart({ data, labelKey }) {
+export default function DonutChart({ data, labelKey, valueKey = 'count', centerLabel = 'penyebab' }) {
   const canvasRef = useRef(null);
 
   useEffect(() => {
@@ -21,11 +21,11 @@ export default function DonutChart({ data, labelKey }) {
 
     const cx = size / 2, cy = size / 2;
     const rOuter = size / 2 - 4, rInner = rOuter * 0.62;
-    const total = data.reduce((s, d) => s + d.count, 0) || 1;
+    const total = data.reduce((s, d) => s + (d[valueKey] ?? 0), 0) || 1;
 
     let start = -Math.PI / 2;
     data.forEach((d, i) => {
-      const slice = (d.count / total) * Math.PI * 2;
+      const slice = ((d[valueKey] ?? 0) / total) * Math.PI * 2;
       const end = start + slice;
       ctx.beginPath();
       ctx.arc(cx, cy, rOuter, start, end);
@@ -44,8 +44,8 @@ export default function DonutChart({ data, labelKey }) {
     ctx.fillText(String(data.length), cx, cy - 6);
     ctx.font = '500 8px Inter, sans-serif';
     ctx.fillStyle = rootStyle.getPropertyValue('--muted');
-    ctx.fillText('penyebab', cx, cy + 9);
-  }, [data, labelKey]);
+    ctx.fillText(centerLabel, cx, cy + 9);
+  }, [data, labelKey, valueKey, centerLabel]);
 
   if (!data?.length) return null;
 
@@ -59,7 +59,7 @@ export default function DonutChart({ data, labelKey }) {
           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5 }}>
             <span style={{ width: 8, height: 8, borderRadius: '50%', background: COLORS[i % COLORS.length], flexShrink: 0 }}></span>
             <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text)' }}>{d[labelKey]}</span>
-            <span style={{ color: 'var(--muted)', fontFamily: 'var(--mono)', flexShrink: 0 }}>{d.pct}%</span>
+            <span style={{ color: 'var(--muted)', fontFamily: 'var(--mono)', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>{d.pct}%</span>
           </div>
         ))}
       </div>

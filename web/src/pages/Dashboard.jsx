@@ -44,7 +44,7 @@ function BreakdownSidebarCard({ items, onMore }) {
                 <div style={{ fontWeight: 600, fontSize: 11.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
                   {b.machine} — {b.cause}
                 </div>
-                <div style={{ fontSize: 9.5, color: 'var(--muted)', whiteSpace: 'nowrap', fontFamily: 'var(--mono)', flexShrink: 0 }}>
+                <div style={{ fontSize: 9.5, color: 'var(--muted)', whiteSpace: 'nowrap', fontFamily: 'var(--mono)', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
                   {fmtDate(b.date)}
                 </div>
               </div>
@@ -162,8 +162,9 @@ export default function Dashboard() {
           <ParetoList data={pareto} labelKey="cause" />
         </div>
         <div className="card">
-          <div className="card-header"><div><div className="card-title">Frekuensi Breakdown per Mesin</div></div></div>
-          <ParetoList data={paretoMachines} labelKey="machine" />
+          <div className="card-header"><div><div className="card-title">Pareto Downtime per Mesin</div></div></div>
+          <DonutChart data={paretoMachines} labelKey="machine" valueKey="downtime_hrs" centerLabel="mesin" />
+          <ParetoList data={paretoMachines} labelKey="machine" valueKey="downtime_hrs" valueUnit=" jam" />
         </div>
       </div>
     </div>

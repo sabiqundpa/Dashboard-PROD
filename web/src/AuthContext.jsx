@@ -14,8 +14,9 @@ export function AuthProvider({ children }) {
     });
     const data = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(data.error || 'Login gagal');
-    storeAuth(data.token, data.username);
-    setAuth({ token: data.token, username: data.username });
+    const role = data.role || 'maintenance';
+    storeAuth(data.token, data.username, role);
+    setAuth({ token: data.token, username: data.username, role });
   }, []);
 
   const logout = useCallback(() => {
@@ -24,7 +25,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ token: auth.token, username: auth.username, login, logout }}>
+    <AuthContext.Provider value={{ token: auth.token, username: auth.username, role: auth.role || 'maintenance', login, logout }}>
       {children}
     </AuthContext.Provider>
   );

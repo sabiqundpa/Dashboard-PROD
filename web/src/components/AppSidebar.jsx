@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { LayoutDashboard, Cog, AlertTriangle, FileText, BarChart2 } from 'lucide-react';
+import { LayoutDashboard, Cog, AlertTriangle, FileText, BarChart2, ClipboardList } from 'lucide-react';
 import { useUI } from '../UIContext.jsx';
 import { useTargets } from '../TargetsContext.jsx';
 
@@ -7,6 +7,7 @@ const NAV_ITEMS = [
   { page: 'dashboard',   label: 'Dashboard',  icon: LayoutDashboard },
   { page: 'machines',    label: 'Mesin',       icon: Cog },
   { page: 'maintenance', label: 'Breakdown',   icon: AlertTriangle },
+  { page: 'rmo',         label: 'RMO',         icon: ClipboardList },
   { page: 'reports',     label: 'Laporan',     icon: FileText },
   { page: 'analytics',  label: 'Analitik',    icon: BarChart2 },
 ];

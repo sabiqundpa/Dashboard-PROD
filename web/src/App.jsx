@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Minimize2 } from 'lucide-react';
+import { Minimize2, LogOut } from 'lucide-react';
 import { AuthProvider, useAuth } from './AuthContext.jsx';
 import { ThemeProvider } from './ThemeContext.jsx';
 import { ToastProvider } from './ToastContext.jsx';
@@ -13,6 +13,7 @@ import Machines from './pages/Machines.jsx';
 import Maintenance from './pages/Maintenance.jsx';
 import Reports from './pages/Reports.jsx';
 import Analytics from './pages/Analytics.jsx';
+import RMO from './pages/RMO.jsx';
 import Topbar from './components/Topbar.jsx';
 import AppSidebar from './components/AppSidebar.jsx';
 import MobileDrawer from './components/MobileDrawer.jsx';
@@ -23,7 +24,7 @@ import DetailPanel from './components/DetailPanel.jsx';
 import WOPanel from './components/WOPanel.jsx';
 import ModalRoot from './components/ModalRoot.jsx';
 
-const PAGES = { dashboard: Dashboard, machines: Machines, maintenance: Maintenance, reports: Reports, analytics: Analytics };
+const PAGES = { dashboard: Dashboard, machines: Machines, maintenance: Maintenance, reports: Reports, analytics: Analytics, rmo: RMO };
 
 function Shell() {
   const { page, closeModal, setNotifOpen, closeDetail, closeWODetail, sidebarOpen, presentMode, togglePresentMode } = useUI();
@@ -69,13 +70,37 @@ function Shell() {
   );
 }
 
+function RMOShell() {
+  const { username, logout } = useAuth();
+  const { loadAll } = useApp();
+
+  useEffect(() => { loadAll(); }, [loadAll]);
+
+  return (
+    <div className="shell">
+      <div className="topbar" style={{ justifyContent: 'space-between' }}>
+        <div className="logo">MTN<span> Dashboard</span></div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <span style={{ color: 'var(--muted)', fontSize: 12 }}>{username}</span>
+          <button className="btn" style={{ fontSize: 11, padding: '4px 10px', gap: 5 }} onClick={logout}>
+            <LogOut size={12} /> Keluar
+          </button>
+        </div>
+      </div>
+      <main className="content" style={{ paddingBottom: 24, justifyContent: 'flex-start' }}>
+        <RMO />
+      </main>
+    </div>
+  );
+}
+
 function AuthGate() {
-  const { token } = useAuth();
+  const { token, role } = useAuth();
   if (!token) return <Login />;
   return (
     <AppProvider>
       <UIProvider>
-        <Shell />
+        {role === 'produksi' ? <RMOShell /> : <Shell />}
       </UIProvider>
     </AppProvider>
   );

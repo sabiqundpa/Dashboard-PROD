@@ -41,7 +41,7 @@ router.post('/login', async (req, res, next) => {
     const valid = await bcrypt.compare(password, admin.passwordHash);
     if (!valid) return res.status(401).json({ error: 'Invalid username or password' });
 
-    res.json({ token: signToken(admin), username: admin.username });
+    res.json({ token: signToken(admin), username: admin.username, role: admin.role || 'maintenance' });
   } catch (err) { next(err); }
 });
 

@@ -8,17 +8,20 @@ export function getStoredAuth() {
   return {
     token: localStorage.getItem('admin_token'),
     username: localStorage.getItem('admin_username'),
+    role: localStorage.getItem('admin_role') || 'maintenance',
   };
 }
 
-export function storeAuth(token, username) {
+export function storeAuth(token, username, role = 'maintenance') {
   localStorage.setItem('admin_token', token);
   localStorage.setItem('admin_username', username);
+  localStorage.setItem('admin_role', role);
 }
 
 export function clearAuth() {
   localStorage.removeItem('admin_token');
   localStorage.removeItem('admin_username');
+  localStorage.removeItem('admin_role');
 }
 
 // GET with a fallback value on any failure (network, 401, non-2xx).

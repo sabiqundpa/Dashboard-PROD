@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Search, RefreshCw, ChevronUp, ChevronDown } from 'lucide-react';
+import { Search, RefreshCw, ChevronUp, ChevronDown, FolderUp } from 'lucide-react';
 import { useApp } from '../AppContext.jsx';
 import { useUI } from '../UIContext.jsx';
 import PeriodPicker from '../components/PeriodPicker.jsx';
@@ -74,6 +74,11 @@ export default function Maintenance() {
       {/* ── Header ───────────────────────────── */}
       <div className="page-header">
         <div><div className="page-title">Log Work Order Maintenance</div></div>
+        <div className="header-actions">
+          <button className="btn" onClick={() => openModal('import', { mode: 'workorder' })}>
+            <FolderUp size={14} /> Import CSV RMO
+          </button>
+        </div>
       </div>
 
       {/* ── Summary cards ────────────────────── */}

@@ -958,6 +958,8 @@ router.post('/import', upload.single('file'), async (req, res, next) => {
         endDate: endDate ?? (endTime ? (startDate ?? reportDate ?? new Date()) : null),
         endTime,
         durationHrs,
+        picGh: (row['Grup Head Produksi'] ?? row['PIC GH'] ?? row['picGh'] ?? null)
+               ? String(row['Grup Head Produksi'] ?? row['PIC GH'] ?? row['picGh']).trim() : null,
         picMtn: (row['PIC MTN'] ? String(row['PIC MTN']).trim() : null)
                 ?? (row.technician ? String(row.technician).trim() : null),
         resolution: row['Penyelesaian'] ? String(row['Penyelesaian']).trim() : null,
@@ -965,15 +967,16 @@ router.post('/import', upload.single('file'), async (req, res, next) => {
       };
     });
 
-    for (let i = 0; i < breakdownData.length; i += CHUNK) {
-      await prisma.$transaction(
-        breakdownData.slice(i, i + CHUNK).map((data) => prisma.breakdown.create({ data }))
-      );
-    }
+    // Filter out rows whose machineId couldn't be resolved (shouldn't happen, but guard anyway)
+    const safeData = breakdownData.filter((d) => d.machineId != null);
+
+    // Single bulk INSERT — far faster than N individual creates, avoids serverless timeout
+    await prisma.breakdown.createMany({ data: safeData, skipDuplicates: false });
 
     res.json({
-      imported: breakdownData.length,
+      imported: safeData.length,
       total: rows.length,
+      skipped: breakdownData.length - safeData.length,
       newMachines: newNames.length,
       matchedMachines: uniqueCsvNames.length - newNames.length,
     });

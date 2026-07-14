@@ -23,13 +23,13 @@ const MODES = {
 };
 
 export default function ImportModal() {
-  const { closeModal } = useUI();
+  const { closeModal, modalPayload } = useUI();
   const { addNotif, loadAll } = useApp();
   const showToast = useToast();
   const { logout } = useAuth();
 
   const fileInputRef = useRef(null);
-  const [mode, setMode] = useState('workorder');
+  const [mode, setMode] = useState(modalPayload?.mode || 'workorder');
   const [file, setFile] = useState(null);
   const [dragOver, setDragOver] = useState(false);
   const [busy, setBusy] = useState(false);

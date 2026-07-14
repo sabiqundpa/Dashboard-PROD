@@ -30,7 +30,7 @@ export default function Machines() {
       <div className="page-header">
         <div><div className="page-title">Semua Mesin</div></div>
         <div className="header-actions">
-          <button className="btn" onClick={() => openModal('import')}><FolderUp size={14} /> Import CSV</button>
+          <button className="btn" onClick={() => openModal('import', { mode: 'machines' })}><FolderUp size={14} /> Import Mesin</button>
           <button className="btn" onClick={() => openModal('addMachine')}><Factory size={14} /> Tambah Mesin</button>
         </div>
       </div>

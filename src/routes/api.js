@@ -813,7 +813,7 @@ router.get('/export-work-orders', async (req, res, next) => {
       orderBy: [{ date: 'asc' }, { id: 'asc' }],
     });
 
-    const HEADERS = ['NO', 'Status', 'Tanggal Lapor', 'Waktu Lapor', 'Nama Mesin', 'Problem', 'Penyelesaian', 'Tanggal Mulai', 'Waktu Mulai', 'Tanggal Selesai', 'Waktu Selesai', 'Waktu Pengerjaan', 'Downtime', 'PIC MTN'];
+    const HEADERS = ['NO', 'Tanggal Lapor', 'Waktu Lapor', 'Nama Mesin', 'Problem', 'Penyelesaian', 'Tanggal Mulai', 'Waktu Mulai', 'Tanggal Selesai', 'Waktu Selesai', 'Waktu Pengerjaan', 'Downtime', 'Status', 'PIC MTN'];
     const csvLines = [HEADERS.join(',')];
     bs.forEach((b, i) => {
       const akumulasi = (b.repairDate && b.repairTime && b.endDate && b.endTime)
@@ -821,7 +821,6 @@ router.get('/export-work-orders', async (req, res, next) => {
         : '';
       const row = [
         i + 1,
-        b.status === 'resolved' ? 'Close' : 'Open',
         b.date.toISOString().slice(0, 10),
         b.startTime ?? '',
         b.machine.name,
@@ -833,6 +832,7 @@ router.get('/export-work-orders', async (req, res, next) => {
         b.endTime ?? '',
         akumulasi,
         b.durationHrs,
+        b.status === 'resolved' ? 'Close' : 'Open',
         b.picMtn ?? '',
       ];
       csvLines.push(row.map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`).join(','));

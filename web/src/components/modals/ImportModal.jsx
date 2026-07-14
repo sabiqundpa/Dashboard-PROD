@@ -11,7 +11,7 @@ const MODES = {
   workorder: {
     label: 'Data Downtime Mesin',
     endpoint: '/import',
-    columns: 'NO · Status · Tanggal Lapor · Waktu Lapor · Nama Mesin · Problem · Penyelesaian · Tanggal Mulai · Waktu Mulai · Tanggal Selesai · Waktu Selesai · Waktu Pengerjaan · Downtime · PIC MTN',
+    columns: 'NO · Tanggal Lapor · Waktu Lapor · Nama Mesin · Problem · Penyelesaian · Tanggal Mulai · Waktu Mulai · Tanggal Selesai · Waktu Selesai · Waktu Pengerjaan · Downtime · Status · PIC MTN',
     notes: 'Delimiter , atau ; atau Tab otomatis terdeteksi. Nama kolom tidak case-sensitive.',
   },
   machines: {

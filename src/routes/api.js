@@ -867,113 +867,54 @@ router.get('/export-machines', async (req, res, next) => {
 });
 
 // ── POST /api/import ──────────────────────────────────
-// Accepts .csv with columns (format baru — Indonesian):
-// NO, Tanggal Lapor, Waktu Lapor, Nama Mesin, Cluster, Line, Problem Identifikasi,
-// Penyelesaian, Tanggal Mulai, Waktu Mulai, Tanggal Selesai, Waktu Selesai,
-// Waktu Pengerjaan, Breakdown Time, Status, PIC MTN
-// Juga mendukung kolom lama (backward-compatible): machine_name, failure_cause, dll.
-router.post('/import', upload.single('file'), async (req, res, next) => {
+// Accepts JSON body (CSV is parsed client-side to avoid serverless timeout):
+// { breakdowns: [...], newMachineNames: [...] }
+// Each breakdown has either machineId (already resolved) or machineName (needs creation).
+router.post('/import', async (req, res, next) => {
   try {
-    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-
-    const rows = parseCsv(req.file.buffer.toString('utf-8'));
-
-    // ── Phase 1: parse all rows, collect valid entries ──────────
-    const validRows = [];
-    for (const row of rows) {
-      const name  = String(row['Nama Mesin'] ?? row.machine_name ?? '').trim();
-      const cause = String(row['Problem Identifikasi'] ?? row['Problem'] ?? row.failure_cause ?? '').trim();
-      if (!name || !cause) continue;
-      validRows.push({ row, name, cause });
+    const { breakdowns: inputRows = [], newMachineNames = [] } = req.body;
+    if (!Array.isArray(inputRows) || inputRows.length === 0) {
+      return res.status(400).json({ error: 'Tidak ada baris valid dalam file' });
     }
 
-    // ── Phase 2: case-insensitive machine matching, then create unmatched ─
-    // Fetch all existing machines and build a normalised-lowercase lookup so
-    // CSV names like "BUBUT MANUAL 01" match DB names like "Bubut Manual 01".
-    const existingMachines = await prisma.machine.findMany({ select: { id: true, name: true } });
-    const lcMap = new Map(); // normalised-lower → {id, name}
-    for (const m of existingMachines) {
-      lcMap.set(m.name.toLowerCase().replace(/\s+/g, ' ').trim(), m);
-    }
-
-    const uniqueCsvNames = [...new Set(validRows.map((r) => r.name))];
-    const nameToId = new Map();  // csvName → machineId
-    const newNames = [];         // truly unmatched CSV names
-
-    for (const csvName of uniqueCsvNames) {
-      const key = csvName.toLowerCase().replace(/\s+/g, ' ').trim();
-      const existing = lcMap.get(key);
-      if (existing) {
-        nameToId.set(csvName, existing.id);
-      } else {
-        newNames.push(csvName);
-      }
-    }
-
-    // Create all unmatched machines in one bulk INSERT, then re-fetch their IDs
-    if (newNames.length > 0) {
+    // Create any machines that the client couldn't match (case-insensitive miss)
+    const nameToId = new Map();
+    if (newMachineNames.length > 0) {
       await prisma.machine.createMany({
-        data: newNames.map((name) => ({ name, cluster: '', line: '' })),
+        data: newMachineNames.map((name) => ({ name, cluster: '', line: '' })),
         skipDuplicates: true,
       });
       const created = await prisma.machine.findMany({
-        where: { name: { in: newNames } },
+        where: { name: { in: newMachineNames } },
         select: { id: true, name: true },
       });
       created.forEach((m) => nameToId.set(m.name, m.id));
     }
 
-    // ── Phase 3: batch-create all breakdowns ────────────────────
-    const breakdownData = validRows.map(({ row, name, cause }) => {
-      const startTime  = parseTimeValue(row['Waktu Mulai'] ?? row['Waktu Lapor'] ?? row.start_time);
-      const endTime    = parseTimeValue(row['Waktu Selesai'] ?? row.end_time);
-      const reportDate = parseDateValue(row['Tanggal Lapor'] ?? row.breakdown_date);
-      const startDate  = parseDateValue(row['Tanggal Mulai'] ?? row['Tanggal Lapor'] ?? row.breakdown_date);
-      const endDate    = parseDateValue(row['Tanggal Selesai']);
+    // Resolve any rows that still carry machineName instead of machineId
+    const safeData = inputRows
+      .map((row) => {
+        const { machineName, ...rest } = row;
+        const machineId = rest.machineId ?? nameToId.get(machineName);
+        if (!machineId) return null;
+        // Coerce date strings → Date objects for Prisma
+        return {
+          ...rest,
+          machineId,
+          date:    rest.date    ? new Date(rest.date)    : new Date(),
+          endDate: rest.endDate ? new Date(rest.endDate) : null,
+        };
+      })
+      .filter(Boolean);
 
-      const btRaw = row['Downtime'] ?? row['Breakdown Time'] ?? row['Waktu Pengerjaan'];
-      let durationHrs = computeDurationHrs(startTime, endTime);
-      if (btRaw !== undefined && btRaw !== '' && !isNaN(parseFloat(btRaw))) {
-        durationHrs = parseFloat(btRaw);
-      }
-      if (isNaN(durationHrs) || !isFinite(durationHrs)) durationHrs = 0;
+    await prisma.breakdown.createMany({ data: safeData });
 
-      const statusRaw = String(row['Status'] ?? '').toLowerCase();
-      const status = statusRaw === 'open' ? 'open'
-        : ['resolved', 'close', 'closed', 'selesai'].includes(statusRaw) ? 'resolved'
-        : (endTime ? 'resolved' : 'open');
-
-      return {
-        machineId: nameToId.get(name),
-        cause,
-        category: row['category'] ? String(row['category']) : 'Mechanical',
-        severity: 'warning',
-        status,
-        date: startDate ?? reportDate ?? new Date(),
-        startTime,
-        endDate: endDate ?? (endTime ? (startDate ?? reportDate ?? new Date()) : null),
-        endTime,
-        durationHrs,
-        picGh: String(row['Grup Head Produksi'] ?? row['PIC GH'] ?? row['picGh'] ?? '').trim() || null,
-        picMtn: (row['PIC MTN'] ? String(row['PIC MTN']).trim() : null)
-                ?? (row.technician ? String(row.technician).trim() : null),
-        resolution: row['Penyelesaian'] ? String(row['Penyelesaian']).trim() : null,
-        notes: row.notes ? String(row.notes) : null,
-      };
-    });
-
-    // Filter out rows whose machineId couldn't be resolved (shouldn't happen, but guard anyway)
-    const safeData = breakdownData.filter((d) => d.machineId != null);
-
-    // Single bulk INSERT — far faster than N individual creates, avoids serverless timeout
-    await prisma.breakdown.createMany({ data: safeData, skipDuplicates: false });
-
+    const matched = inputRows.filter((r) => r.machineId).length;
     res.json({
       imported: safeData.length,
-      total: rows.length,
-      skipped: breakdownData.length - safeData.length,
-      newMachines: newNames.length,
-      matchedMachines: uniqueCsvNames.length - newNames.length,
+      total: inputRows.length,
+      matchedMachines: matched,
+      newMachines: newMachineNames.length,
     });
   } catch (err) { next(err); }
 });

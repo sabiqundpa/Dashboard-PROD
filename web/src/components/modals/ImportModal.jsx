@@ -5,12 +5,11 @@ import { useUI } from '../../UIContext.jsx';
 import { useApp } from '../../AppContext.jsx';
 import { useToast } from '../../ToastContext.jsx';
 import { useAuth } from '../../AuthContext.jsx';
-import { apiSendForm } from '../../api.js';
+import { apiSend, apiSendForm } from '../../api.js';
 
 const MODES = {
   workorder: {
     label: 'Data Downtime Mesin',
-    endpoint: '/import',
     columns: 'NO · Tanggal Lapor · Waktu Lapor · Nama Mesin · Problem · Penyelesaian · Tanggal Mulai · Waktu Mulai · Tanggal Selesai · Waktu Selesai · Waktu Pengerjaan · Downtime · Status · PIC MTN',
     notes: 'Delimiter , atau ; atau Tab otomatis terdeteksi. Nama kolom tidak case-sensitive.',
   },
@@ -22,9 +21,56 @@ const MODES = {
   },
 };
 
+// Minimal CSV parser — handles quoted fields, auto-detects delimiter
+function parseCsvText(text) {
+  const firstLine = text.split(/\r?\n/).find((l) => l.trim()) || '';
+  const commas = (firstLine.match(/,/g) || []).length;
+  const semis  = (firstLine.match(/;/g) || []).length;
+  const tabs   = (firstLine.match(/\t/g) || []).length;
+  const delim  = tabs > commas && tabs > semis ? '\t' : semis > commas ? ';' : ',';
+
+  function splitLine(line) {
+    const fields = [];
+    let field = '', inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (inQ) {
+        if (c === '"') { if (line[i + 1] === '"') { field += '"'; i++; } else inQ = false; }
+        else field += c;
+      } else if (c === '"') { inQ = true; }
+      else if (c === delim) { fields.push(field.trim()); field = ''; }
+      else field += c;
+    }
+    fields.push(field.trim());
+    return fields;
+  }
+
+  const nonEmpty = text.split(/\r?\n/).filter((l) => l.trim());
+  if (nonEmpty.length < 2) return [];
+  const headers = splitLine(nonEmpty[0]).map((h) => h.replace(/^"|"$/g, ''));
+  return nonEmpty.slice(1).map((line) => {
+    const vals = splitLine(line).map((v) => v.replace(/^"|"$/g, ''));
+    const obj = {};
+    headers.forEach((h, i) => { obj[h] = vals[i] ?? ''; });
+    return obj;
+  });
+}
+
+function parseDate(val) {
+  if (!val) return null;
+  const s = String(val).trim();
+  const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (m) {
+    const d = new Date(+m[3], +m[2] - 1, +m[1]);
+    return isNaN(d.getTime()) ? null : d.toISOString();
+  }
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? null : d.toISOString();
+}
+
 export default function ImportModal() {
   const { closeModal, modalPayload } = useUI();
-  const { addNotif, loadAll } = useApp();
+  const { addNotif, loadAll, machines } = useApp();
   const showToast = useToast();
   const { logout } = useAuth();
 
@@ -42,20 +88,92 @@ export default function ImportModal() {
   async function doImport() {
     if (!file) return;
     setBusy(true);
-    const formData = new FormData();
-    formData.append('file', file);
-    try {
-      const result = await apiSendForm(MODES[mode].endpoint, formData, logout);
-      const matchInfo = result.newMachines != null
-        ? ` · ${result.matchedMachines} mesin cocok, ${result.newMachines} mesin baru`
-        : '';
-      showToast(`Import berhasil: ${result.imported}/${result.total} baris${matchInfo}`, 'green');
-      addNotif('CSV data imported', 'green');
-      closeModal();
-      loadAll();
-    } catch (err) {
-      showToast(err.message || 'Import gagal — periksa koneksi backend', 'red');
+
+    if (mode === 'workorder') {
+      try {
+        const text = await file.text();
+        const rows = parseCsvText(text);
+
+        // Build case-insensitive machine name → id map from already-loaded machines list
+        const machineMap = new Map();
+        machines.forEach((m) => {
+          machineMap.set(m.name.toLowerCase().replace(/\s+/g, ' ').trim(), m.id);
+        });
+
+        const breakdowns = [];
+        const newMachineNames = new Set();
+
+        for (const row of rows) {
+          const csvName = String(row['Nama Mesin'] ?? row.machine_name ?? '').trim();
+          const cause   = String(row['Problem Identifikasi'] ?? row['Problem'] ?? row.failure_cause ?? '').trim();
+          if (!csvName || !cause) continue;
+
+          const key       = csvName.toLowerCase().replace(/\s+/g, ' ').trim();
+          const machineId = machineMap.get(key);
+          if (!machineId) newMachineNames.add(csvName);
+
+          const startTime  = String(row['Waktu Mulai'] ?? row['Waktu Lapor'] ?? '').trim() || null;
+          const endTime    = String(row['Waktu Selesai'] ?? '').trim() || null;
+          const reportDate = parseDate(row['Tanggal Lapor']);
+          const startDate  = parseDate(row['Tanggal Mulai'] ?? row['Tanggal Lapor']);
+          const endDate    = parseDate(row['Tanggal Selesai']);
+          const btRaw      = row['Downtime'] ?? row['Breakdown Time'] ?? row['Waktu Pengerjaan'];
+          let durationHrs  = 0;
+          if (btRaw && !isNaN(parseFloat(btRaw))) durationHrs = parseFloat(btRaw);
+
+          const statusRaw = String(row['Status'] ?? '').toLowerCase();
+          const status = statusRaw === 'open' ? 'open'
+            : ['resolved', 'close', 'closed', 'selesai'].includes(statusRaw) ? 'resolved'
+            : (endTime ? 'resolved' : 'open');
+
+          const bd = {
+            cause,
+            category: String(row['category'] ?? 'Mechanical') || 'Mechanical',
+            severity: 'warning',
+            status,
+            date: startDate ?? reportDate ?? new Date().toISOString(),
+            startTime,
+            endDate: endDate ?? (endTime ? (startDate ?? reportDate ?? new Date().toISOString()) : null),
+            endTime,
+            durationHrs: isFinite(durationHrs) ? durationHrs : 0,
+            picGh:  String(row['Grup Head Produksi'] ?? row['PIC GH'] ?? '').trim() || null,
+            picMtn: String(row['PIC MTN'] ?? row.technician ?? '').trim() || null,
+            resolution: String(row['Penyelesaian'] ?? '').trim() || null,
+          };
+          if (machineId) bd.machineId = machineId;
+          else bd.machineName = csvName;
+
+          breakdowns.push(bd);
+        }
+
+        const result = await apiSend('/import', 'POST', {
+          breakdowns,
+          newMachineNames: [...newMachineNames],
+        }, logout);
+
+        const matchInfo = ` · ${result.matchedMachines ?? 0} mesin cocok, ${result.newMachines ?? 0} mesin baru`;
+        showToast(`Import berhasil: ${result.imported}/${result.total} baris${matchInfo}`, 'green');
+        addNotif('CSV data imported', 'green');
+        closeModal();
+        loadAll();
+      } catch (err) {
+        showToast(err.message || 'Import gagal', 'red');
+      }
+    } else {
+      // Master Data Mesin — still uses file upload
+      const formData = new FormData();
+      formData.append('file', file);
+      try {
+        const result = await apiSendForm(MODES[mode].endpoint, formData, logout);
+        showToast(`Import berhasil: ${result.imported ?? result.upserted ?? '?'} mesin`, 'green');
+        addNotif('CSV data imported', 'green');
+        closeModal();
+        loadAll();
+      } catch (err) {
+        showToast(err.message || 'Import gagal — periksa koneksi backend', 'red');
+      }
     }
+
     setBusy(false);
   }
 

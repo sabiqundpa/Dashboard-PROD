@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, AlertTriangle } from 'lucide-react';
 
 const API = '/api';
 
@@ -65,12 +65,19 @@ export default function RMOPublic() {
   const [errM, setErrM]         = useState('');
   const [errC, setErrC]         = useState('');
   const [done, setDone]         = useState(null);
+  const [cancelWarn, setCancelWarn] = useState(false);
 
   const timeRef    = useRef(null);
   const machineRef = useRef(null);
   const causeRef   = useRef(null);
   const picGhRef   = useRef(null);
   const submitRef  = useRef(null);
+
+  /* Set tab title untuk halaman RMO */
+  useEffect(() => {
+    document.title = 'RMO';
+    return () => { document.title = 'MTN-DPA Monitoring'; };
+  }, []);
 
   useEffect(() => {
     fetch(`${API}/machines-public`)
@@ -81,6 +88,7 @@ export default function RMOPublic() {
 
   const machineObj   = machines.find((m) => m.name === machine.trim());
   const validMachine = !!machineObj;
+  const hasInput     = !!(machine || cause || picGh);
 
   function onEnter(ref) {
     return (e) => { if (e.key === 'Enter') { e.preventDefault(); ref.current?.focus(); } };
@@ -88,16 +96,32 @@ export default function RMOPublic() {
   function handleMachineChange(e) {
     const val = e.target.value;
     setMachine(val);
+    setCancelWarn(false);
     if (machines.some((m) => m.name === val.trim())) {
       setErrM('');
       setTimeout(() => causeRef.current?.focus(), 80);
     }
   }
+  function handleCancel() {
+    if (hasInput) { setCancelWarn(true); }
+    else { reset(); }
+  }
+  function confirmCancel() { reset(); setCancelWarn(false); }
   function reset() {
     setDate(todayStr()); setStart(nowTime());
     setMachine(''); setCause(''); setPicGh('');
     setErrM(''); setErrC(''); setDone(null);
+    setCancelWarn(false);
   }
+
+  /* Auto-grow textarea */
+  function handleCauseChange(e) {
+    setCause(e.target.value);
+    setCancelWarn(false);
+    e.target.style.height = 'auto';
+    e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+  }
+
   async function submit() {
     const m = machine.trim(), c = cause.trim();
     setErrM(m ? (validMachine ? '' : 'Mesin tidak ditemukan') : 'Wajib diisi');
@@ -119,27 +143,29 @@ export default function RMOPublic() {
     setBusy(false);
   }
 
-  /* input style yang kompak */
+  /* Input styles */
   const inp = {
     background: 'var(--input-bg)', border: '1px solid var(--input-border)',
     borderRadius: 8, padding: '10px 13px', color: 'var(--text)',
     fontSize: 14, outline: 'none', width: '100%', boxSizing: 'border-box',
     fontFamily: 'var(--font)', transition: 'border-color .15s',
   };
-  const inpRO = { ...inp, opacity: .55, cursor: 'default' };
+  const inpRO  = { ...inp, opacity: .55, cursor: 'default' };
   const inpErr = { ...inp, borderColor: 'var(--red)' };
+  const taBase = {
+    ...inp, resize: 'vertical', minHeight: 44, maxHeight: 120,
+    lineHeight: 1.5, overflow: 'hidden',
+  };
 
   return (
-    /* Shell: full viewport, flex column, tidak scroll */
     <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--bg)', color: 'var(--text)', overflow: 'hidden' }}>
 
       {/* ── Header orange ─────────────────────────────── */}
       <div style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent2))', padding: '16px 28px', flexShrink: 0 }}>
         <div style={{ fontSize: 20, fontWeight: 700, color: '#000', letterSpacing: '-.4px' }}>Repair Machine Order</div>
-        <div style={{ fontSize: 12, color: 'rgba(0,0,0,.55)', marginTop: 2 }}>Laporan kerusakan mesin — tim Produksi</div>
       </div>
 
-      {/* ── Konten (tidak scroll) ──────────────────────── */}
+      {/* ── Konten ────────────────────────────────────── */}
       {done ? (
         <SuccessView data={done} onReset={reset} />
       ) : (
@@ -198,17 +224,16 @@ export default function RMOPublic() {
               <input type="text" style={inpRO} value={machineObj?.line || ''} readOnly placeholder="Otomatis dari mesin" tabIndex={-1} />
             </div>
 
-            {/* Problem — full width */}
+            {/* Problem — textarea fleksibel, full width */}
             <div style={{ gridColumn: '1 / -1' }}>
               <FL>Problem Identifikasi *</FL>
-              <input
+              <textarea
                 ref={causeRef}
-                type="text"
-                style={!cause.trim() && errC ? inpErr : inp}
+                style={!cause.trim() && errC ? { ...taBase, borderColor: 'var(--red)' } : taBase}
                 placeholder="contoh: Spindle tidak bisa berputar"
                 value={cause}
-                onChange={(e) => setCause(e.target.value)}
-                onKeyDown={onEnter(picGhRef)}
+                rows={1}
+                onChange={handleCauseChange}
               />
               {errC && <div style={{ color: 'var(--red)', fontSize: 11, marginTop: 4 }}>{errC}</div>}
             </div>
@@ -222,20 +247,51 @@ export default function RMOPublic() {
                 style={inp}
                 placeholder="Nama PIC GH"
                 value={picGh}
-                onChange={(e) => setPicGh(e.target.value)}
+                onChange={(e) => { setPicGh(e.target.value); setCancelWarn(false); }}
                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submitRef.current?.click(); } }}
               />
             </div>
 
           </div>
 
-          {/* ── Footer / Tombol simpan ───────────────────── */}
-          <div style={{ flexShrink: 0, paddingTop: 16, borderTop: '1px solid var(--border)', marginTop: 16 }}>
-            <button ref={submitRef} className="btn primary"
-              style={{ width: '100%', padding: '13px', fontSize: 15, borderRadius: 10 }}
-              disabled={busy} onClick={submit}>
-              {busy ? 'Menyimpan…' : 'Simpan Work Order'}
-            </button>
+          {/* ── Footer ──────────────────────────────────── */}
+          <div style={{ flexShrink: 0, paddingTop: 14, borderTop: '1px solid var(--border)', marginTop: 14 }}>
+
+            {/* Konfirmasi batal — muncul ketika tombol Batal diklik */}
+            {cancelWarn && (
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 12,
+                background: 'rgba(239,68,68,.08)', border: '1px solid rgba(239,68,68,.3)',
+                borderRadius: 8, padding: '10px 14px', marginBottom: 12,
+              }}>
+                <AlertTriangle size={16} style={{ color: 'var(--red)', flexShrink: 0 }} />
+                <span style={{ flex: 1, fontSize: 13, color: 'var(--text)' }}>
+                  Batalkan semua input? Data yang diisi tidak akan tersimpan.
+                </span>
+                <button className="btn" style={{ fontSize: 12, padding: '5px 12px' }}
+                  onClick={() => setCancelWarn(false)}>
+                  Tidak
+                </button>
+                <button className="btn" style={{ fontSize: 12, padding: '5px 12px', background: 'var(--red)', color: '#fff', border: 'none' }}
+                  onClick={confirmCancel}>
+                  Ya, Batalkan
+                </button>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button className="btn"
+                style={{ flex: '0 0 auto', padding: '13px 28px', fontSize: 15, borderRadius: 10 }}
+                onClick={handleCancel}>
+                Batal
+              </button>
+              <button ref={submitRef} className="btn primary"
+                style={{ flex: 1, padding: '13px', fontSize: 15, borderRadius: 10 }}
+                disabled={busy} onClick={submit}>
+                {busy ? 'Menyimpan…' : 'Simpan Work Order'}
+              </button>
+            </div>
+
           </div>
 
         </div>

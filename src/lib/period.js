@@ -3,6 +3,10 @@
 // and /mtbf-mttr-trend so every endpoint agrees on what "this week"/
 // "this month" means.
 function getPeriodRange(period, refDateStr, rangeStartStr, rangeEndStr) {
+  if (period === 'all') {
+    return { start: new Date(2000, 0, 1), end: new Date(2099, 11, 31, 23, 59, 59, 999) };
+  }
+
   if (period === 'range' && rangeStartStr && rangeEndStr) {
     const s = new Date(rangeStartStr); s.setHours(0, 0, 0, 0);
     const e = new Date(rangeEndStr); e.setHours(23, 59, 59, 999);

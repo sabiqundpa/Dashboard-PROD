@@ -6,10 +6,10 @@ import { useAuth } from '../AuthContext.jsx';
 import { useTheme } from '../ThemeContext.jsx';
 
 // Gear cluster logo — 3 interlocking gears (gray, orange, teal).
-// Background adapts: hitam (light theme) ↔ putih (dark theme).
+// Background: black in dark theme (blends with topbar), white in light theme.
 function BrandIcon({ size = 26 }) {
   const { theme } = useTheme();
-  const bg  = theme === 'dark' ? '#f0f0f0' : '#0d0d0d';
+  const bg  = theme === 'dark' ? '#0d0d0d' : '#f0f0f0';
   const hub = bg;
   return (
     <svg width={size} height={size} viewBox="0 0 100 100" style={{ flexShrink: 0, borderRadius: 3 }}>
@@ -44,7 +44,7 @@ const NAV_ITEMS = [
 
 export default function Topbar() {
   const { page, navigate, toggleDrawer, toggleNotif, toggleTodo, toggleSidebar } = useUI();
-  const { connected, notifications, breakdowns } = useApp();
+  const { connected, notifications, breakdowns, isLoading } = useApp();
   const { username, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [clock, setClock] = useState(tickLabel());
@@ -99,6 +99,7 @@ export default function Topbar() {
 
   return (
     <header className="topbar">
+      <div className={`top-load-bar${isLoading ? ' active' : ''}`} />
       <button className="hamburger" onClick={toggleDrawer} aria-label="Menu"><Menu size={20} /></button>
       <button className="btn-icon sidebar-toggle" onClick={toggleSidebar} title="Toggle sidebar">
         <PanelLeft size={16} />

@@ -18,7 +18,6 @@ export default function Maintenance() {
   const {
     breakdowns, kpi,
     period, setPeriod, refDate, setRefDate,
-    rangeStart, setRangeStart, rangeEnd, setRangeEnd,
     loadAll,
   } = useApp();
   const { openModal, showWODetail } = useUI();
@@ -29,7 +28,7 @@ export default function Maintenance() {
   const [sortKey, setSortKey]           = useState('date');
   const [sortDir, setSortDir]           = useState(-1);
 
-  useEffect(() => { loadAll(); }, [period, refDate, rangeStart, rangeEnd]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { loadAll(); }, [period, refDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const machineOptions = useMemo(() =>
     [...new Set(breakdowns.map((b) => b.machine).filter(Boolean))].sort()
@@ -116,8 +115,6 @@ export default function Maintenance() {
           <PeriodPicker
             period={period} setPeriod={setPeriod}
             refDate={refDate} setRefDate={setRefDate}
-            rangeStart={rangeStart} setRangeStart={setRangeStart}
-            rangeEnd={rangeEnd} setRangeEnd={setRangeEnd}
           />
           <button className="btn-icon" title="Refresh data" onClick={() => loadAll()}>
             <RefreshCw size={14} />

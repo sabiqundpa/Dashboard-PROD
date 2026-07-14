@@ -14,11 +14,6 @@ export function AppProvider({ children }) {
   const { logout } = useAuth();
   const [period, setPeriod] = useState('month');
   const [refDate, setRefDate] = useState(todayStr());
-  const [rangeStart, setRangeStart] = useState(() => {
-    const d = new Date(); d.setDate(1);
-    return d.toISOString().slice(0, 10);
-  });
-  const [rangeEnd, setRangeEnd] = useState(todayStr());
   const [selectedMachine, setSelectedMachine] = useState('');
   const [kpi, setKpi] = useState(EMPTY_KPI);
   const [machines, setMachines] = useState([]);
@@ -29,10 +24,11 @@ export function AppProvider({ children }) {
   const [mtbfMttrTrend, setMtbfMttrTrend] = useState([]);
   const [connected, setConnected] = useState(false);
   const [lastUpdate, setLastUpdate] = useState('—');
+  const [isLoading, setIsLoading] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const requestIdRef = useRef(0);
-  const stateRef = useRef({ period, refDate, rangeStart, rangeEnd, selectedMachine });
-  stateRef.current = { period, refDate, rangeStart, rangeEnd, selectedMachine };
+  const stateRef = useRef({ period, refDate, selectedMachine });
+  stateRef.current = { period, refDate, selectedMachine };
 
   const addNotif = useCallback((text, color = 'yellow') => {
     setNotifications((n) => [{ text, color, time: new Date(), unread: true, id: Math.random() }, ...n]);
@@ -48,21 +44,16 @@ export function AppProvider({ children }) {
     const usePeriod = stateRef.current.period;
     const useDate = stateRef.current.refDate;
     const useMachine = stateRef.current.selectedMachine;
-    // "Latest request wins": don't block overlapping calls (period/date
-    // changes must always fire immediately), but if an older, slower call
-    // finishes after a newer one, discard its results instead of
-    // clobbering fresher state.
     const myId = ++requestIdRef.current;
+    setIsLoading(true);
     setLastUpdate('Updating…');
-    const useRangeStart = stateRef.current.rangeStart;
-    const useRangeEnd   = stateRef.current.rangeEnd;
-    const qs = usePeriod === 'range' && useRangeStart && useRangeEnd
-      ? `period=range&start=${useRangeStart}&end=${useRangeEnd}`
+    const qs = usePeriod === 'all'
+      ? 'period=all'
       : `period=${usePeriod}&date=${useDate}`;
     const machineQs = useMachine ? `${qs}&machine=${encodeURIComponent(useMachine)}` : qs;
     const [k, m, b, pr, pm, dt, mt] = await Promise.all([
       apiFetch(`/kpi?${machineQs}`, EMPTY_KPI, logout),
-      apiFetch(`/machines?${qs}`, [], logout), // unfiltered: dropdown + table always list every machine
+      apiFetch(`/machines?${qs}`, [], logout),
       apiFetch(`/breakdowns?${machineQs}`, [], logout),
       apiFetch(`/pareto?${machineQs}`, [], logout),
       apiFetch(`/pareto-machines?${machineQs}`, [], logout),
@@ -73,15 +64,16 @@ export function AppProvider({ children }) {
     setConnected(true);
     setKpi(k); setMachines(m); setBreakdowns(b); setPareto(pr); setParetoMachines(pm); setDowntime(dt); setMtbfMttrTrend(mt);
     setLastUpdate('Updated ' + new Date().toLocaleTimeString());
+    setIsLoading(false);
   }, [logout]);
 
   return (
     <AppContext.Provider value={{
       period, setPeriod, refDate, setRefDate,
-      rangeStart, setRangeStart, rangeEnd, setRangeEnd,
       selectedMachine, setSelectedMachine,
       kpi, machines, breakdowns, pareto, paretoMachines, downtime, mtbfMttrTrend,
-      connected, lastUpdate, loadAll, notifications, addNotif, markAllRead, clearNotifs,
+      connected, lastUpdate, isLoading, setIsLoading, loadAll,
+      notifications, addNotif, markAllRead, clearNotifs,
     }}>
       {children}
     </AppContext.Provider>

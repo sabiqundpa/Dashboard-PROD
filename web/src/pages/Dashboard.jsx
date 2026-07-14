@@ -1,7 +1,9 @@
-import { useEffect } from 'react';
-import { AlertCircle, CheckCircle2, CalendarCheck, RefreshCw, Maximize2, Minimize2 } from 'lucide-react';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { AlertCircle, CheckCircle2, CalendarCheck, RefreshCw, Maximize2, Minimize2, ChevronDown, RotateCcw } from 'lucide-react';
 import { useApp } from '../AppContext.jsx';
 import { useUI } from '../UIContext.jsx';
+import { useAuth } from '../AuthContext.jsx';
+import { apiFetch } from '../api.js';
 import { fmtDate } from '../utils/fmt.js';
 import KpiRow from '../components/KpiRow.jsx';
 import AvailabilityCard from '../components/AvailabilityCard.jsx';
@@ -12,6 +14,10 @@ import Timeline from '../components/Timeline.jsx';
 import ParetoList from '../components/ParetoList.jsx';
 import DonutChart from '../components/DonutChart.jsx';
 import PeriodPicker from '../components/PeriodPicker.jsx';
+
+const EMPTY_KPI = { breakdowns: 0, downtime_hrs: 0, planned_hours: 0, planned_hours_per_day: 0, planned_hours_minutes: 0, availability: 0, mtbf: 0, mttr: 0 };
+
+function todayStr() { return new Date().toISOString().slice(0, 10); }
 
 function BreakdownSidebarCard({ items, onMore }) {
   const recent = (items || []).slice(0, 4);
@@ -75,17 +81,66 @@ function BreakdownSidebarCard({ items, onMore }) {
 }
 
 export default function Dashboard() {
-  const {
-    kpi, machines, breakdowns, pareto, paretoMachines, downtime, mtbfMttrTrend,
-    period, setPeriod, refDate, setRefDate, selectedMachine, setSelectedMachine,
-    lastUpdate, loadAll,
-  } = useApp();
-  const { navigate, openModal, presentMode, togglePresentMode } = useUI();
+  // Only setIsLoading from global — everything else is local to Dashboard
+  const { setIsLoading } = useApp();
+  const { navigate, presentMode, togglePresentMode } = useUI();
+  const { logout } = useAuth();
 
-  useEffect(() => { loadAll(); }, [period, refDate, selectedMachine]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Dashboard-local filter state — isolated from Mesin / Breakdown pages
+  const [period, setPeriod]               = useState('month');
+  const [refDate, setRefDate]             = useState(todayStr());
+  const [selectedMachine, setSelectedMachine] = useState('');
+  const [dashLastUpdate, setDashLastUpdate]   = useState('—');
+  const reqIdRef = useRef(0);
+
+  // Dashboard-local data state
+  const [kpi, setKpi]                     = useState(EMPTY_KPI);
+  const [machines, setMachines]           = useState([]);
+  const [breakdowns, setBreakdowns]       = useState([]);
+  const [pareto, setPareto]               = useState([]);
+  const [paretoMachines, setParetoMachines] = useState([]);
+  const [downtime, setDowntime]           = useState([]);
+  const [mtbfMttrTrend, setMtbfMttrTrend] = useState([]);
+
+  const loadDashboard = useCallback(() => {
+    const myId = ++reqIdRef.current;
+    setIsLoading(true);
+    setDashLastUpdate('Updating…');
+    const qs = period === 'all'
+      ? 'period=all'
+      : `period=${period}&date=${refDate}`;
+    const machineQs = selectedMachine ? `${qs}&machine=${encodeURIComponent(selectedMachine)}` : qs;
+    Promise.all([
+      apiFetch(`/kpi?${machineQs}`, EMPTY_KPI, logout),
+      apiFetch(`/machines?${qs}`, [], logout),
+      apiFetch(`/breakdowns?${machineQs}`, [], logout),
+      apiFetch(`/pareto?${machineQs}`, [], logout),
+      apiFetch(`/pareto-machines?${machineQs}`, [], logout),
+      apiFetch(`/downtime-by-day?${machineQs}`, [], logout),
+      apiFetch(`/mtbf-mttr-trend?${machineQs}`, [], logout),
+    ]).then(([k, m, b, pr, pm, dt, mt]) => {
+      if (myId !== reqIdRef.current) return;
+      setKpi(k); setMachines(m); setBreakdowns(b); setPareto(pr); setParetoMachines(pm); setDowntime(dt); setMtbfMttrTrend(mt);
+      setDashLastUpdate('Updated ' + new Date().toLocaleTimeString());
+      setIsLoading(false);
+    }).catch(() => {
+      if (myId !== reqIdRef.current) return;
+      setDashLastUpdate('—');
+      setIsLoading(false);
+    });
+  }, [period, refDate, selectedMachine, logout, setIsLoading]);
+
+  useEffect(() => { loadDashboard(); }, [loadDashboard]);
+
+  function resetFilters() {
+    setPeriod('month');
+    setRefDate(todayStr());
+    setSelectedMachine('');
+  }
 
   const selectedMachineObj = machines.find((m) => m.name === selectedMachine);
   const year = refDate ? new Date(refDate).getFullYear() : new Date().getFullYear();
+  const hasFilter = !!selectedMachine || period !== 'month';
 
   return (
     <div className="page-view active">
@@ -94,26 +149,37 @@ export default function Dashboard() {
       <div className="page-header">
         <div>
           <div className="page-title">Monitoring</div>
-          <div className="page-sub">Performa real-time · {lastUpdate}</div>
+          <div className="page-sub">Performa real-time · {dashLastUpdate}</div>
         </div>
-        <div className="header-actions">
-          {/* Machine filter */}
-          <select
-            className="btn"
-            style={{ padding: '6px 10px' }}
-            value={selectedMachine}
-            onChange={(e) => setSelectedMachine(e.target.value)}
-            title="Filter per mesin"
-          >
-            <option value="">Semua Mesin</option>
-            {machines.map((m) => <option key={m.name} value={m.name}>{m.name}</option>)}
-          </select>
+
+        {/* GrabCAD-style filter bar */}
+        <div className="dash-filter-bar">
+          {/* Machine filter pill */}
+          <div className="gc-pill-wrap">
+            <select
+              className={`gc-pill-select${selectedMachine ? ' selected' : ''}`}
+              value={selectedMachine}
+              onChange={(e) => setSelectedMachine(e.target.value)}
+            >
+              <option value="">Semua Mesin</option>
+              {machines.map((m) => <option key={m.name} value={m.name}>{m.name}</option>)}
+            </select>
+            <ChevronDown size={11} className="gc-caret" />
+          </div>
 
           <PeriodPicker
+            pill
             period={period} setPeriod={setPeriod}
             refDate={refDate} setRefDate={setRefDate}
           />
-          <button className="btn-icon" title="Refresh data" onClick={() => loadAll()}>
+
+          {hasFilter && (
+            <button className="gc-reset-btn" onClick={resetFilters} title="Reset semua filter">
+              <RotateCcw size={11} /> Reset
+            </button>
+          )}
+
+          <button className="btn-icon" title="Refresh data" onClick={loadDashboard}>
             <RefreshCw size={14} />
           </button>
           <button

@@ -116,7 +116,13 @@ export default function RMOPublic() {
   /* Tab title */
   useEffect(() => {
     document.title = 'RMO';
-    return () => { document.title = 'MTN-DPA Monitoring'; };
+    const prev = document.documentElement.getAttribute('data-theme');
+    document.documentElement.setAttribute('data-theme', 'light');
+    return () => {
+      document.title = 'MTN-DPA Monitoring';
+      if (prev) document.documentElement.setAttribute('data-theme', prev);
+      else document.documentElement.removeAttribute('data-theme');
+    };
   }, []);
 
   /* Fullscreen listener */
@@ -201,7 +207,7 @@ export default function RMOPublic() {
 
       {/* ── Header orange ─────────────────────────────── */}
       <div style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent2))', padding: '16px 28px', flexShrink: 0 }}>
-        <div style={{ fontSize: 20, fontWeight: 700, color: '#000', letterSpacing: '-.4px' }}>Repair Machine Order</div>
+        <div style={{ fontSize: 20, fontWeight: 700, color: '#000', letterSpacing: '.08em', textTransform: 'uppercase', textAlign: 'center' }}>Repair Machine Order</div>
       </div>
 
       {/* ── Konten ────────────────────────────────────── */}

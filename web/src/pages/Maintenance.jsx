@@ -14,11 +14,6 @@ function fmtHrs(hrs) {
   return m > 0 ? `${h}j ${m}m` : `${h}j`;
 }
 
-function fmtDateTime(date, time) {
-  if (!date) return '—';
-  return time ? `${date} · ${time}` : date;
-}
-
 export default function Maintenance() {
   const {
     breakdowns, kpi,
@@ -28,11 +23,11 @@ export default function Maintenance() {
   } = useApp();
   const { openModal, showWODetail } = useUI();
 
-  const [search, setSearch]           = useState('');
+  const [search, setSearch]             = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [machineFilter, setMachineFilter] = useState('');
-  const [sortKey, setSortKey]         = useState('date');
-  const [sortDir, setSortDir]         = useState(-1);
+  const [sortKey, setSortKey]           = useState('date');
+  const [sortDir, setSortDir]           = useState(-1);
 
   useEffect(() => { loadAll(); }, [period, refDate, rangeStart, rangeEnd]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -100,31 +95,24 @@ export default function Maintenance() {
 
       {/* ── Table card ───────────────────────── */}
       <div className="card" style={{ overflow: 'visible' }}>
-        {/* ── Unified filter bar ─────────────── */}
+        {/* ── Filter bar ─────────────── */}
         <div className="wo-filter-bar">
-          {/* Search */}
           <div className="search-wrap" style={{ flex: '1 1 180px', minWidth: 140 }}>
             <span className="search-icon"><Search size={14} /></span>
             <input className="search-input" placeholder="Cari mesin atau problem…"
               value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
-
-          {/* Machine filter */}
           <select className="btn wo-filter-select" value={machineFilter}
             onChange={(e) => setMachineFilter(e.target.value)}>
             <option value="">Semua Mesin</option>
             {machineOptions.map((name) => <option key={name} value={name}>{name}</option>)}
           </select>
-
-          {/* Status filter — dropdown instead of chips */}
           <select className="btn wo-filter-select" value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}>
             <option value="all">Semua Status</option>
             <option value="open">Open</option>
             <option value="resolved">Close</option>
           </select>
-
-          {/* Period picker + refresh */}
           <PeriodPicker
             period={period} setPeriod={setPeriod}
             refDate={refDate} setRefDate={setRefDate}
@@ -136,12 +124,11 @@ export default function Maintenance() {
           </button>
         </div>
 
-        {/* Result count */}
         <div className="wo-result-count">
           {data.length > 0 ? `Menampilkan ${data.length} hasil` : ''}
         </div>
 
-        {/* Table */}
+        {/* ── Table ─────────────────── */}
         <div className="table-scroll">
           <table className="wo-table">
             <thead>
@@ -149,105 +136,84 @@ export default function Maintenance() {
                 <th className={thCls('status')} onClick={() => sortBy('status')}>STATUS {arrow('status')}</th>
                 <th className={thCls('machine')} onClick={() => sortBy('machine')}>MESIN {arrow('machine')}</th>
                 <th className={thCls('date')} onClick={() => sortBy('date')}>TANGGAL LAPOR {arrow('date')}</th>
-                <th className={thCls('repair_date')} onClick={() => sortBy('repair_date')}>TANGGAL MULAI {arrow('repair_date')}</th>
-                <th className={thCls('cause')} onClick={() => sortBy('cause')}>PROBLEM {arrow('cause')}</th>
+                <th className={thCls('cause')} onClick={() => sortBy('cause')}>IDENTIFIKASI PROBLEM {arrow('cause')}</th>
                 <th className={thCls('resolution')} onClick={() => sortBy('resolution')}>PENYELESAIAN {arrow('resolution')}</th>
+                <th className={thCls('repair_date')} onClick={() => sortBy('repair_date')}>TGL MULAI REPAIR {arrow('repair_date')}</th>
+                <th className={thCls('end_date')} onClick={() => sortBy('end_date')}>TGL SELESAI {arrow('end_date')}</th>
+                <th className={thCls('akumulasiRepair')} onClick={() => sortBy('akumulasiRepair')} style={{ textAlign: 'right' }}>WAKTU PENGERJAAN {arrow('akumulasiRepair')}</th>
                 <th className={thCls('durationHrs')} onClick={() => sortBy('durationHrs')} style={{ textAlign: 'right' }}>DOWNTIME {arrow('durationHrs')}</th>
-                <th className={thCls('akumulasiRepair')} onClick={() => sortBy('akumulasiRepair')} style={{ textAlign: 'right' }}>AKUMULASI WAKTU REPAIR {arrow('akumulasiRepair')}</th>
                 <th className={thCls('pic_mtn')} onClick={() => sortBy('pic_mtn')} style={{ textAlign: 'center' }}>PIC MTN {arrow('pic_mtn')}</th>
-                <th className="wo-th" style={{ textAlign: 'center', cursor: 'default' }}>AKSI</th>
               </tr>
             </thead>
             <tbody>
               {!data.length ? (
-                <tr>
-                  <td colSpan={10} className="wo-empty">Tidak ada kasus yang cocok</td>
+                <tr><td colSpan={10} className="wo-empty">Tidak ada kasus yang cocok</td></tr>
+              ) : data.map((b, i) => (
+                <tr key={b.id ?? i} className="wo-row" onClick={() => showWODetail(b)}>
+                  {/* STATUS */}
+                  <td>
+                    <span className={`wo-badge ${b.status === 'open' ? 'open' : 'closed'}`}>
+                      <span className="wo-badge-dot"></span>
+                      {b.status === 'open' ? 'OPEN' : 'CLOSE'}
+                    </span>
+                  </td>
+
+                  {/* MESIN */}
+                  <td>
+                    <div className="wo-machine-name">{b.machine}</div>
+                    {(b.cluster || b.line) && (
+                      <div className="wo-machine-sub">{[b.cluster, b.line].filter(Boolean).join(' · ')}</div>
+                    )}
+                  </td>
+
+                  {/* TANGGAL LAPOR + WAKTU */}
+                  <td>
+                    <div className="wo-date">{fmtDate(b.date)}</div>
+                    {b.start && <div className="wo-time">{b.start}</div>}
+                  </td>
+
+                  {/* IDENTIFIKASI PROBLEM */}
+                  <td className="wo-problem">{b.cause || '—'}</td>
+
+                  {/* PENYELESAIAN */}
+                  <td className="wo-resolution">{b.resolution || '—'}</td>
+
+                  {/* TGL MULAI + WAKTU (repair) */}
+                  <td>
+                    {b.repair_date
+                      ? <><div className="wo-date">{fmtDate(b.repair_date)}</div>{b.repair_time && <div className="wo-time">{b.repair_time}</div>}</>
+                      : <span style={{ color: 'var(--muted)', fontSize: 11 }}>—</span>}
+                  </td>
+
+                  {/* TGL SELESAI + WAKTU */}
+                  <td>
+                    {b.end_date
+                      ? <><div className="wo-date">{fmtDate(b.end_date)}</div>{b.end_time && <div className="wo-time">{b.end_time}</div>}</>
+                      : <span style={{ color: 'var(--muted)', fontSize: 11 }}>—</span>}
+                  </td>
+
+                  {/* WAKTU PENGERJAAN */}
+                  <td style={{ textAlign: 'right' }}>
+                    {b.akumulasiRepair != null
+                      ? <span className="wo-dur-main">{fmtHrs(b.akumulasiRepair)}</span>
+                      : <span style={{ color: 'var(--muted)', fontSize: 11 }}>—</span>}
+                  </td>
+
+                  {/* DOWNTIME */}
+                  <td style={{ textAlign: 'right' }}>
+                    {b.durationHrs != null
+                      ? <span className="wo-dur-main" style={{ color: b.durationHrs > 0 ? 'var(--red)' : undefined }}>{fmtHrs(b.durationHrs)}</span>
+                      : <span style={{ color: 'var(--muted)', fontSize: 11 }}>—</span>}
+                  </td>
+
+                  {/* PIC MTN */}
+                  <td style={{ textAlign: 'center' }}>
+                    {b.pic_mtn
+                      ? <span className="wo-pic-chip">{b.pic_mtn}</span>
+                      : <span style={{ color: 'var(--muted)', fontSize: 11 }}>—</span>}
+                  </td>
                 </tr>
-              ) : data.map((b, i) => {
-                const isOpen = b.status === 'open';
-                return (
-                  <tr key={b.id ?? i} className="wo-row" onClick={() => showWODetail(b)}>
-                    {/* STATUS */}
-                    <td>
-                      <span className={`wo-badge ${isOpen ? 'open' : 'closed'}`}>
-                        <span className="wo-badge-dot"></span>
-                        {isOpen ? 'OPEN' : 'CLOSE'}
-                      </span>
-                    </td>
-
-                    {/* MESIN */}
-                    <td>
-                      <div className="wo-machine-name">{b.machine}</div>
-                      {(b.cluster || b.line) && (
-                        <div className="wo-machine-sub">
-                          {[b.cluster, b.line].filter(Boolean).join(' · ')}
-                        </div>
-                      )}
-                    </td>
-
-                    {/* TANGGAL LAPOR */}
-                    <td>
-                      <div className="wo-date">{fmtDate(b.date)}</div>
-                      {b.start && <div className="wo-time">{b.start}</div>}
-                    </td>
-
-                    {/* TANGGAL MULAI */}
-                    <td>
-                      {b.repair_date
-                        ? <><div className="wo-date">{fmtDate(b.repair_date)}</div>{b.repair_time && <div className="wo-time">{b.repair_time}</div>}</>
-                        : <span style={{ color: 'var(--muted)', fontSize: 11 }}>—</span>}
-                    </td>
-
-                    {/* PROBLEM */}
-                    <td className="wo-problem">{b.cause || '—'}</td>
-
-                    {/* PENYELESAIAN */}
-                    <td className="wo-resolution">{b.resolution || '—'}</td>
-
-                    {/* DOWNTIME (waktu selesai - waktu lapor) */}
-                    <td style={{ textAlign: 'right' }}>
-                      {b.durationHrs != null ? (
-                        <div>
-                          <span className="wo-dur-main">{fmtHrs(b.durationHrs)}</span>
-                          {b.end_date && (
-                            <div className="wo-time" style={{ textAlign: 'right' }}>
-                              s/d {fmtDate(b.end_date)}{b.end_time ? ' ' + b.end_time : ''}
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <span style={{ color: 'var(--muted)', fontSize: 11 }}>—</span>
-                      )}
-                    </td>
-
-                    {/* AKUMULASI REPAIR (waktu selesai - waktu mulai perbaikan) */}
-                    <td style={{ textAlign: 'right' }}>
-                      {b.akumulasiRepair != null
-                        ? <span className="wo-dur-main">{fmtHrs(b.akumulasiRepair)}</span>
-                        : <span style={{ color: 'var(--muted)', fontSize: 11 }}>—</span>}
-                    </td>
-
-                    {/* PIC */}
-                    <td style={{ textAlign: 'center' }}>
-                      {b.pic_mtn
-                        ? <span className="wo-pic-chip">{b.pic_mtn}</span>
-                        : <span style={{ color: 'var(--muted)', fontSize: 11 }}>—</span>}
-                    </td>
-
-                    {/* AKSI */}
-                    <td style={{ textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
-                      {isOpen && b.id ? (
-                        <button className="btn wo-action-btn"
-                          onClick={() => openModal('closeWO', { id: b.id, machine: b.machine, cause: b.cause })}>
-                          Tutup WO
-                        </button>
-                      ) : (
-                        <span className="wo-done-mark">✓</span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
+              ))}
             </tbody>
           </table>
         </div>

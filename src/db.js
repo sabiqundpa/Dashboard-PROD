@@ -1,6 +1,9 @@
 require('dotenv').config();
 const { PrismaClient } = require('@prisma/client');
 
-const prisma = new PrismaClient();
+// Reuse the same client across warm Vercel invocations to avoid reconnect overhead.
+const globalForPrisma = globalThis;
+const prisma = globalForPrisma.prisma ?? new PrismaClient();
+globalForPrisma.prisma = prisma;
 
 module.exports = prisma;

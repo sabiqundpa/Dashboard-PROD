@@ -714,12 +714,13 @@ router.put('/breakdown/:id', async (req, res, next) => {
   try {
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) return res.status(400).json({ error: 'Invalid id' });
-    const { cause, resolution, action, category, pic_mtn, date, start_time, end_date, end_time, duration_hrs, repair_date, repair_time } = req.body;
+    const { cause, resolution, action, category, pic_gh, pic_mtn, date, start_time, end_date, end_time, duration_hrs, repair_date, repair_time } = req.body;
     const data = {};
     if (cause        !== undefined) data.cause       = String(cause);
     if (resolution   !== undefined) data.resolution  = resolution ? String(resolution) : null;
     if (action       !== undefined) data.action      = action ? String(action) : null;
     if (category     !== undefined) data.category    = String(category);
+    if (pic_gh       !== undefined) data.picGh       = pic_gh ? String(pic_gh) : null;
     if (pic_mtn      !== undefined) data.picMtn      = pic_mtn ? String(pic_mtn) : null;
     if (date         !== undefined) data.date        = new Date(date);
     if (start_time   !== undefined) data.startTime   = start_time || null;

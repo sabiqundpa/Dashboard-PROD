@@ -20,8 +20,17 @@ function fmtHrs(hrs) {
   return m > 0 ? `${h}j ${m}m` : `${h}j`;
 }
 
+function Row({ label, value, valueStyle }) {
+  return (
+    <div className="wo-detail-row">
+      <span className="wo-detail-key">{label}</span>
+      <span className="wo-detail-val" style={valueStyle}>{value ?? '—'}</span>
+    </div>
+  );
+}
+
 export default function WOPanel() {
-  const { detailWO, closeWODetail, openModal, showWODetail } = useUI();
+  const { detailWO, closeWODetail, openModal } = useUI();
   const { loadAll } = useApp();
   const showToast = useToast();
   const { logout } = useAuth();
@@ -39,6 +48,7 @@ export default function WOPanel() {
       resolution:   wo.resolution   || '',
       action:       wo.action       || '',
       category:     wo.category     || CATEGORIES[0],
+      pic_gh:       wo.pic_gh       || '',
       pic_mtn:      wo.pic_mtn      || '',
       date:         wo.date         || '',
       start_time:   wo.start        || '',
@@ -55,7 +65,7 @@ export default function WOPanel() {
   function set(k) { return (e) => setForm((f) => ({ ...f, [k]: e.target.value })); }
 
   async function saveEdit() {
-    if (!form.cause?.trim()) { showToast('Problem wajib diisi', 'red'); return; }
+    if (!form.cause?.trim()) { showToast('Identifikasi problem wajib diisi', 'red'); return; }
     setSaving(true);
     try {
       await apiSend(`/breakdown/${wo.id}`, 'PUT', form, logout);
@@ -69,14 +79,14 @@ export default function WOPanel() {
   async function deleteWO() {
     if (!window.confirm(`Hapus work order ini?\n\n"${wo.cause}"\n${wo.machine} · ${fmtDate(wo.date)}\n\nData tidak bisa dikembalikan.`)) return;
     try {
-      await apiSend(`/breakdown/${wo.id}`, 'DELETE', {}, logout);
+      await apiSend(`/breakdown/${wo.id}`, 'DELETE', undefined, logout);
       showToast('Work order dihapus', 'yellow');
       closeWODetail();
       loadAll();
     } catch (e) { showToast(e.message || 'Gagal menghapus', 'red'); }
   }
 
-  function handleCloseWO() {
+  function handleTutupRMO() {
     openModal('closeWO', { id: wo.id, machine: wo.machine, cause: wo.cause });
   }
 
@@ -87,7 +97,7 @@ export default function WOPanel() {
         <>
           <div className="detail-header">
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div className="detail-title">Edit Work Order</div>
+              <div className="detail-title">Edit RMO</div>
               <div className="detail-subtitle">{wo.machine}</div>
             </div>
             <button className="btn" style={{ padding: '5px 10px', fontSize: 12 }} onClick={cancelEdit}>Batal</button>
@@ -98,7 +108,7 @@ export default function WOPanel() {
           </div>
           <div className="detail-body">
             <div className="form-group">
-              <label className="form-label">Problem *</label>
+              <label className="form-label">Identifikasi Problem *</label>
               <textarea className="form-input" rows={2} style={{ resize: 'vertical' }} value={form.cause} onChange={set('cause')} />
             </div>
             <div className="form-group">
@@ -115,11 +125,15 @@ export default function WOPanel() {
                 {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
               </select>
             </div>
-            <div className="form-group">
-              <label className="form-label">PIC MTN</label>
-              <input className="form-input" value={form.pic_mtn} onChange={set('pic_mtn')} placeholder="Nama PIC MTN" />
-            </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div className="form-group">
+                <label className="form-label">Grup Head Produksi</label>
+                <input className="form-input" value={form.pic_gh} onChange={set('pic_gh')} placeholder="Nama GH Produksi" />
+              </div>
+              <div className="form-group">
+                <label className="form-label">PIC MTN</label>
+                <input className="form-input" value={form.pic_mtn} onChange={set('pic_mtn')} placeholder="Nama PIC MTN" />
+              </div>
               <div className="form-group">
                 <label className="form-label">Tanggal Lapor</label>
                 <input type="date" className="form-input" value={form.date} onChange={set('date')} />
@@ -129,11 +143,11 @@ export default function WOPanel() {
                 <input type="time" className="form-input" value={form.start_time} onChange={set('start_time')} />
               </div>
               <div className="form-group">
-                <label className="form-label">Tanggal Mulai</label>
+                <label className="form-label">Tanggal Mulai Repair</label>
                 <input type="date" className="form-input" value={form.repair_date} onChange={set('repair_date')} />
               </div>
               <div className="form-group">
-                <label className="form-label">Waktu Mulai</label>
+                <label className="form-label">Waktu Mulai Repair</label>
                 <input type="time" className="form-input" value={form.repair_time} onChange={set('repair_time')} />
               </div>
               <div className="form-group">
@@ -159,64 +173,41 @@ export default function WOPanel() {
               <div className="detail-title">{wo.machine}</div>
               <div className="detail-subtitle">{[wo.cluster, wo.line].filter(Boolean).join(' · ') || '—'}</div>
             </div>
-            <button className="detail-nav-btn" onClick={startEdit} title="Edit work order">
+            <button className="detail-nav-btn" onClick={startEdit} title="Edit RMO">
               <Pencil size={14} />
             </button>
             <button className="modal-close" onClick={closeWODetail}><X size={18} /></button>
           </div>
 
           <div className="detail-body">
-            {/* Status badge */}
+            {/* Status */}
             <span className={`wo-badge ${isOpen ? 'open' : 'closed'}`} style={{ alignSelf: 'flex-start' }}>
               <span className="wo-badge-dot"></span>
               {isOpen ? 'OPEN' : 'CLOSE'}
             </span>
 
-            {/* Info grid */}
+            {/* Info grid — matches CSV column order */}
             <div className="wo-detail-grid">
-              <div className="wo-detail-row">
-                <span className="wo-detail-key">Tanggal Lapor</span>
-                <span className="wo-detail-val">{fmtDate(wo.date)}{wo.start ? ' · ' + wo.start : ''}</span>
-              </div>
-              {(wo.repair_date || wo.repair_time) && (
-                <div className="wo-detail-row">
-                  <span className="wo-detail-key">Tanggal Mulai</span>
-                  <span className="wo-detail-val">{fmtDate(wo.repair_date)}{wo.repair_time ? ' · ' + wo.repair_time : ''}</span>
-                </div>
-              )}
-              {(wo.end_date || wo.end_time) && (
-                <div className="wo-detail-row">
-                  <span className="wo-detail-key">Tanggal Selesai</span>
-                  <span className="wo-detail-val">{fmtDate(wo.end_date)}{wo.end_time ? ' · ' + wo.end_time : ''}</span>
-                </div>
-              )}
-              <div className="wo-detail-row">
-                <span className="wo-detail-key">Downtime</span>
-                <span className="wo-detail-val" style={{ color: wo.durationHrs > 0 ? 'var(--red)' : 'var(--muted)', fontFamily: 'var(--mono)', fontVariantNumeric: 'tabular-nums' }}>
-                  {fmtHrs(wo.durationHrs)}
-                </span>
-              </div>
-              {wo.akumulasiRepair != null && (
-                <div className="wo-detail-row">
-                  <span className="wo-detail-key">Akumulasi Waktu Repair</span>
-                  <span className="wo-detail-val" style={{ color: 'var(--yellow)', fontFamily: 'var(--mono)', fontVariantNumeric: 'tabular-nums' }}>
-                    {fmtHrs(wo.akumulasiRepair)}
-                  </span>
-                </div>
-              )}
-              <div className="wo-detail-row">
-                <span className="wo-detail-key">PIC MTN</span>
-                <span className="wo-detail-val">{wo.pic_mtn || '—'}</span>
-              </div>
-              <div className="wo-detail-row">
-                <span className="wo-detail-key">Jenis Problem</span>
-                <span className="wo-detail-val" style={{ maxWidth: 160, textAlign: 'right' }}>{wo.category || '—'}</span>
-              </div>
+              <Row label="Tanggal Lapor"
+                value={`${fmtDate(wo.date)}${wo.start ? ' · ' + wo.start : ''}`} />
+              <Row label="Tanggal Mulai Repair"
+                value={wo.repair_date ? `${fmtDate(wo.repair_date)}${wo.repair_time ? ' · ' + wo.repair_time : ''}` : null} />
+              <Row label="Tanggal Selesai"
+                value={wo.end_date ? `${fmtDate(wo.end_date)}${wo.end_time ? ' · ' + wo.end_time : ''}` : null} />
+              <Row label="Waktu Pengerjaan"
+                value={wo.akumulasiRepair != null ? fmtHrs(wo.akumulasiRepair) : null}
+                valueStyle={{ color: 'var(--yellow)', fontFamily: 'var(--mono)', fontVariantNumeric: 'tabular-nums' }} />
+              <Row label="Downtime"
+                value={fmtHrs(wo.durationHrs)}
+                valueStyle={{ color: wo.durationHrs > 0 ? 'var(--red)' : 'var(--muted)', fontFamily: 'var(--mono)', fontVariantNumeric: 'tabular-nums' }} />
+              {wo.pic_gh && <Row label="Grup Head Produksi" value={wo.pic_gh} />}
+              <Row label="PIC MTN" value={wo.pic_mtn || null} />
+              <Row label="Jenis Problem" value={wo.category || null} />
             </div>
 
             {/* Problem */}
             <div className="detail-section">
-              <div className="detail-section-title">Problem</div>
+              <div className="detail-section-title">Identifikasi Problem</div>
               <div style={{ fontSize: 13, lineHeight: 1.55 }}>{wo.cause || '—'}</div>
             </div>
 
@@ -239,8 +230,8 @@ export default function WOPanel() {
             {/* Buttons */}
             <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
               {isOpen && wo.id && (
-                <button className="btn primary" style={{ flex: 1 }} onClick={handleCloseWO}>
-                  Tutup WO
+                <button className="btn primary" style={{ flex: 1 }} onClick={handleTutupRMO}>
+                  Tutup RMO
                 </button>
               )}
               <button

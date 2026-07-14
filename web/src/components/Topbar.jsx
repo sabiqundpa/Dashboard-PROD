@@ -5,17 +5,26 @@ import { useApp } from '../AppContext.jsx';
 import { useAuth } from '../AuthContext.jsx';
 import { useTheme } from '../ThemeContext.jsx';
 
-// Logo PNG — dark theme: logo-light.png (white bg), light theme: logo-dark.png (black bg)
+// Gear cluster logo — 3 interlocking gears (gray, orange, teal).
+// Background adapts: hitam (light theme) ↔ putih (dark theme).
 function BrandIcon({ size = 26 }) {
   const { theme } = useTheme();
+  const bg  = theme === 'dark' ? '#f0f0f0' : '#0d0d0d';
+  const hub = bg;
   return (
-    <img
-      src={theme === 'dark' ? '/logo-light.png' : '/logo-dark.png'}
-      alt="logo"
-      width={size}
-      height={size}
-      style={{ flexShrink: 0, objectFit: 'contain', borderRadius: 4 }}
-    />
+    <svg width={size} height={size} viewBox="0 0 100 100" style={{ flexShrink: 0, borderRadius: 3 }}>
+      {/* Background circle */}
+      <circle cx="50" cy="50" r="49" fill={bg}/>
+      {/* Gray gear */}
+      <path fill="#A2A2A2" d="M54,48 L50,53 L49.3,59.3 L43,60 L38,64 L33,60 L26.7,59.3 L26,53 L22,48 L26,43 L26.7,36.7 L33,36 L38,32 L43,36 L49.3,36.7 L50,43 Z"/>
+      <circle cx="38" cy="48" r="6" fill={hub}/>
+      {/* Orange gear */}
+      <path fill="#E88D0A" d="M69,30 L65.4,34.3 L63.5,39.5 L58,38.5 L52.5,39.5 L50.6,34.3 L47,30 L50.6,25.7 L52.5,20.5 L58,21.5 L63.5,20.5 L65.4,25.7 Z"/>
+      <circle cx="58" cy="30" r="4" fill={hub}/>
+      {/* Teal gear */}
+      <path fill="#1499AA" d="M68,65 L64.9,69 L63,73.7 L58,73 L53,73.7 L51.1,69 L48,65 L51.1,61 L53,56.3 L58,57 L63,56.3 L64.9,61 Z"/>
+      <circle cx="58" cy="65" r="3.5" fill={hub}/>
+    </svg>
   );
 }
 

@@ -10,9 +10,10 @@ import AvailabilityCard from '../components/AvailabilityCard.jsx';
 import MtbfMttrChart from '../components/MtbfMttrChart.jsx';
 import DowntimeTrend from '../components/DowntimeTrend.jsx';
 import MachineTable from '../components/MachineTable.jsx';
-import Timeline from '../components/Timeline.jsx';
 import ParetoList from '../components/ParetoList.jsx';
 import DonutChart from '../components/DonutChart.jsx';
+import ParetoMachineChart from '../components/ParetoMachineChart.jsx';
+import RecentClosedWO from '../components/RecentClosedWO.jsx';
 import PeriodPicker from '../components/PeriodPicker.jsx';
 
 const EMPTY_KPI = { breakdowns: 0, downtime_hrs: 0, planned_hours: 0, planned_hours_per_day: 0, planned_hours_minutes: 0, availability: 0, mtbf: 0, mttr: 0 };
@@ -212,15 +213,15 @@ export default function Dashboard() {
       </div>
 
       {/* ── Full-width bottom section ──────────────────── */}
-      <MachineTable machines={machines} limit={5} />
+      <MachineTable machines={machines} limit={10} />
 
       <div className="row4">
         <div className="card">
           <div className="card-header">
-            <div><div className="card-title">Log Breakdown Terbaru</div></div>
+            <div><div className="card-title">Breakdown Selesai Terbaru</div></div>
             <button className="card-action" onClick={() => navigate('maintenance')}>All ›</button>
           </div>
-          <Timeline items={breakdowns} limit={5} />
+          <RecentClosedWO items={breakdowns} />
         </div>
         <div className="card">
           <div className="card-header"><div><div className="card-title">Top Penyebab Kerusakan</div></div></div>
@@ -228,9 +229,8 @@ export default function Dashboard() {
           <ParetoList data={pareto} labelKey="cause" />
         </div>
         <div className="card">
-          <div className="card-header"><div><div className="card-title">Pareto Downtime per Mesin</div></div></div>
-          <DonutChart data={paretoMachines} labelKey="machine" valueKey="downtime_hrs" centerLabel="mesin" />
-          <ParetoList data={paretoMachines} labelKey="machine" valueKey="downtime_hrs" valueUnit=" jam" />
+          <div className="card-header"><div><div className="card-title">Pareto Breakdown per Mesin</div></div></div>
+          <ParetoMachineChart machines={machines} />
         </div>
       </div>
     </div>

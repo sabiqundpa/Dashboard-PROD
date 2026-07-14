@@ -35,6 +35,9 @@ export default function MachineTable({ machines, limit, search: controlledSearch
     return limit ? d.slice(0, limit) : d;
   }, [machines, search, sortKey, sortDir, limit]);
 
+  const maxBD = useMemo(() => Math.max(1, ...data.map(m => m.breakdowns || 0)), [data]);
+  const maxDT = useMemo(() => Math.max(0.1, ...data.map(m => m.downtime_hrs || 0)), [data]);
+
   return (
     <div className="card">
       <div className="card-header" style={{ flexWrap: 'wrap', gap: 8 }}>
@@ -80,8 +83,18 @@ export default function MachineTable({ machines, limit, search: controlledSearch
                     <span style={{ fontFamily: 'var(--mono)', fontSize: 11, fontVariantNumeric: 'tabular-nums' }}>{av.toFixed(1)}%</span>
                     <span className="pct-bar"><span className="pct-fill" style={{ width: `${av}%`, background: bc }}></span></span>
                   </td>
-                  <td style={{ fontFamily: 'var(--mono)', fontVariantNumeric: 'tabular-nums', textAlign: 'center', color: m.breakdowns > 3 ? 'var(--red)' : 'var(--text)' }}>{m.breakdowns}</td>
-                  <td style={{ fontFamily: 'var(--mono)', fontVariantNumeric: 'tabular-nums', textAlign: 'right' }}>{m.downtime_hrs?.toFixed(1)}</td>
+                  <td style={{ textAlign: 'center', width: 68 }}>
+                    <div style={{ fontFamily: 'var(--mono)', fontVariantNumeric: 'tabular-nums', fontSize: 12, fontWeight: 700, color: m.breakdowns > 5 ? 'var(--red)' : m.breakdowns > 2 ? 'var(--yellow)' : m.breakdowns > 0 ? 'var(--text)' : 'var(--muted)' }}>{m.breakdowns}</div>
+                    <span className="pct-bar" style={{ marginTop: 3 }}>
+                      <span className="pct-fill" style={{ width: `${(m.breakdowns / maxBD) * 100}%`, background: m.breakdowns > 5 ? 'var(--red)' : m.breakdowns > 2 ? 'var(--yellow)' : 'var(--accent)' }} />
+                    </span>
+                  </td>
+                  <td style={{ textAlign: 'right', width: 80 }}>
+                    <div style={{ fontFamily: 'var(--mono)', fontVariantNumeric: 'tabular-nums', fontSize: 12, color: m.downtime_hrs > 10 ? 'var(--red)' : m.downtime_hrs > 2 ? 'var(--yellow)' : m.downtime_hrs > 0 ? 'var(--text)' : 'var(--muted)' }}>{(m.downtime_hrs ?? 0).toFixed(1)}</div>
+                    <span className="pct-bar" style={{ marginTop: 3 }}>
+                      <span className="pct-fill" style={{ width: `${((m.downtime_hrs || 0) / maxDT) * 100}%`, background: m.downtime_hrs > 10 ? 'var(--red)' : m.downtime_hrs > 2 ? 'var(--yellow)' : 'var(--accent)' }} />
+                    </span>
+                  </td>
                   <td style={{ color: 'var(--muted)', fontSize: 11, maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.last_incident}</td>
                 </tr>
               );

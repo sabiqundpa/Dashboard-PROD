@@ -887,12 +887,33 @@ router.post('/import', upload.single('file'), async (req, res, next) => {
       validRows.push({ row, name, cause });
     }
 
-    // ── Phase 2: batch-upsert unique machines, build name→id map ─
-    const uniqueNames = [...new Set(validRows.map((r) => r.name))];
-    const nameToId = new Map();
+    // ── Phase 2: case-insensitive machine matching, then create unmatched ─
+    // Fetch all existing machines and build a normalised-lowercase lookup so
+    // CSV names like "BUBUT MANUAL 01" match DB names like "Bubut Manual 01".
+    const existingMachines = await prisma.machine.findMany({ select: { id: true, name: true } });
+    const lcMap = new Map(); // normalised-lower → {id, name}
+    for (const m of existingMachines) {
+      lcMap.set(m.name.toLowerCase().replace(/\s+/g, ' ').trim(), m);
+    }
+
+    const uniqueCsvNames = [...new Set(validRows.map((r) => r.name))];
+    const nameToId = new Map();  // csvName → machineId
+    const newNames = [];         // truly unmatched CSV names
+
+    for (const csvName of uniqueCsvNames) {
+      const key = csvName.toLowerCase().replace(/\s+/g, ' ').trim();
+      const existing = lcMap.get(key);
+      if (existing) {
+        nameToId.set(csvName, existing.id);
+      } else {
+        newNames.push(csvName);
+      }
+    }
+
+    // Only upsert machines that have no case-insensitive match
     const CHUNK = 50;
-    for (let i = 0; i < uniqueNames.length; i += CHUNK) {
-      const chunk = uniqueNames.slice(i, i + CHUNK);
+    for (let i = 0; i < newNames.length; i += CHUNK) {
+      const chunk = newNames.slice(i, i + CHUNK);
       const results = await prisma.$transaction(
         chunk.map((name) =>
           prisma.machine.upsert({
@@ -919,6 +940,7 @@ router.post('/import', upload.single('file'), async (req, res, next) => {
       if (btRaw !== undefined && btRaw !== '' && !isNaN(parseFloat(btRaw))) {
         durationHrs = parseFloat(btRaw);
       }
+      if (isNaN(durationHrs) || !isFinite(durationHrs)) durationHrs = 0;
 
       const statusRaw = String(row['Status'] ?? '').toLowerCase();
       const status = statusRaw === 'open' ? 'open'
@@ -949,7 +971,12 @@ router.post('/import', upload.single('file'), async (req, res, next) => {
       );
     }
 
-    res.json({ imported: breakdownData.length, total: rows.length });
+    res.json({
+      imported: breakdownData.length,
+      total: rows.length,
+      newMachines: newNames.length,
+      matchedMachines: uniqueCsvNames.length - newNames.length,
+    });
   } catch (err) { next(err); }
 });
 
@@ -1174,7 +1201,14 @@ function parseCsv(text) {
 function parseDateValue(value) {
   if (!value) return null;
   if (value instanceof Date) return value;
-  const d = new Date(value);
+  const s = String(value).trim();
+  // Handle dd/mm/yyyy and dd-mm-yyyy (Indonesian/manual format)
+  const dmyMatch = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (dmyMatch) {
+    const d = new Date(Number(dmyMatch[3]), Number(dmyMatch[2]) - 1, Number(dmyMatch[1]));
+    return isNaN(d.getTime()) ? null : d;
+  }
+  const d = new Date(s);
   return isNaN(d.getTime()) ? null : d;
 }
 

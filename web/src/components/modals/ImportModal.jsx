@@ -46,12 +46,15 @@ export default function ImportModal() {
     formData.append('file', file);
     try {
       const result = await apiSendForm(MODES[mode].endpoint, formData, logout);
-      showToast(`Imported ${result.imported}/${result.total} rows`, 'green');
+      const matchInfo = result.newMachines != null
+        ? ` · ${result.matchedMachines} mesin cocok, ${result.newMachines} mesin baru`
+        : '';
+      showToast(`Import berhasil: ${result.imported}/${result.total} baris${matchInfo}`, 'green');
       addNotif('CSV data imported', 'green');
       closeModal();
       loadAll();
-    } catch {
-      showToast('Import failed — check backend connection', 'red');
+    } catch (err) {
+      showToast(err.message || 'Import gagal — periksa koneksi backend', 'red');
     }
     setBusy(false);
   }

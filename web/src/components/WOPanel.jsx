@@ -29,6 +29,14 @@ function Row({ label, value, valueStyle }) {
   );
 }
 
+function EditSection({ title }) {
+  return (
+    <div style={{ fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', padding: '4px 0 8px', borderBottom: '1px solid var(--border)', marginTop: 4 }}>
+      {title}
+    </div>
+  );
+}
+
 export default function WOPanel() {
   const { detailWO, closeWODetail, openModal } = useUI();
   const { loadAll } = useApp();
@@ -42,14 +50,23 @@ export default function WOPanel() {
   const wo     = detailWO;
   const isOpen = wo?.status === 'open';
 
-  // Edit mode: only initial Grup Head fields (identifikasi problem, jenis, tanggal lapor, GH)
   function startEdit() {
     setForm({
-      cause:      wo.cause      || '',
-      category:   wo.category   || CATEGORIES[0],
-      pic_gh:     wo.pic_gh     || '',
-      date:       wo.date       || '',
-      start_time: wo.start      || '',
+      // ── Laporan Awal (Grup Head) ──
+      cause:        wo.cause        || '',
+      category:     wo.category     || CATEGORIES[0],
+      pic_gh:       wo.pic_gh       || '',
+      date:         wo.date         || '',
+      start_time:   wo.start        || '',
+      // ── Data Perbaikan (MTN) ──────
+      repair_date:  wo.repair_date  || '',
+      repair_time:  wo.repair_time  || '',
+      end_date:     wo.end_date     || '',
+      end_time:     wo.end_time     || '',
+      pic_mtn:      wo.pic_mtn      || '',
+      duration_hrs: wo.durationHrs  ?? 0,
+      resolution:   wo.resolution   || '',
+      action:       wo.action       || '',
     });
     setEditMode(true);
   }
@@ -61,13 +78,7 @@ export default function WOPanel() {
     if (!form.cause?.trim()) { showToast('Identifikasi problem wajib diisi', 'red'); return; }
     setSaving(true);
     try {
-      await apiSend(`/breakdown/${wo.id}`, 'PUT', {
-        cause:      form.cause,
-        category:   form.category,
-        pic_gh:     form.pic_gh,
-        date:       form.date,
-        start_time: form.start_time,
-      }, logout);
+      await apiSend(`/breakdown/${wo.id}`, 'PUT', form, logout);
       showToast('RMO diperbarui', 'green');
       cancelEdit();
       await loadAll();
@@ -92,11 +103,11 @@ export default function WOPanel() {
   return (
     <div className={`detail-panel${wo ? ' show' : ''}`} id="woPanel">
       {!wo ? null : editMode ? (
-        /* ── Edit mode: Laporan Awal (Grup Head) ───── */
+        /* ── Edit mode — semua field RMO ──────────── */
         <>
           <div className="detail-header">
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div className="detail-title">Edit Laporan Awal</div>
+              <div className="detail-title">Edit RMO</div>
               <div className="detail-subtitle">{wo.machine}</div>
             </div>
             <button className="btn" style={{ padding: '5px 10px', fontSize: 12 }} onClick={cancelEdit}>Batal</button>
@@ -105,7 +116,12 @@ export default function WOPanel() {
             </button>
             <button className="modal-close" onClick={() => { cancelEdit(); closeWODetail(); }}><X size={18} /></button>
           </div>
+
           <div className="detail-body">
+
+            {/* ── Laporan Awal (Grup Head) ──────────── */}
+            <EditSection title="Laporan Awal" />
+
             <div className="form-group">
               <label className="form-label">Identifikasi Problem *</label>
               <textarea className="form-input" rows={3} style={{ resize: 'vertical' }} value={form.cause} onChange={set('cause')} />
@@ -130,6 +146,45 @@ export default function WOPanel() {
               <label className="form-label">Grup Head Produksi</label>
               <input className="form-input" value={form.pic_gh} onChange={set('pic_gh')} placeholder="Nama GH Produksi" />
             </div>
+
+            {/* ── Data Perbaikan (MTN) ──────────────── */}
+            <EditSection title="Data Perbaikan" />
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div className="form-group">
+                <label className="form-label">Tanggal Mulai Repair</label>
+                <input type="date" className="form-input" value={form.repair_date} onChange={set('repair_date')} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Waktu Mulai Repair</label>
+                <input type="time" className="form-input" value={form.repair_time} onChange={set('repair_time')} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Tanggal Selesai</label>
+                <input type="date" className="form-input" value={form.end_date} onChange={set('end_date')} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Waktu Selesai</label>
+                <input type="time" className="form-input" value={form.end_time} onChange={set('end_time')} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">PIC MTN</label>
+                <input className="form-input" value={form.pic_mtn} onChange={set('pic_mtn')} placeholder="Nama PIC MTN" />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Downtime (jam)</label>
+                <input type="number" step="0.1" min="0" className="form-input" value={form.duration_hrs} onChange={set('duration_hrs')} />
+              </div>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Penyelesaian</label>
+              <textarea className="form-input" rows={2} style={{ resize: 'vertical' }} value={form.resolution} onChange={set('resolution')} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Permanent Action</label>
+              <textarea className="form-input" rows={2} style={{ resize: 'vertical' }} value={form.action} onChange={set('action')} />
+            </div>
+
           </div>
         </>
       ) : (
@@ -142,7 +197,7 @@ export default function WOPanel() {
                 <div className="detail-subtitle">{[wo.cluster, wo.line].filter(Boolean).join(' · ')}</div>
               )}
             </div>
-            <button className="detail-nav-btn" onClick={startEdit} title="Edit laporan awal">
+            <button className="detail-nav-btn" onClick={startEdit} title="Edit RMO">
               <Pencil size={14} />
             </button>
             <button className="modal-close" onClick={closeWODetail}><X size={18} /></button>

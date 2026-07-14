@@ -910,21 +910,17 @@ router.post('/import', upload.single('file'), async (req, res, next) => {
       }
     }
 
-    // Only upsert machines that have no case-insensitive match
-    const CHUNK = 50;
-    for (let i = 0; i < newNames.length; i += CHUNK) {
-      const chunk = newNames.slice(i, i + CHUNK);
-      const results = await prisma.$transaction(
-        chunk.map((name) =>
-          prisma.machine.upsert({
-            where: { name },
-            update: {},
-            create: { name, cluster: '', line: '' },
-            select: { id: true, name: true },
-          })
-        )
-      );
-      results.forEach((m) => nameToId.set(m.name, m.id));
+    // Create all unmatched machines in one bulk INSERT, then re-fetch their IDs
+    if (newNames.length > 0) {
+      await prisma.machine.createMany({
+        data: newNames.map((name) => ({ name, cluster: '', line: '' })),
+        skipDuplicates: true,
+      });
+      const created = await prisma.machine.findMany({
+        where: { name: { in: newNames } },
+        select: { id: true, name: true },
+      });
+      created.forEach((m) => nameToId.set(m.name, m.id));
     }
 
     // ── Phase 3: batch-create all breakdowns ────────────────────
@@ -958,8 +954,7 @@ router.post('/import', upload.single('file'), async (req, res, next) => {
         endDate: endDate ?? (endTime ? (startDate ?? reportDate ?? new Date()) : null),
         endTime,
         durationHrs,
-        picGh: (row['Grup Head Produksi'] ?? row['PIC GH'] ?? row['picGh'] ?? null)
-               ? String(row['Grup Head Produksi'] ?? row['PIC GH'] ?? row['picGh']).trim() : null,
+        picGh: String(row['Grup Head Produksi'] ?? row['PIC GH'] ?? row['picGh'] ?? '').trim() || null,
         picMtn: (row['PIC MTN'] ? String(row['PIC MTN']).trim() : null)
                 ?? (row.technician ? String(row.technician).trim() : null),
         resolution: row['Penyelesaian'] ? String(row['Penyelesaian']).trim() : null,

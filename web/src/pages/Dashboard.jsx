@@ -213,7 +213,7 @@ export default function Dashboard() {
       </div>
 
       {/* ── Full-width bottom section ──────────────────── */}
-      <MachineTable machines={machines} limit={10} />
+      <MachineTable machines={machines} limit={5} />
 
       <div className="row4">
         <div className="card">

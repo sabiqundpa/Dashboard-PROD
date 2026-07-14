@@ -155,7 +155,7 @@ body{min-height:100%;background:var(--bg);color:var(--text);font-family:var(--fo
 ═══════════════════════════════════════ */
 .row2{display:grid;grid-template-columns:1.6fr 1fr;gap:12px}
 .row2-equal{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.row4{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:12px}
+.row4{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
 
 /* ═══════════════════════════════════════
    CARDS
@@ -192,10 +192,10 @@ body{min-height:100%;background:var(--bg);color:var(--text);font-family:var(--fo
    MACHINE TABLE
 ═══════════════════════════════════════ */
 .machine-table{width:100%;border-collapse:collapse}
-.machine-table th{font-size:9.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;padding:7px 10px;text-align:left;border:1px solid var(--border);cursor:pointer;white-space:nowrap;user-select:none}
+.machine-table th{font-size:9.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;padding:5px 8px;text-align:left;border:1px solid var(--border);cursor:pointer;white-space:nowrap;user-select:none}
 .machine-table th:hover{color:var(--text)}
 .machine-table th.sorted{color:var(--accent)}
-.machine-table td{padding:9px 10px;border:1px solid var(--border);font-size:12px;vertical-align:middle;white-space:nowrap}
+.machine-table td{padding:6px 8px;border:1px solid var(--border);font-size:11.5px;vertical-align:middle;white-space:nowrap}
 .machine-table tbody tr{cursor:pointer;transition:background .1s}
 .machine-table tbody tr:hover td,.machine-table tbody tr:active td{background:rgba(255,255,255,.022)}
 .table-scroll{overflow:auto;max-height:480px;border-radius:8px}

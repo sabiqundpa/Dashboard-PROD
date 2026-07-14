@@ -77,7 +77,7 @@ export default function CloseWOModal({ payload }) {
   }
 
   return (
-    <Modal title="Tutup Work Order" onClose={closeModal} fullscreen headerVariant="blue">
+    <Modal title="Tutup RMO" onClose={closeModal} fullscreen headerVariant="blue">
       <div className="rmo-form">
 
         {/* ── WO info banner ─────────────────────── */}
@@ -140,11 +140,11 @@ export default function CloseWOModal({ payload }) {
             onKeyDown={(e) => { if (e.key === 'Tab') { e.preventDefault(); actionRef.current?.focus(); } }} />
         </div>
 
-        {/* ── Action ────────────────────────────── */}
+        {/* ── Permanent Action ──────────────────── */}
         <div className="form-group rmo-full">
-          <label className="form-label">Action / Tindakan</label>
+          <label className="form-label">Permanent Action</label>
           <textarea ref={actionRef} className="form-input cwo-textarea"
-            placeholder="Tindakan yang dilakukan…"
+            placeholder="Permanent action / tindakan permanen…"
             value={action} onChange={(e) => setAction(e.target.value)} />
         </div>
 
@@ -154,7 +154,7 @@ export default function CloseWOModal({ payload }) {
       <div className="modal-footer">
         <button className="btn" onClick={closeModal}>Batal</button>
         <button ref={submitRef} className="btn blue" disabled={busy} onClick={submit}>
-          {busy ? 'Menyimpan…' : 'Tutup WO'}
+          {busy ? 'Menyimpan…' : 'Tutup RMO'}
         </button>
       </div>
     </Modal>

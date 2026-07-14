@@ -442,16 +442,21 @@ textarea.form-input{resize:vertical;min-height:64px}
 .maint-card-val{font-family:var(--display);font-size:28px;font-weight:700;letter-spacing:-.5px;line-height:1;font-variant-numeric:tabular-nums}
 .maint-card-unit{font-size:10px;color:var(--muted);margin-top:2px}
 
+/* Maintenance table card fills remaining viewport height */
+.maint-table-card{display:flex;flex-direction:column}
+.maint-table-card .table-scroll{max-height:calc(100vh - var(--topbar-h) - 310px);min-height:180px}
+
 /* ── Work Order table ──────────────────── */
 .wo-filter-bar{display:flex;gap:8px;margin-bottom:6px;flex-wrap:wrap;align-items:center}
 .wo-filter-select{padding:6px 10px;flex-shrink:0}
 .wo-result-count{font-size:10.5px;color:var(--muted);padding:0 2px 8px;border-bottom:1px solid var(--border);margin-bottom:2px}
 .wo-table{width:100%;border-collapse:collapse;font-size:12.5px}
-.wo-th{padding:9px 12px;font-size:9.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700;text-align:left;white-space:nowrap;cursor:pointer;user-select:none;border-bottom:2px solid var(--border)}
+.wo-th{padding:9px 12px;font-size:9.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700;text-align:left;white-space:nowrap;cursor:pointer;user-select:none;border:1px solid var(--border);background:var(--s1);position:sticky;top:0;z-index:1}
 .wo-th.sorted{color:var(--accent)}
-.wo-row{border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s}
+.wo-row{cursor:pointer;transition:background .1s}
 .wo-row:hover{background:var(--s2)}
-.wo-row td{padding:11px 12px;vertical-align:middle}
+.wo-row:hover td{background:var(--s2)}
+.wo-row td{padding:11px 12px;vertical-align:middle;border:1px solid var(--border)}
 /* Status badge */
 .wo-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:99px;font-size:10px;font-weight:700;letter-spacing:.04em;white-space:nowrap}
 .wo-badge.open{background:rgba(255,68,85,.12);color:var(--red)}

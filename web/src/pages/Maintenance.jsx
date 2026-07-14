@@ -93,7 +93,7 @@ export default function Maintenance() {
       </div>
 
       {/* ── Table card ───────────────────────── */}
-      <div className="card" style={{ overflow: 'visible' }}>
+      <div className="card maint-table-card">
         {/* ── Filter bar ─────────────── */}
         <div className="wo-filter-bar">
           <div className="search-wrap" style={{ flex: '1 1 180px', minWidth: 140 }}>

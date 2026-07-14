@@ -32,21 +32,11 @@ model Machine {
   active         Boolean        @default(false)                        // Hanya mesin aktif yang dihitung di KPI
   createdAt      DateTime       @default(now())
   breakdowns     Breakdown[]
-  machineStatus  MachineStatus?
   analytics      Analytic[]
 
   @@map("Machine")
 }
 
-// Runtime status mesin — terpisah dari master data Machine
-// agar Machine tetap bersih sebagai data referensi statis.
-model MachineStatus {
-  id         Int      @id @default(autoincrement())
-  machineId  Int      @unique
-  machine    Machine  @relation(fields: [machineId], references: [id], onDelete: Cascade)
-  status     String   @default("idle") // running | down | idle | maintenance
-  updatedAt  DateTime @updatedAt
-}
 
 // Hasil kalkulasi analitik per mesin per periode.
 // Diisi otomatis via endpoint POST /api/analytics/compute.

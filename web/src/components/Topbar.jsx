@@ -5,57 +5,17 @@ import { useApp } from '../AppContext.jsx';
 import { useAuth } from '../AuthContext.jsx';
 import { useTheme } from '../ThemeContext.jsx';
 
-// Inline SVG: gear + wrench + down-arrow maintenance icon
-// Uses currentColor so it adapts to dark/light theme automatically.
+// Logo PNG — dark theme: logo-light.png (white bg), light theme: logo-dark.png (black bg)
 function BrandIcon({ size = 26 }) {
+  const { theme } = useTheme();
   return (
-    <svg
-      width={size} height={size}
-      viewBox="0 0 200 200"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="10"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      style={{ flexShrink: 0 }}
-    >
-      {/* ── Gear (upper-left) ── */}
-      <circle cx="76" cy="70" r="34" />
-      <circle cx="76" cy="70" r="15" />
-      {/* 8 gear teeth — filled rectangles so they appear solid */}
-      {/* N */}
-      <rect x="69" y="27" width="14" height="12" rx="3" fill="currentColor" stroke="none" />
-      {/* S */}
-      <rect x="69" y="101" width="14" height="12" rx="3" fill="currentColor" stroke="none" />
-      {/* W */}
-      <rect x="27" y="63" width="12" height="14" rx="3" fill="currentColor" stroke="none" />
-      {/* E */}
-      <rect x="101" y="63" width="12" height="14" rx="3" fill="currentColor" stroke="none" />
-      {/* NW */}
-      <rect x="39" y="38" width="12" height="12" rx="3" fill="currentColor" stroke="none"
-        transform="rotate(-45 45 44)" />
-      {/* NE */}
-      <rect x="99" y="38" width="12" height="12" rx="3" fill="currentColor" stroke="none"
-        transform="rotate(45 105 44)" />
-      {/* SW */}
-      <rect x="39" y="90" width="12" height="12" rx="3" fill="currentColor" stroke="none"
-        transform="rotate(45 45 96)" />
-      {/* SE */}
-      <rect x="99" y="90" width="12" height="12" rx="3" fill="currentColor" stroke="none"
-        transform="rotate(-45 105 96)" />
-
-      {/* ── Wrench (diagonal lower-left → upper-right) ── */}
-      {/* Long handle shaft */}
-      <line x1="32" y1="178" x2="138" y2="52" strokeWidth="12" />
-      {/* Open-end head at upper-right */}
-      <path d="M126 40 Q156 24 168 44 Q176 62 160 76 L148 58" strokeWidth="9" />
-      {/* Ball end at lower-left */}
-      <circle cx="24" cy="186" r="11" strokeWidth="10" />
-
-      {/* ── Down arrow (right side) ── */}
-      <line x1="168" y1="90" x2="168" y2="160" strokeWidth="10" />
-      <polyline points="154,146 168,165 182,146" strokeWidth="10" />
-    </svg>
+    <img
+      src={theme === 'dark' ? '/logo-light.png' : '/logo-dark.png'}
+      alt="logo"
+      width={size}
+      height={size}
+      style={{ flexShrink: 0, objectFit: 'contain', borderRadius: 4 }}
+    />
   );
 }
 

@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
-import { CheckCircle2, AlertTriangle } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { CheckCircle2, AlertTriangle, Maximize2, Minimize2 } from 'lucide-react';
 
 const API = '/api';
 
@@ -53,19 +53,59 @@ function FL({ children, sub }) {
   );
 }
 
+/* ── Popup konfirmasi batal — di tengah layar ─────── */
+function CancelModal({ onConfirm, onDismiss }) {
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 999,
+      background: 'rgba(0,0,0,.55)', backdropFilter: 'blur(3px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}
+      onClick={onDismiss}
+    >
+      <div style={{
+        background: 'var(--bg)', border: '1px solid var(--border)',
+        borderRadius: 14, padding: '32px 28px', maxWidth: 360, width: '88%',
+        textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,.4)',
+      }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <AlertTriangle size={40} style={{ color: 'var(--red)', marginBottom: 14 }} />
+        <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 8, letterSpacing: '-.3px' }}>
+          Batalkan Input RMO?
+        </div>
+        <div style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.6, marginBottom: 24 }}>
+          Semua data yang sudah diisi akan dihapus dan tidak tersimpan.
+        </div>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button className="btn" style={{ flex: 1, padding: '11px', fontSize: 14 }} onClick={onDismiss}>
+            Tidak, Lanjutkan
+          </button>
+          <button className="btn"
+            style={{ flex: 1, padding: '11px', fontSize: 14, background: 'var(--red)', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontFamily: 'var(--font)', fontWeight: 600 }}
+            onClick={onConfirm}>
+            Ya, Batalkan
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── Halaman utama ──────────────────────────────────── */
 export default function RMOPublic() {
-  const [machines, setMachines] = useState([]);
-  const [date, setDate]         = useState(todayStr());
-  const [start, setStart]       = useState(nowTime());
-  const [machine, setMachine]   = useState('');
-  const [cause, setCause]       = useState('');
-  const [picGh, setPicGh]       = useState('');
-  const [busy, setBusy]         = useState(false);
-  const [errM, setErrM]         = useState('');
-  const [errC, setErrC]         = useState('');
-  const [done, setDone]         = useState(null);
+  const [machines, setMachines]     = useState([]);
+  const [date, setDate]             = useState(todayStr());
+  const [start, setStart]           = useState(nowTime());
+  const [machine, setMachine]       = useState('');
+  const [cause, setCause]           = useState('');
+  const [picGh, setPicGh]           = useState('');
+  const [busy, setBusy]             = useState(false);
+  const [errM, setErrM]             = useState('');
+  const [errC, setErrC]             = useState('');
+  const [done, setDone]             = useState(null);
   const [cancelWarn, setCancelWarn] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const timeRef    = useRef(null);
   const machineRef = useRef(null);
@@ -73,12 +113,28 @@ export default function RMOPublic() {
   const picGhRef   = useRef(null);
   const submitRef  = useRef(null);
 
-  /* Set tab title untuk halaman RMO */
+  /* Tab title */
   useEffect(() => {
     document.title = 'RMO';
     return () => { document.title = 'MTN-DPA Monitoring'; };
   }, []);
 
+  /* Fullscreen listener */
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
+
+  const toggleFullscreen = useCallback(() => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+  }, []);
+
+  /* Fetch machines */
   useEffect(() => {
     fetch(`${API}/machines-public`)
       .then((r) => r.json())
@@ -94,34 +150,20 @@ export default function RMOPublic() {
     return (e) => { if (e.key === 'Enter') { e.preventDefault(); ref.current?.focus(); } };
   }
   function handleMachineChange(e) {
-    const val = e.target.value;
-    setMachine(val);
-    setCancelWarn(false);
-    if (machines.some((m) => m.name === val.trim())) {
+    setMachine(e.target.value);
+    if (machines.some((m) => m.name === e.target.value.trim())) {
       setErrM('');
       setTimeout(() => causeRef.current?.focus(), 80);
     }
   }
   function handleCancel() {
-    if (hasInput) { setCancelWarn(true); }
-    else { reset(); }
+    if (hasInput) { setCancelWarn(true); } else { reset(); }
   }
-  function confirmCancel() { reset(); setCancelWarn(false); }
   function reset() {
     setDate(todayStr()); setStart(nowTime());
     setMachine(''); setCause(''); setPicGh('');
-    setErrM(''); setErrC(''); setDone(null);
-    setCancelWarn(false);
+    setErrM(''); setErrC(''); setDone(null); setCancelWarn(false);
   }
-
-  /* Auto-grow textarea */
-  function handleCauseChange(e) {
-    setCause(e.target.value);
-    setCancelWarn(false);
-    e.target.style.height = 'auto';
-    e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
-  }
-
   async function submit() {
     const m = machine.trim(), c = cause.trim();
     setErrM(m ? (validMachine ? '' : 'Mesin tidak ditemukan') : 'Wajib diisi');
@@ -137,13 +179,11 @@ export default function RMOPublic() {
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(data.error || 'Gagal mengirim');
       setDone({ machine: m, date, start, cause: c, picGh, cluster: machineObj?.cluster || '', line: machineObj?.line || '' });
-    } catch (e) {
-      alert(e.message);
-    }
+    } catch (e) { alert(e.message); }
     setBusy(false);
   }
 
-  /* Input styles */
+  /* Styles */
   const inp = {
     background: 'var(--input-bg)', border: '1px solid var(--input-border)',
     borderRadius: 8, padding: '10px 13px', color: 'var(--text)',
@@ -152,10 +192,9 @@ export default function RMOPublic() {
   };
   const inpRO  = { ...inp, opacity: .55, cursor: 'default' };
   const inpErr = { ...inp, borderColor: 'var(--red)' };
-  const taBase = {
-    ...inp, resize: 'vertical', minHeight: 44, maxHeight: 120,
-    lineHeight: 1.5, overflow: 'hidden',
-  };
+  /* Textarea Problem — 2 baris tetap, tidak fleksibel */
+  const ta = { ...inp, resize: 'none', lineHeight: 1.55 };
+  const taErr = { ...ta, borderColor: 'var(--red)' };
 
   return (
     <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--bg)', color: 'var(--text)', overflow: 'hidden' }}>
@@ -177,7 +216,7 @@ export default function RMOPublic() {
             {/* Tanggal */}
             <div>
               <FL>Tanggal *</FL>
-              <input type="date" style={inp} value={date}
+              <input type="date" lang="id" style={inp} value={date}
                 onChange={(e) => setDate(e.target.value)} onKeyDown={onEnter(timeRef)} />
             </div>
 
@@ -215,25 +254,24 @@ export default function RMOPublic() {
             {/* Cluster */}
             <div>
               <FL sub="— otomatis">Cluster</FL>
-              <input type="text" style={inpRO} value={machineObj?.cluster || ''} readOnly placeholder="Otomatis dari mesin" tabIndex={-1} />
+              <input type="text" style={inpRO} value={machineObj?.cluster || ''} readOnly tabIndex={-1} />
             </div>
 
             {/* Line */}
             <div>
               <FL sub="— otomatis">Line</FL>
-              <input type="text" style={inpRO} value={machineObj?.line || ''} readOnly placeholder="Otomatis dari mesin" tabIndex={-1} />
+              <input type="text" style={inpRO} value={machineObj?.line || ''} readOnly tabIndex={-1} />
             </div>
 
-            {/* Problem — textarea fleksibel, full width */}
+            {/* Problem — 2 baris tetap, full width */}
             <div style={{ gridColumn: '1 / -1' }}>
               <FL>Problem Identifikasi *</FL>
               <textarea
                 ref={causeRef}
-                style={!cause.trim() && errC ? { ...taBase, borderColor: 'var(--red)' } : taBase}
-                placeholder="contoh: Spindle tidak bisa berputar"
+                rows={2}
+                style={!cause.trim() && errC ? taErr : ta}
                 value={cause}
-                rows={1}
-                onChange={handleCauseChange}
+                onChange={(e) => setCause(e.target.value)}
               />
               {errC && <div style={{ color: 'var(--red)', fontSize: 11, marginTop: 4 }}>{errC}</div>}
             </div>
@@ -247,7 +285,7 @@ export default function RMOPublic() {
                 style={inp}
                 placeholder="Nama PIC GH"
                 value={picGh}
-                onChange={(e) => { setPicGh(e.target.value); setCancelWarn(false); }}
+                onChange={(e) => setPicGh(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submitRef.current?.click(); } }}
               />
             </div>
@@ -255,47 +293,33 @@ export default function RMOPublic() {
           </div>
 
           {/* ── Footer ──────────────────────────────────── */}
-          <div style={{ flexShrink: 0, paddingTop: 14, borderTop: '1px solid var(--border)', marginTop: 14 }}>
-
-            {/* Konfirmasi batal — muncul ketika tombol Batal diklik */}
-            {cancelWarn && (
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: 12,
-                background: 'rgba(239,68,68,.08)', border: '1px solid rgba(239,68,68,.3)',
-                borderRadius: 8, padding: '10px 14px', marginBottom: 12,
-              }}>
-                <AlertTriangle size={16} style={{ color: 'var(--red)', flexShrink: 0 }} />
-                <span style={{ flex: 1, fontSize: 13, color: 'var(--text)' }}>
-                  Batalkan semua input? Data yang diisi tidak akan tersimpan.
-                </span>
-                <button className="btn" style={{ fontSize: 12, padding: '5px 12px' }}
-                  onClick={() => setCancelWarn(false)}>
-                  Tidak
-                </button>
-                <button className="btn" style={{ fontSize: 12, padding: '5px 12px', background: 'var(--red)', color: '#fff', border: 'none' }}
-                  onClick={confirmCancel}>
-                  Ya, Batalkan
-                </button>
-              </div>
-            )}
-
-            <div style={{ display: 'flex', gap: 12 }}>
-              <button className="btn"
-                style={{ flex: '0 0 auto', padding: '13px 28px', fontSize: 15, borderRadius: 10 }}
-                onClick={handleCancel}>
-                Batal
-              </button>
-              <button ref={submitRef} className="btn primary"
-                style={{ flex: 1, padding: '13px', fontSize: 15, borderRadius: 10 }}
-                disabled={busy} onClick={submit}>
-                {busy ? 'Menyimpan…' : 'Simpan Work Order'}
-              </button>
-            </div>
-
+          <div style={{ flexShrink: 0, paddingTop: 14, borderTop: '1px solid var(--border)', marginTop: 14, display: 'flex', gap: 12 }}>
+            <button className="btn"
+              style={{ flex: '0 0 auto', padding: '13px 28px', fontSize: 15, borderRadius: 10 }}
+              onClick={handleCancel}>
+              Batal
+            </button>
+            <button ref={submitRef} className="btn primary"
+              style={{ flex: 1, padding: '13px', fontSize: 15, borderRadius: 10 }}
+              disabled={busy} onClick={submit}>
+              {busy ? 'Menyimpan…' : 'Simpan Work Order'}
+            </button>
           </div>
 
         </div>
       )}
+
+      {/* ── Tombol fullscreen — pojok kanan bawah ─────── */}
+      <button className="login-fs-btn" onClick={toggleFullscreen}
+        title={isFullscreen ? 'Keluar layar penuh' : 'Layar penuh'}>
+        {isFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+      </button>
+
+      {/* ── Popup konfirmasi batal — di tengah layar ─── */}
+      {cancelWarn && (
+        <CancelModal onConfirm={reset} onDismiss={() => setCancelWarn(false)} />
+      )}
+
     </div>
   );
 }

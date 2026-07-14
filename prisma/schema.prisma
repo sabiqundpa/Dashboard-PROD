@@ -68,25 +68,35 @@ model Analytic {
 }
 
 model Breakdown {
-  id          Int      @id @default(autoincrement())
-  machineId   Int
-  machine     Machine  @relation(fields: [machineId], references: [id], onDelete: Cascade)
-  cause       String   // Problem Identifikasi
-  category    String   @default("Mechanical") // Jenis Problem: Mechanical | Electrical | Hydraulic | Operator | Preventive
-  severity    String   @default("warning") // critical | warning | info
-  status      String   @default("open") // open | resolved
-  date        DateTime // Tanggal
-  startTime   String?  // Waktu Mulai
-  endDate     DateTime? // Tanggal Selesai
-  endTime     String?
-  durationHrs Float    @default(0)
-  repairDate  DateTime? @map("repair_date")  // Tanggal Mulai perbaikan
-  repairTime  String?   @map("repair_time")  // Waktu Mulai perbaikan
-  picGh       String?  // PIC GH (pelapor)
-  picMtn      String?  // PIC MTN (yang menutup work order)
-  resolution  String?  // Penyelesaian Problem
-  action      String?  // Action
-  technician  String?
-  notes       String?
-  createdAt   DateTime @default(now())
+  id          Int       @id @default(autoincrement())
+  machineId   Int       @map("machine_id")
+  machine     Machine   @relation(fields: [machineId], references: [id], onDelete: Cascade)
+
+  // ── Laporan ───────────────────────────────────────
+  cause       String    @map("problem")              // Identifikasi Problem
+  category    String    @default("Mechanical") @map("jenis_problem")
+  severity    String    @default("warning")           // critical | warning | info
+  status      String    @default("open")              // open | resolved
+  date        DateTime  @map("tanggal_lapor")         // Tanggal Lapor
+  startTime   String?   @map("waktu_lapor")           // Waktu Lapor
+
+  // ── Repair ────────────────────────────────────────
+  repairDate  DateTime? @map("tanggal_mulai")         // Tanggal Mulai perbaikan
+  repairTime  String?   @map("waktu_mulai")           // Waktu Mulai perbaikan
+  endDate     DateTime? @map("tanggal_selesai")       // Tanggal Selesai
+  endTime     String?   @map("waktu_selesai")         // Waktu Selesai
+
+  // ── Durasi ────────────────────────────────────────
+  durationHrs Float     @default(0) @map("downtime")  // Downtime (jam)
+
+  // ── Orang ─────────────────────────────────────────
+  picGh       String?   @map("grup_head")             // Grup Head Produksi
+  picMtn      String?   @map("pic_mtn")               // PIC MTN
+
+  // ── Tindakan ──────────────────────────────────────
+  resolution  String?   @map("penyelesaian")
+  action      String?   @map("tindakan")
+  notes       String?   @map("catatan")
+
+  createdAt   DateTime  @default(now()) @map("created_at")
 }

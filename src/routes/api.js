@@ -714,7 +714,7 @@ router.put('/breakdown/:id', async (req, res, next) => {
   try {
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) return res.status(400).json({ error: 'Invalid id' });
-    const { cause, resolution, action, category, pic_gh, pic_mtn, date, start_time, end_date, end_time, duration_hrs, repair_date, repair_time } = req.body;
+    const { cause, resolution, action, category, pic_gh, pic_mtn, date, start_time, end_date, end_time, duration_hrs, repair_date, repair_time, machine_name } = req.body;
     const data = {};
     if (cause        !== undefined) data.cause       = String(cause);
     if (resolution   !== undefined) data.resolution  = resolution ? String(resolution) : null;
@@ -729,6 +729,11 @@ router.put('/breakdown/:id', async (req, res, next) => {
     if (duration_hrs !== undefined) data.durationHrs = parseFloat(duration_hrs) || 0;
     if (repair_date  !== undefined) data.repairDate  = repair_date ? new Date(repair_date) : null;
     if (repair_time  !== undefined) data.repairTime  = repair_time || null;
+    if (machine_name !== undefined && String(machine_name).trim()) {
+      const machine = await prisma.machine.findUnique({ where: { name: String(machine_name).trim() } });
+      if (!machine) return res.status(404).json({ error: `Mesin "${machine_name}" tidak ditemukan di master data` });
+      data.machineId = machine.id;
+    }
     await prisma.breakdown.update({ where: { id }, data });
     res.json({ ok: true });
   } catch (err) { next(err); }

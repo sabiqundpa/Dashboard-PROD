@@ -26,7 +26,7 @@ import ModalRoot from './components/ModalRoot.jsx';
 const PAGES = { dashboard: Dashboard, machines: Machines, maintenance: Maintenance, reports: Reports, analytics: Analytics };
 
 function Shell() {
-  const { page, closeModal, setNotifOpen, closeDetail, closeWODetail, sidebarOpen, presentMode, togglePresentMode } = useUI();
+  const { page, closeModal, setNotifOpen, closeDetail, closeWODetail, sidebarOpen, presentMode, togglePresentMode, detailWO } = useUI();
   const { loadAll } = useApp();
   const PageComponent = PAGES[page] || Dashboard;
 
@@ -45,7 +45,7 @@ function Shell() {
 
   return (
     <>
-      <div className={`shell${sidebarOpen && !presentMode ? ' sidebar-open' : ''}${presentMode ? ' pres-mode' : ''}`}>
+      <div className={`shell${sidebarOpen && !presentMode ? ' sidebar-open' : ''}${presentMode ? ' pres-mode' : ''}${detailWO ? ' wo-open' : ''}`}>
         <Topbar />
         <AppSidebar />
         <main className="content">

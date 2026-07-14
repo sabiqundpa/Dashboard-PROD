@@ -39,7 +39,7 @@ function EditSection({ title }) {
 
 export default function WOPanel() {
   const { detailWO, closeWODetail, openModal } = useUI();
-  const { loadAll } = useApp();
+  const { loadAll, machines } = useApp();
   const showToast = useToast();
   const { logout } = useAuth();
 
@@ -59,6 +59,7 @@ export default function WOPanel() {
       date:         wo.date         || '',
       start_time:   wo.start        || '',
       // ── Data Perbaikan (MTN) ──────
+      machine_name: wo.machine      || '',
       repair_date:  wo.repair_date  || '',
       repair_time:  wo.repair_time  || '',
       end_date:     wo.end_date     || '',
@@ -149,6 +150,16 @@ export default function WOPanel() {
 
             {/* ── Data Perbaikan (MTN) ──────────────── */}
             <EditSection title="Data Perbaikan" />
+
+            <div className="form-group">
+              <label className="form-label">Nama Mesin</label>
+              <select className="form-input" value={form.machine_name} onChange={set('machine_name')}>
+                {form.machine_name && !machines.find((m) => m.name === form.machine_name) && (
+                  <option value={form.machine_name}>{form.machine_name} (tidak di master)</option>
+                )}
+                {machines.map((m) => <option key={m.name} value={m.name}>{m.name}</option>)}
+              </select>
+            </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <div className="form-group">

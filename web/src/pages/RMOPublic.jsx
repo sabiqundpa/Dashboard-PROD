@@ -251,18 +251,6 @@ export default function RMOPublic() {
               {errM && <div style={{ color: 'var(--red)', fontSize: 11, marginTop: 4 }}>{errM}</div>}
             </div>
 
-            {/* Cluster */}
-            <div>
-              <FL sub="— otomatis">Cluster</FL>
-              <input type="text" style={inpRO} value={machineObj?.cluster || ''} readOnly tabIndex={-1} />
-            </div>
-
-            {/* Line */}
-            <div>
-              <FL sub="— otomatis">Line</FL>
-              <input type="text" style={inpRO} value={machineObj?.line || ''} readOnly tabIndex={-1} />
-            </div>
-
             {/* Problem — 2 baris tetap, full width */}
             <div style={{ gridColumn: '1 / -1' }}>
               <FL>Problem Identifikasi *</FL>

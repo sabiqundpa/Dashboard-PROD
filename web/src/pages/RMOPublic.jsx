@@ -19,7 +19,7 @@ function MachineSelect({ machines, value, onChange, onPick, inputStyle, errStyle
   const filtered = machines
     .filter((m) => !value || m.name.toLowerCase().includes(value.toLowerCase()))
     .sort((a, b) => a.name.localeCompare(b.name))
-    .slice(0, 30);
+    ;
 
   useEffect(() => {
     function onDown(e) {
@@ -95,7 +95,7 @@ function SuccessView({ data, onReset }) {
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 24px', textAlign: 'center' }}>
       <CheckCircle2 size={64} style={{ color: 'var(--green)', marginBottom: 16 }} />
       <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-.4px', marginBottom: 10 }}>
-        Work Order Berhasil Dikirim!
+        RMO Berhasil Dikirim!
       </div>
       <div style={{ color: 'var(--muted)', fontSize: 15, lineHeight: 1.7, marginBottom: 24, maxWidth: 420 }}>
         Laporan kerusakan untuk <strong style={{ color: 'var(--text)' }}>{data.machine}</strong> telah diterima dan diteruskan ke tim Maintenance.
@@ -114,7 +114,7 @@ function SuccessView({ data, onReset }) {
           </div>
         ))}
       </div>
-      <button className="btn primary" style={{ width: '100%', maxWidth: 480, padding: '14px', fontSize: 16 }} onClick={onReset}>
+      <button className="btn primary" style={{ width: '100%', maxWidth: 480, padding: '14px', fontSize: 16, color: '#fff' }} onClick={onReset}>
         Buat Laporan Baru
       </button>
     </div>
@@ -344,9 +344,9 @@ export default function RMOPublic() {
               Batal
             </button>
             <button ref={submitRef} className="btn primary"
-              style={{ flex: 1, padding: '14px', fontSize: 16, borderRadius: 10 }}
+              style={{ flex: 1, padding: '14px', fontSize: 16, borderRadius: 10, color: '#fff' }}
               disabled={busy} onClick={submit}>
-              {busy ? 'Menyimpan…' : 'Simpan Work Order'}
+              {busy ? 'Menyimpan…' : 'Simpan RMO'}
             </button>
           </div>
 

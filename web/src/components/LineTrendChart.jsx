@@ -27,7 +27,7 @@ function calcMovingAvg(arr, w = 3) {
 
 function ChartCanvas({
   data, valueKey, targetKey, color, unit,
-  showMovingAvg, movingAvgColor, overTargetColor,
+  showMovingAvg, movingAvgColor, overTargetColor, targetColor,
 }) {
   const canvasRef = useRef(null);
   const tipRef    = useRef(null);
@@ -147,15 +147,21 @@ function ChartCanvas({
       }
     });
 
-    // Target line
+    // Target line — solid with dot markers so it's clearly visible
     if (targetKey && targets.some((t) => t > 0)) {
+      const tColor = targetColor || 'rgba(150,150,180,.7)';
       ctx.beginPath(); ctx.lineWidth = 1.5;
-      ctx.strokeStyle = 'rgba(150,150,180,.5)';
-      ctx.setLineDash([5, 4]); ctx.lineCap = 'round';
+      ctx.strokeStyle = tColor;
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.setLineDash([]);
       targets.forEach((t, i) => {
         if (i === 0) ctx.moveTo(cxOf(0), yOf(t)); else ctx.lineTo(cxOf(i), yOf(t));
       });
-      ctx.stroke(); ctx.setLineDash([]);
+      ctx.stroke();
+      targets.forEach((t, i) => {
+        ctx.beginPath(); ctx.arc(cxOf(i), yOf(t), 2.5, 0, Math.PI * 2);
+        ctx.fillStyle = tColor; ctx.fill();
+      });
     }
 
     // Moving average line
@@ -237,7 +243,7 @@ function ChartCanvas({
 export default function LineTrendChart({
   title, data, valueKey, targetKey, color, unit,
   showMovingAvg = false, movingAvgColor = '#f0a500',
-  overTargetColor = null,
+  overTargetColor = null, targetColor = 'rgba(150,150,180,.7)',
   legendItems = null,
 }) {
   const legend = legendItems || (() => {
@@ -257,7 +263,7 @@ export default function LineTrendChart({
         data={data} valueKey={valueKey} targetKey={targetKey}
         color={color} unit={unit}
         showMovingAvg={showMovingAvg} movingAvgColor={movingAvgColor}
-        overTargetColor={overTargetColor}
+        overTargetColor={overTargetColor} targetColor={targetColor}
       />
       <div className="chart-legend" style={{ marginTop: 8 }}>
         {legend.map((l, i) => (

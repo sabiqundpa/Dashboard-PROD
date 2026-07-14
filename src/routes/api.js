@@ -478,13 +478,20 @@ router.get('/mtbf-mttr-trend', async (req, res, next) => {
 
     if (period === 'month') {
       const year = now.getFullYear();
+      // Fetch configured working days; fall back to calendar days if not set.
+      const wcRows = await prisma.workingCalendar.findMany({ where: { year } });
+      const wcMap = {};
+      for (const r of wcRows) wcMap[r.month] = r.workingDays;
+
       const months = [];
       for (let m = 0; m < 12; m++) {
-        const daysInMonth = new Date(year, m + 1, 0).getDate();
+        const monthNum = m + 1;
+        const calDays = new Date(year, m + 1, 0).getDate();
+        const workingDays = wcMap[monthNum] ?? calDays; // use configured hari kerja, else calendar days
         months.push({
-          key: `${year}-${String(m + 1).padStart(2, '0')}`,
+          key: `${year}-${String(monthNum).padStart(2, '0')}`,
           day: new Date(year, m, 1).toLocaleDateString('en-US', { month: 'short' }),
-          downtimeHrs: 0, count: 0, plannedHrs: plannedPerDay * daysInMonth,
+          downtimeHrs: 0, count: 0, plannedHrs: plannedPerDay * workingDays,
         });
       }
 
@@ -1088,6 +1095,35 @@ router.get('/analytics', async (req, res, next) => {
         calculatedAt: r.calculatedAt.toISOString().slice(0, 16).replace('T', ' '),
       })),
     });
+  } catch (err) { next(err); }
+});
+
+// ── GET /api/working-calendar?year=YYYY ───────────────
+// Hari kerja per bulan yang dikonfigurasi via menu Analitik.
+router.get('/working-calendar', requireAuth, async (req, res, next) => {
+  try {
+    const year = parseInt(req.query.year) || new Date().getFullYear();
+    const records = await prisma.workingCalendar.findMany({ where: { year }, orderBy: { month: 'asc' } });
+    res.json({ year, records });
+  } catch (err) { next(err); }
+});
+
+// ── PUT /api/working-calendar ──────────────────────────
+// Upsert hari kerja untuk bulan tertentu: { year, month, workingDays }
+router.put('/working-calendar', requireAuth, async (req, res, next) => {
+  try {
+    const year = parseInt(req.body.year);
+    const month = parseInt(req.body.month);
+    const workingDays = parseInt(req.body.workingDays);
+    if (!year || !month || isNaN(workingDays) || workingDays < 1) {
+      return res.status(400).json({ error: 'year, month, workingDays (≥1) wajib diisi' });
+    }
+    const record = await prisma.workingCalendar.upsert({
+      where: { year_month: { year, month } },
+      update: { workingDays },
+      create: { year, month, workingDays },
+    });
+    res.json({ ok: true, record });
   } catch (err) { next(err); }
 });
 

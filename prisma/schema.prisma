@@ -57,6 +57,18 @@ model Analytic {
   calculatedAt    DateTime @default(now())
 }
 
+// Hari kerja per bulan untuk kalkulasi MTBF/MTTR yang akurat.
+// Diisi via menu Analitik → Kalender Kerja.
+model WorkingCalendar {
+  id          Int @id @default(autoincrement())
+  year        Int
+  month       Int // 1-12
+  workingDays Int @default(22)
+
+  @@unique([year, month])
+  @@map("WorkingCalendar")
+}
+
 model Breakdown {
   id          Int       @id @default(autoincrement())
   machineId   Int       @map("machine_id")

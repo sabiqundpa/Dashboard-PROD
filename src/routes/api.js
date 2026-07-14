@@ -393,6 +393,28 @@ router.get('/downtime-by-day', async (req, res, next) => {
       return res.json(days.map(({ day, hrs }) => ({ day, hrs })));
     }
 
+    // all: group every breakdown by year-month across all time
+    if (period === 'all') {
+      const allBD = await prisma.breakdown.findMany({
+        where: machineWhere(req),
+        orderBy: { date: 'asc' },
+      });
+      if (!allBD.length) return res.json([]);
+      const map = {};
+      for (const b of allBD) {
+        const y = b.date.getUTCFullYear();
+        const m = b.date.getUTCMonth() + 1;
+        const key = `${y}-${String(m).padStart(2, '0')}`;
+        if (!map[key]) {
+          const lbl = new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'short' });
+          map[key] = { day: `${lbl}'${String(y).slice(2)}`, hrs: 0 };
+        }
+        map[key].hrs += b.durationHrs;
+      }
+      const sorted = Object.keys(map).sort();
+      return res.json(sorted.map((k) => ({ day: map[k].day, hrs: map[k].hrs })));
+    }
+
     // week: Monday through Sunday of the current calendar week
     const dayOfWeek = now.getDay(); // 0 = Sunday .. 6 = Saturday
     const mondayOffset = (dayOfWeek + 6) % 7;
@@ -556,6 +578,48 @@ router.get('/mtbf-mttr-trend', async (req, res, next) => {
       const rTotalP  = rDays.reduce((s, d) => s + d.plannedHrs, 0);
       rRows.push(totalRow(rTotalDT, rTotalC, rTotalP, rDays.map((d) => d.plannedHrs)));
       return res.json(rRows);
+    }
+
+    // all: group every breakdown by year-month across all time
+    if (period === 'all') {
+      const allBD = await prisma.breakdown.findMany({
+        where: machineWhere(req),
+        orderBy: { date: 'asc' },
+      });
+      if (!allBD.length) return res.json([]);
+
+      const map = {};
+      for (const b of allBD) {
+        const y = b.date.getUTCFullYear();
+        const m = b.date.getUTCMonth() + 1;
+        const key = `${y}-${String(m).padStart(2, '0')}`;
+        if (!map[key]) map[key] = { year: y, month: m, downtimeHrs: 0, count: 0 };
+        map[key].downtimeHrs += b.durationHrs;
+        map[key].count += 1;
+      }
+
+      const years = [...new Set(Object.values(map).map((v) => v.year))];
+      const wcRows = await prisma.workingCalendar.findMany({ where: { year: { in: years } } });
+      const wcMap = {};
+      for (const r of wcRows) wcMap[`${r.year}-${r.month}`] = r.workingDays;
+
+      const sorted = Object.keys(map).sort();
+      const planFor = (year, month) => {
+        const calDays = new Date(year, month, 0).getDate();
+        return plannedPerDay * (wcMap[`${year}-${month}`] ?? calDays);
+      };
+
+      const rows = sorted.map((key) => {
+        const { year, month, downtimeHrs, count } = map[key];
+        const lbl = new Date(year, month - 1, 1).toLocaleDateString('en-US', { month: 'short' });
+        return { day: `${lbl}'${String(year).slice(2)}`, ...bucket(downtimeHrs, count, planFor(year, month)) };
+      });
+
+      const totalDT = Object.values(map).reduce((s, v) => s + v.downtimeHrs, 0);
+      const totalC  = Object.values(map).reduce((s, v) => s + v.count, 0);
+      const totalP  = sorted.reduce((s, key) => s + planFor(map[key].year, map[key].month), 0);
+      rows.push(totalRow(totalDT, totalC, totalP, sorted.map((key) => planFor(map[key].year, map[key].month))));
+      return res.json(rows);
     }
 
     // week: Monday through Sunday of the current calendar week

@@ -218,7 +218,7 @@ function ChartCanvas({ days }) {
         </div>
         <div className="legend-item">
           <span style={{ display: 'inline-block', width: 18, height: 2, background: '#f0a500', borderRadius: 1, verticalAlign: 'middle', marginRight: 4 }}></span>
-          Rata-rata bergerak
+          Average
         </div>
         {hasNoData && (
           <div className="legend-item">

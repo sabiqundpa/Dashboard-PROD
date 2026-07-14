@@ -11,7 +11,7 @@ export default function MtbfMttrChart({ data, lineLabel, year }) {
         showMovingAvg={true} movingAvgColor="#f0a500"
         legendItems={[
           { type: 'dot', color: '#a855f7', label: 'MTBF (jam)' },
-          { type: 'line', color: '#f0a500', label: 'Rata-rata bergerak' },
+          { type: 'line', color: '#f0a500', label: 'Average' },
         ]}
       />
       <LineTrendChart
@@ -20,7 +20,7 @@ export default function MtbfMttrChart({ data, lineLabel, year }) {
         color="#f0b429" overTargetColor="#ff4455" unit="jam"
         legendItems={[
           { type: 'dot', color: '#f0b429', label: 'MTTR (jam)' },
-          { type: 'dash', color: 'rgba(150,150,180,.7)', label: 'Target ≤4 jam' },
+          { type: 'dash', color: 'rgba(150,150,180,.7)', label: 'Target ≤1 jam' },
         ]}
       />
     </>

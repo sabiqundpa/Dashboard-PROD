@@ -6,7 +6,7 @@ const ROTATE_ANGLE = -(40 * Math.PI) / 180;
 
 function formatAxisLabel(label) {
   const s = String(label ?? '').trim();
-  if (s === 'TOTAL') return s;
+  if (s === 'TOTAL' || s === 'Avg') return s;
   const h = parseInt(s, 10);
   if (!isNaN(h) && h >= 0 && h <= 23 && /^\d{1,2}$/.test(s)) {
     if (h === 0)  return '12AM';
@@ -38,7 +38,7 @@ function ChartCanvas({
   const [panStart, setPanStart] = useState(0);
   const [tick, setTick]         = useState(0);
 
-  const hasTotal  = data?.[data.length - 1]?.day === 'TOTAL';
+  const hasTotal  = data?.[data.length - 1]?.day === 'TOTAL' || data?.[data.length - 1]?.day === 'Avg';
   const mainData  = hasTotal ? data.slice(0, -1) : (data || []);
   const totalRow  = hasTotal ? data[data.length - 1] : null;
 
@@ -105,7 +105,7 @@ function ChartCanvas({
     const xOf     = (i) => pad.l + i * slotW + (slotW - barW) / 2;
     const cxOf    = (i) => pad.l + i * slotW + slotW / 2;
     const yOf     = (v) => pad.t + (1 - v / maxV) * iH;
-    const isTotal = visibleData[m - 1]?.day === 'TOTAL';
+    const isTotal = visibleData[m - 1]?.day === 'TOTAL' || visibleData[m - 1]?.day === 'Avg';
 
     ctx.clearRect(0, 0, W, H);
 
@@ -186,7 +186,7 @@ function ChartCanvas({
     ctx.textBaseline = 'top';
     visibleData.forEach((d, i) => {
       if (i % step !== 0 && i !== m - 1) return;
-      const isT  = d.day === 'TOTAL';
+      const isT  = d.day === 'TOTAL' || d.day === 'Avg';
       const label = formatAxisLabel(d.day);
       ctx.fillStyle = isT ? accent2 : muted;
       ctx.font      = isT

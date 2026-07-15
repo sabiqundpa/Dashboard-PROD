@@ -493,7 +493,7 @@ router.get('/mtbf-mttr-trend', async (req, res, next) => {
       const mttr = totalCount > 0 ? totalDowntimeHrs / totalCount : 0;
       const avgTarget = bucketTargets.reduce((s, t) => s + t, 0) / (bucketTargets.length || 1);
       return {
-        day: 'TOTAL',
+        day: 'Avg',
         mtbf: Number(mtbf.toFixed(1)),
         mttr: Number(mttr.toFixed(1)),
         mtbfTarget: Number(avgTarget.toFixed(1)),

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { AlertCircle, CheckCircle2, CalendarCheck, RefreshCw, Maximize2, Minimize2, ChevronDown, RotateCcw } from 'lucide-react';
 import { useApp } from '../AppContext.jsx';
 import { useUI } from '../UIContext.jsx';
@@ -91,8 +91,11 @@ export default function Dashboard() {
   const [period, setPeriod]               = useState('month');
   const [refDate, setRefDate]             = useState(todayStr());
   const [selectedMachine, setSelectedMachine] = useState('');
+  const [selectedLine, setSelectedLine]       = useState('');
+  const [mtbfLine, setMtbfLine]               = useState('');
   const [dashLastUpdate, setDashLastUpdate]   = useState('—');
-  const reqIdRef = useRef(0);
+  const reqIdRef    = useRef(0);
+  const mtbfReqRef  = useRef(0);
 
   // Dashboard-local data state
   const [kpi, setKpi]                     = useState(EMPTY_KPI);
@@ -107,21 +110,23 @@ export default function Dashboard() {
     const myId = ++reqIdRef.current;
     setIsLoading(true);
     setDashLastUpdate('Updating…');
-    const qs = period === 'all'
-      ? 'period=all'
-      : `period=${period}&date=${refDate}`;
-    const machineQs = selectedMachine ? `${qs}&machine=${encodeURIComponent(selectedMachine)}` : qs;
+    const qs = period === 'all' ? 'period=all' : `period=${period}&date=${refDate}`;
+    const filterQs = selectedMachine
+      ? `${qs}&machine=${encodeURIComponent(selectedMachine)}`
+      : selectedLine
+      ? `${qs}&line=${encodeURIComponent(selectedLine)}`
+      : qs;
+    const machinesQs = selectedLine ? `${qs}&line=${encodeURIComponent(selectedLine)}` : qs;
     Promise.all([
-      apiFetch(`/kpi?${machineQs}`, EMPTY_KPI, logout),
-      apiFetch(`/machines?${qs}`, [], logout),
-      apiFetch(`/breakdowns?${machineQs}`, [], logout),
-      apiFetch(`/pareto?${machineQs}`, [], logout),
-      apiFetch(`/pareto-machines?${machineQs}`, [], logout),
-      apiFetch(`/downtime-by-day?${machineQs}`, [], logout),
-      apiFetch(`/mtbf-mttr-trend?${machineQs}`, [], logout),
-    ]).then(([k, m, b, pr, pm, dt, mt]) => {
+      apiFetch(`/kpi?${filterQs}`, EMPTY_KPI, logout),
+      apiFetch(`/machines?${machinesQs}`, [], logout),
+      apiFetch(`/breakdowns?${filterQs}`, [], logout),
+      apiFetch(`/pareto?${filterQs}`, [], logout),
+      apiFetch(`/pareto-machines?${filterQs}`, [], logout),
+      apiFetch(`/downtime-by-day?${filterQs}`, [], logout),
+    ]).then(([k, m, b, pr, pm, dt]) => {
       if (myId !== reqIdRef.current) return;
-      setKpi(k); setMachines(m); setBreakdowns(b); setPareto(pr); setParetoMachines(pm); setDowntime(dt); setMtbfMttrTrend(mt);
+      setKpi(k); setMachines(m); setBreakdowns(b); setPareto(pr); setParetoMachines(pm); setDowntime(dt);
       setDashLastUpdate('Updated ' + new Date().toLocaleTimeString());
       setIsLoading(false);
     }).catch(() => {
@@ -129,19 +134,43 @@ export default function Dashboard() {
       setDashLastUpdate('—');
       setIsLoading(false);
     });
-  }, [period, refDate, selectedMachine, logout, setIsLoading]);
+  }, [period, refDate, selectedMachine, selectedLine, logout, setIsLoading]);
+
+  const loadMtbfMttr = useCallback(() => {
+    const myId = ++mtbfReqRef.current;
+    const qs = period === 'all' ? 'period=all' : `period=${period}&date=${refDate}`;
+    const mtbfQs = mtbfLine
+      ? `${qs}&line=${encodeURIComponent(mtbfLine)}`
+      : selectedMachine
+      ? `${qs}&machine=${encodeURIComponent(selectedMachine)}`
+      : selectedLine
+      ? `${qs}&line=${encodeURIComponent(selectedLine)}`
+      : qs;
+    apiFetch(`/mtbf-mttr-trend?${mtbfQs}`, [], logout).then((data) => {
+      if (myId !== mtbfReqRef.current) return;
+      setMtbfMttrTrend(data);
+    }).catch(() => {});
+  }, [period, refDate, mtbfLine, selectedMachine, selectedLine, logout]);
 
   useEffect(() => { loadDashboard(); }, [loadDashboard]);
+  useEffect(() => { loadMtbfMttr(); }, [loadMtbfMttr]);
 
   function resetFilters() {
     setPeriod('month');
     setRefDate(todayStr());
     setSelectedMachine('');
+    setSelectedLine('');
+    setMtbfLine('');
   }
+
+  const lines = useMemo(
+    () => [...new Set(machines.map((m) => m.line).filter(Boolean))].sort(),
+    [machines],
+  );
 
   const selectedMachineObj = machines.find((m) => m.name === selectedMachine);
   const year = refDate ? new Date(refDate).getFullYear() : new Date().getFullYear();
-  const hasFilter = !!selectedMachine || period !== 'month';
+  const hasFilter = !!selectedMachine || !!selectedLine || !!mtbfLine || period !== 'month';
 
   return (
     <div className="page-view active">
@@ -160,13 +189,28 @@ export default function Dashboard() {
             <select
               className={`gc-pill-select${selectedMachine ? ' selected' : ''}`}
               value={selectedMachine}
-              onChange={(e) => setSelectedMachine(e.target.value)}
+              onChange={(e) => { setSelectedMachine(e.target.value); setSelectedLine(''); }}
             >
               <option value="">Semua Mesin</option>
               {machines.map((m) => <option key={m.name} value={m.name}>{m.name}</option>)}
             </select>
             <ChevronDown size={11} className="gc-caret" />
           </div>
+
+          {/* Line filter pill — only visible when no specific machine is selected */}
+          {!selectedMachine && lines.length > 0 && (
+            <div className="gc-pill-wrap">
+              <select
+                className={`gc-pill-select${selectedLine ? ' selected' : ''}`}
+                value={selectedLine}
+                onChange={(e) => { setSelectedLine(e.target.value); setSelectedMachine(''); }}
+              >
+                <option value="">Semua Line</option>
+                {lines.map((l) => <option key={l} value={l}>{l}</option>)}
+              </select>
+              <ChevronDown size={11} className="gc-caret" />
+            </div>
+          )}
 
           <PeriodPicker
             pill
@@ -201,7 +245,14 @@ export default function Dashboard() {
           <KpiRow kpi={kpi} downtime={downtime} mtbfMttrTrend={mtbfMttrTrend} period={period} refDate={refDate} />
           <DowntimeTrend days={downtime} year={year} />
           <div className="row2-equal">
-            <MtbfMttrChart data={mtbfMttrTrend} lineLabel={selectedMachineObj?.line} year={year} />
+            <MtbfMttrChart
+            data={mtbfMttrTrend}
+            lineLabel={mtbfLine || selectedMachineObj?.line}
+            year={year}
+            lines={lines}
+            mtbfLine={mtbfLine}
+            setMtbfLine={setMtbfLine}
+          />
           </div>
         </div>
 

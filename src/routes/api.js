@@ -12,7 +12,9 @@ const router = express.Router();
 // Optional ?machine=<name> filter, used across breakdown queries to scope
 // the whole dashboard to a single machine.
 function machineWhere(req) {
-  return req.query.machine ? { machine: { name: req.query.machine } } : {};
+  if (req.query.machine) return { machine: { name: req.query.machine } };
+  if (req.query.line) return { machine: { line: req.query.line } };
+  return {};
 }
 
 // ── GET /api/health ──────────────────────────────────
@@ -97,7 +99,9 @@ router.get('/machines', async (req, res, next) => {
   try {
     const { start, end } = getPeriodRange(req.query.period, req.query.date, req.query.start, req.query.end);
     const days = daysInRange(start, end);
+    const lineFilter = req.query.line ? { line: req.query.line } : {};
     const machines = await prisma.machine.findMany({
+      where: lineFilter,
       orderBy: { name: 'asc' },
       include: {
         breakdowns: {
@@ -147,14 +151,13 @@ router.get('/kpi', async (req, res, next) => {
     // When a specific machine is requested by name, honour that regardless of active flag.
     const machineFilter = req.query.machine
       ? { name: req.query.machine }
+      : req.query.line
+      ? { line: req.query.line, active: true }
       : { active: true };
 
     const machines = await prisma.machine.findMany({ where: machineFilter });
     const breakdowns = await prisma.breakdown.findMany({
-      where: {
-        date: { gte: start, lte: end },
-        ...(req.query.machine ? { machine: { name: req.query.machine } } : {}),
-      },
+      where: { date: { gte: start, lte: end }, ...machineWhere(req) },
     });
 
     const downtimeHrs = breakdowns.reduce((s, b) => s + b.durationHrs, 0);
@@ -255,10 +258,7 @@ router.get('/pareto', async (req, res, next) => {
   try {
     const { start, end } = getPeriodRange(req.query.period, req.query.date, req.query.start, req.query.end);
     const breakdowns = await prisma.breakdown.findMany({
-      where: {
-        date: { gte: start, lte: end },
-        ...(req.query.machine ? { machine: { name: req.query.machine } } : {}),
-      },
+      where: { date: { gte: start, lte: end }, ...machineWhere(req) },
     });
 
     const counts = {};
@@ -286,10 +286,7 @@ router.get('/pareto-machines', async (req, res, next) => {
   try {
     const { start, end } = getPeriodRange(req.query.period, req.query.date, req.query.start, req.query.end);
     const breakdowns = await prisma.breakdown.findMany({
-      where: {
-        date: { gte: start, lte: end },
-        ...(req.query.machine ? { machine: { name: req.query.machine } } : {}),
-      },
+      where: { date: { gte: start, lte: end }, ...machineWhere(req) },
       include: { machine: true },
     });
 
@@ -462,7 +459,13 @@ router.get('/mtbf-mttr-trend', async (req, res, next) => {
     const now = req.query.date ? new Date(req.query.date) : new Date();
     const MTTR_TARGET_HOURS = 1; // fixed org-wide target: repair within 1 jam
 
-    const machines = await prisma.machine.findMany({ where: req.query.machine ? { name: req.query.machine } : { active: true } });
+    const machines = await prisma.machine.findMany({
+      where: req.query.machine
+        ? { name: req.query.machine }
+        : req.query.line
+        ? { line: req.query.line }
+        : { active: true },
+    });
     const plannedPerDay = machines.reduce((s, m) => s + m.plannedHours, 0);
     const mttrTarget = MTTR_TARGET_HOURS;
 

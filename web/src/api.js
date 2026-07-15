@@ -28,7 +28,7 @@ export function clearAuth() {
 // Calls onUnauthorized() instead of throwing when the token is invalid/expired.
 export async function apiFetch(path, fallback, onUnauthorized) {
   try {
-    const r = await fetch(API + path, { signal: AbortSignal.timeout(5000), headers: authHeader() });
+    const r = await fetch(API + path, { signal: AbortSignal.timeout(9000), headers: authHeader() });
     if (r.status === 401) { onUnauthorized?.(); return fallback; }
     if (!r.ok) throw new Error('Request failed');
     return await r.json();
@@ -41,6 +41,7 @@ export async function apiFetch(path, fallback, onUnauthorized) {
 export async function apiSend(path, method, body, onUnauthorized) {
   const r = await fetch(API + path, {
     method,
+    signal: AbortSignal.timeout(15000),
     headers: { 'Content-Type': 'application/json', ...authHeader() },
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });

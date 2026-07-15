@@ -5,34 +5,18 @@ export default function MtbfMttrChart({ data, lineLabel, year, lines = [], mtbfL
   return (
     <>
       {lines.length > 0 && setMtbfLine && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 11, color: 'var(--muted)', flexShrink: 0 }}>Filter Line MTBF/MTTR:</span>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-            <button
-              onClick={() => setMtbfLine('')}
-              style={{
-                fontSize: 10.5, padding: '3px 10px', borderRadius: 20, cursor: 'pointer',
-                border: `1px solid ${!mtbfLine ? 'var(--accent)' : 'var(--border)'}`,
-                background: !mtbfLine ? 'var(--accent)' : 'var(--s2)',
-                color: !mtbfLine ? '#fff' : 'var(--muted)',
-              }}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+          <span style={{ fontSize: 11, color: 'var(--muted)', flexShrink: 0 }}>Line:</span>
+          <div className="gc-pill-wrap">
+            <select
+              className={`gc-pill-select${mtbfLine ? ' selected' : ''}`}
+              value={mtbfLine}
+              onChange={(e) => setMtbfLine(e.target.value)}
             >
-              Semua
-            </button>
-            {lines.map((l) => (
-              <button
-                key={l}
-                onClick={() => setMtbfLine(mtbfLine === l ? '' : l)}
-                style={{
-                  fontSize: 10.5, padding: '3px 10px', borderRadius: 20, cursor: 'pointer',
-                  border: `1px solid ${mtbfLine === l ? 'var(--accent)' : 'var(--border)'}`,
-                  background: mtbfLine === l ? 'var(--accent)' : 'var(--s2)',
-                  color: mtbfLine === l ? '#fff' : 'var(--text)',
-                }}
-              >
-                {l}
-              </button>
-            ))}
+              <option value="">Semua Line</option>
+              {lines.map((l) => <option key={l} value={l}>{l}</option>)}
+            </select>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="gc-caret" style={{ pointerEvents: 'none' }}><polyline points="6 9 12 15 18 9"/></svg>
           </div>
         </div>
       )}

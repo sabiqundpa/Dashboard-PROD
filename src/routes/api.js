@@ -805,8 +805,10 @@ router.put('/breakdown/:id', async (req, res, next) => {
     if (repair_time  !== undefined) data.repairTime  = repair_time || null;
     if (machine_name !== undefined && String(machine_name).trim()) {
       const machine = await prisma.machine.findUnique({ where: { name: String(machine_name).trim() } });
-      if (!machine) return res.status(404).json({ error: `Mesin "${machine_name}" tidak ditemukan di master data` });
-      data.machineId = machine.id;
+      if (machine) {
+        data.machineId = machine.id;
+      }
+      // if not found in master data, leave machineId unchanged so the save still succeeds
     }
     await prisma.breakdown.update({ where: { id }, data });
     res.json({ ok: true });

@@ -3,9 +3,9 @@ import LineTrendChart from './LineTrendChart.jsx';
 export default function MtbfMttrChart({ data, lineLabel, year, lines = [], mtbfLine = '', setMtbfLine }) {
   const scope = lineLabel ? ` — LINE ${lineLabel.toUpperCase()}` : '';
   return (
-    <>
+    <div>
       {lines.length > 0 && setMtbfLine && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
           <span style={{ fontSize: 11, color: 'var(--muted)', flexShrink: 0 }}>Line:</span>
           <div className="gc-pill-wrap">
             <select
@@ -20,26 +20,28 @@ export default function MtbfMttrChart({ data, lineLabel, year, lines = [], mtbfL
           </div>
         </div>
       )}
-      <LineTrendChart
-        title={`MTBF${scope}`}
-        data={data} valueKey="mtbf" targetKey="mtbfTarget"
-        color="#a855f7" unit="jam"
-        targetColor="#f0b429"
-        legendItems={[
-          { type: 'dot', color: '#a855f7', label: 'MTBF (jam)' },
-          { type: 'line', color: '#f0b429', label: 'Target MTBF' },
-        ]}
-      />
-      <LineTrendChart
-        title={`MTTR${scope}`}
-        data={data} valueKey="mttr" targetKey="mttrTarget"
-        color="#f0b429" overTargetColor="#ff4455" unit="jam"
-        targetColor="#f0b429"
-        legendItems={[
-          { type: 'dot', color: '#f0b429', label: 'MTTR (jam)' },
-          { type: 'line', color: '#f0b429', label: 'Target ≤1 jam' },
-        ]}
-      />
-    </>
+      <div className="row2-equal">
+        <LineTrendChart
+          title={`MTBF${scope}`}
+          data={data} valueKey="mtbf" targetKey="mtbfTarget"
+          color="#a855f7" unit="jam"
+          targetColor="#f0b429"
+          legendItems={[
+            { type: 'dot', color: '#a855f7', label: 'MTBF (jam)' },
+            { type: 'line', color: '#f0b429', label: 'Target MTBF' },
+          ]}
+        />
+        <LineTrendChart
+          title={`MTTR${scope}`}
+          data={data} valueKey="mttr" targetKey="mttrTarget"
+          color="#f0b429" overTargetColor="#ff4455" unit="jam"
+          targetColor="#f0b429"
+          legendItems={[
+            { type: 'dot', color: '#f0b429', label: 'MTTR (jam)' },
+            { type: 'line', color: '#f0b429', label: 'Target ≤1 jam' },
+          ]}
+        />
+      </div>
+    </div>
   );
 }

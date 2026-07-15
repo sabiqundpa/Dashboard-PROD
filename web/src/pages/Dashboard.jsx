@@ -244,8 +244,7 @@ export default function Dashboard() {
         <div className="dash-main">
           <KpiRow kpi={kpi} downtime={downtime} mtbfMttrTrend={mtbfMttrTrend} period={period} refDate={refDate} />
           <DowntimeTrend days={downtime} year={year} />
-          <div className="row2-equal">
-            <MtbfMttrChart
+          <MtbfMttrChart
             data={mtbfMttrTrend}
             lineLabel={mtbfLine || selectedMachineObj?.line}
             year={year}
@@ -253,7 +252,6 @@ export default function Dashboard() {
             mtbfLine={mtbfLine}
             setMtbfLine={setMtbfLine}
           />
-          </div>
         </div>
 
         {/* Right: sidebar */}

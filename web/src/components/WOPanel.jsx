@@ -79,7 +79,10 @@ export default function WOPanel() {
     if (!form.cause?.trim()) { showToast('Identifikasi problem wajib diisi', 'red'); return; }
     setSaving(true);
     try {
-      await apiSend(`/breakdown/${wo.id}`, 'PUT', form, logout);
+      const payload = { ...form };
+      // only send machine_name when user explicitly changed it so we skip the master lookup for unedited WOs
+      if (payload.machine_name === (wo.machine || '')) delete payload.machine_name;
+      await apiSend(`/breakdown/${wo.id}`, 'PUT', payload, logout);
       showToast('RMO diperbarui', 'green');
       cancelEdit();
       await loadAll();

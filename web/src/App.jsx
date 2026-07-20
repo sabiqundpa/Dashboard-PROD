@@ -13,6 +13,7 @@ import Machines from './pages/Machines.jsx';
 import Maintenance from './pages/Maintenance.jsx';
 import Reports from './pages/Reports.jsx';
 import Analytics from './pages/Analytics.jsx';
+import Settings from './pages/Settings.jsx';
 import Topbar from './components/Topbar.jsx';
 import AppSidebar from './components/AppSidebar.jsx';
 import MobileDrawer from './components/MobileDrawer.jsx';
@@ -23,7 +24,7 @@ import DetailPanel from './components/DetailPanel.jsx';
 import WOPanel from './components/WOPanel.jsx';
 import ModalRoot from './components/ModalRoot.jsx';
 
-const PAGES = { dashboard: Dashboard, machines: Machines, maintenance: Maintenance, reports: Reports, analytics: Analytics };
+const PAGES = { dashboard: Dashboard, machines: Machines, maintenance: Maintenance, reports: Reports, analytics: Analytics, settings: Settings };
 
 function Shell() {
   const { page, closeModal, setNotifOpen, closeDetail, closeWODetail, sidebarOpen, presentMode, togglePresentMode, detailWO } = useUI();

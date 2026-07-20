@@ -42,4 +42,31 @@ function daysInRange(start, end) {
   return Math.max(1, ms / (1000 * 60 * 60 * 24));
 }
 
-module.exports = { getPeriodRange, daysInRange };
+// Calculates total planned hours for a date range using WorkingCalendar data.
+// wcRows: array of { year, month, workingDays } from the DB.
+// If no WC row exists for a month, falls back to calendar days for that month.
+// plannedHrsPerDay: sum of machine.plannedHours in scope.
+function calcPlannedHours(start, end, plannedHrsPerDay, wcRows = []) {
+  if (!plannedHrsPerDay) return 0;
+  const wcMap = {};
+  for (const r of wcRows) wcMap[`${r.year}-${r.month}`] = r.workingDays;
+
+  let total = 0;
+  let y = start.getFullYear(), m = start.getMonth() + 1;
+  const ey = end.getFullYear(), em = end.getMonth() + 1;
+
+  while (y < ey || (y === ey && m <= em)) {
+    const calDays = new Date(y, m, 0).getDate();
+    const workDays = wcMap[`${y}-${m}`] ?? calDays;
+    const mStart = new Date(y, m - 1, 1);
+    const mEnd   = new Date(y, m, 0, 23, 59, 59, 999);
+    const covStart = start > mStart ? start : mStart;
+    const covEnd   = end   < mEnd   ? end   : mEnd;
+    const covDays  = Math.max(0, Math.round((covEnd - covStart) / 86400000) + 1);
+    total += plannedHrsPerDay * workDays * (covDays / calDays);
+    m++; if (m > 12) { m = 1; y++; }
+  }
+  return total;
+}
+
+module.exports = { getPeriodRange, daysInRange, calcPlannedHours };

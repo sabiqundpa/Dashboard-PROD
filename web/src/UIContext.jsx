@@ -14,9 +14,17 @@ export function UIProvider({ children }) {
   const [detailMachine, setDetailMachine] = useState(null);
   const [detailList, setDetailList] = useState([]);
   const [detailWO, setDetailWO] = useState(null);
+  const [maintFilter, setMaintFilter] = useState('');
 
   const navigate = useCallback((p) => {
     setPage(p);
+    setDetailMachine(null);
+    setDrawerOpen(false);
+  }, []);
+
+  const navigateToMaintenance = useCallback((machineName = '') => {
+    setMaintFilter(machineName);
+    setPage('maintenance');
     setDetailMachine(null);
     setDrawerOpen(false);
   }, []);
@@ -61,6 +69,7 @@ export function UIProvider({ children }) {
       activeModal, modalPayload, openModal, closeModal,
       detailMachine, detailList, showDetail, closeDetail,
       detailWO, showWODetail, closeWODetail,
+      maintFilter, setMaintFilter, navigateToMaintenance,
     }}>
       {children}
     </UIContext.Provider>

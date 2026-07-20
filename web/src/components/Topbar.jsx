@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Menu, Sun, Moon, ClipboardList, Bell, LogOut, Maximize2, Minimize2, PanelLeft } from 'lucide-react';
+import { Menu, Sun, Moon, ClipboardList, Bell, LogOut, Maximize2, Minimize2, PanelLeft, SlidersHorizontal } from 'lucide-react';
 import { useUI } from '../UIContext.jsx';
 import { useApp } from '../AppContext.jsx';
 import { useAuth } from '../AuthContext.jsx';
@@ -40,6 +40,7 @@ const NAV_ITEMS = [
   { page: 'maintenance', label: 'Breakdown' },
   { page: 'reports', label: 'Laporan' },
   { page: 'analytics', label: 'Analitik' },
+  { page: 'settings', label: 'Pengaturan' },
 ];
 
 export default function Topbar() {
@@ -141,6 +142,9 @@ export default function Topbar() {
             {(username || 'OP').slice(0, 2).toUpperCase()}
           </div>
           <div className={'avatar-menu' + (avatarOpen ? ' show' : '')}>
+            <div className="avatar-menu-item" onClick={() => { navigate('settings'); setAvatarOpen(false); }}>
+              <SlidersHorizontal size={14} /> Pengaturan
+            </div>
             <div className="avatar-menu-item" onClick={logout}><LogOut size={14} /> Log Out</div>
           </div>
         </div>

@@ -20,7 +20,7 @@ export default function Maintenance() {
     period, setPeriod, refDate, setRefDate,
     loadAll,
   } = useApp();
-  const { openModal, showWODetail } = useUI();
+  const { openModal, showWODetail, maintFilter, setMaintFilter } = useUI();
 
   const [search, setSearch]             = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -29,6 +29,14 @@ export default function Maintenance() {
   const [sortDir, setSortDir]           = useState(-1);
 
   useEffect(() => { loadAll(); }, [period, refDate]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Apply machine filter + switch to 'all' when navigating from machine detail panel
+  useEffect(() => {
+    if (!maintFilter) return;
+    setMachineFilter(maintFilter);
+    setPeriod('all');
+    setMaintFilter('');
+  }, [maintFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const machineOptions = useMemo(() =>
     [...new Set(breakdowns.map((b) => b.machine).filter(Boolean))].sort()

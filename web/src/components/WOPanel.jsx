@@ -65,7 +65,6 @@ export default function WOPanel() {
       end_date:     wo.end_date     || '',
       end_time:     wo.end_time     || '',
       pic_mtn:      wo.pic_mtn      || '',
-      duration_hrs: wo.durationHrs  ?? 0,
       resolution:   wo.resolution   || '',
       action:       wo.action       || '',
     });
@@ -82,7 +81,7 @@ export default function WOPanel() {
       const payload = { ...form };
       // only send machine_name when user explicitly changed it so we skip the master lookup for unedited WOs
       if (payload.machine_name === (wo.machine || '')) delete payload.machine_name;
-      await apiSend(`/breakdown/${wo.id}`, 'PUT', payload, logout);
+      await apiSend(`/breakdown-update`, 'POST', { ...payload, id: wo.id }, logout);
       showToast('RMO diperbarui', 'green');
       cancelEdit();
       await loadAll();
@@ -93,7 +92,7 @@ export default function WOPanel() {
   async function deleteWO() {
     if (!window.confirm(`Hapus work order ini?\n\n"${wo.cause}"\n${wo.machine} · ${fmtDate(wo.date)}\n\nData tidak bisa dikembalikan.`)) return;
     try {
-      await apiSend(`/breakdown/${wo.id}`, 'DELETE', undefined, logout);
+      await apiSend(`/breakdown-delete`, 'POST', { id: wo.id }, logout);
       showToast('Work order dihapus', 'yellow');
       closeWODetail();
       loadAll();
@@ -184,10 +183,6 @@ export default function WOPanel() {
               <div className="form-group">
                 <label className="form-label">PIC MTN</label>
                 <input className="form-input" value={form.pic_mtn} onChange={set('pic_mtn')} placeholder="Nama PIC MTN" />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Downtime (jam)</label>
-                <input type="number" step="0.1" min="0" className="form-input" value={form.duration_hrs} onChange={set('duration_hrs')} />
               </div>
             </div>
             <div className="form-group">

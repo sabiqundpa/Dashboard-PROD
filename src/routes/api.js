@@ -2,12 +2,22 @@ const express = require('express');
 const multer = require('multer');
 const bcrypt = require('bcryptjs');
 const prisma = require('../db');
-const { getPeriodRange, daysInRange } = require('../lib/period');
+const { getPeriodRange, daysInRange, calcPlannedHours } = require('../lib/period');
 const { signToken, requireAuth } = require('../lib/auth');
 
 const upload = multer({ storage: multer.memoryStorage() });
 
 const router = express.Router();
+
+// Fetch WorkingCalendar rows for the date range. Skipped for very long ranges
+// (period=all spans 2000–2099) to avoid a huge IN list — those fall back to
+// calendar days inside calcPlannedHours.
+async function fetchWcRows(start, end) {
+  const sy = start.getFullYear(), ey = end.getFullYear();
+  if (ey - sy > 10) return [];
+  const years = Array.from({ length: ey - sy + 1 }, (_, i) => sy + i);
+  return prisma.workingCalendar.findMany({ where: { year: { in: years } } });
+}
 
 // Optional ?machine=<name> filter, used across breakdown queries to scope
 // the whole dashboard to a single machine.
@@ -94,26 +104,49 @@ router.get('/me', (req, res) => {
   res.json({ username: req.admin.username });
 });
 
+// ── POST /api/change-password ──────────────────────────
+// Change the logged-in admin's password. Requires the current password.
+router.post('/change-password', async (req, res, next) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'currentPassword dan newPassword wajib diisi' });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'Password baru minimal 6 karakter' });
+    }
+    const admin = await prisma.admin.findUnique({ where: { username: req.admin.username } });
+    if (!admin) return res.status(404).json({ error: 'Akun tidak ditemukan' });
+    const valid = await bcrypt.compare(currentPassword, admin.passwordHash);
+    if (!valid) return res.status(401).json({ error: 'Password saat ini salah' });
+    const newHash = await bcrypt.hash(newPassword, 10);
+    await prisma.admin.update({ where: { username: req.admin.username }, data: { passwordHash: newHash } });
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
 // ── GET /api/machines ──────────────────────────────
 router.get('/machines', async (req, res, next) => {
   try {
     const { start, end } = getPeriodRange(req.query.period, req.query.date, req.query.start, req.query.end);
-    const days = daysInRange(start, end);
     const lineFilter = req.query.line ? { line: req.query.line } : {};
-    const machines = await prisma.machine.findMany({
-      where: lineFilter,
-      orderBy: { name: 'asc' },
-      include: {
-        breakdowns: {
-          where: { date: { gte: start, lte: end } },
-          orderBy: { date: 'desc' },
+    const [machines, wcRows] = await Promise.all([
+      prisma.machine.findMany({
+        where: lineFilter,
+        orderBy: { name: 'asc' },
+        include: {
+          breakdowns: {
+            where: { date: { gte: start, lte: end } },
+            orderBy: { date: 'desc' },
+          },
         },
-      },
-    });
+      }),
+      fetchWcRows(start, end),
+    ]);
 
     const result = machines.map((m) => {
       const downtimeHrs = m.breakdowns.reduce((s, b) => s + b.durationHrs, 0);
-      const plannedHrs = m.plannedHours * days;
+      const plannedHrs = calcPlannedHours(start, end, m.plannedHours, wcRows);
       const availability = plannedHrs > 0
         ? Math.max(0, Math.min(100, ((plannedHrs - downtimeHrs) / plannedHrs) * 100))
         : 0;
@@ -146,7 +179,6 @@ router.get('/machines', async (req, res, next) => {
 router.get('/kpi', async (req, res, next) => {
   try {
     const { start, end } = getPeriodRange(req.query.period, req.query.date, req.query.start, req.query.end);
-    const days = daysInRange(start, end);
     // Only active machines contribute to planned hours (and thus availability).
     // When a specific machine is requested by name, honour that regardless of active flag.
     const machineFilter = req.query.machine
@@ -155,14 +187,15 @@ router.get('/kpi', async (req, res, next) => {
       ? { line: req.query.line, active: true }
       : { active: true };
 
-    const machines = await prisma.machine.findMany({ where: machineFilter });
-    const breakdowns = await prisma.breakdown.findMany({
-      where: { date: { gte: start, lte: end }, ...machineWhere(req) },
-    });
+    const [machines, breakdowns, wcRows] = await Promise.all([
+      prisma.machine.findMany({ where: machineFilter }),
+      prisma.breakdown.findMany({ where: { date: { gte: start, lte: end }, ...machineWhere(req) } }),
+      fetchWcRows(start, end),
+    ]);
 
     const downtimeHrs = breakdowns.reduce((s, b) => s + b.durationHrs, 0);
     const plannedHrsPerDay = machines.reduce((s, m) => s + m.plannedHours, 0);
-    const plannedHrsTotal = plannedHrsPerDay * days;
+    const plannedHrsTotal = calcPlannedHours(start, end, plannedHrsPerDay, wcRows);
 
     const availability = plannedHrsTotal > 0
       ? Math.max(0, Math.min(100, ((plannedHrsTotal - downtimeHrs) / plannedHrsTotal) * 100))
@@ -198,7 +231,6 @@ router.get('/breakdowns', async (req, res, next) => {
       },
       include: { machine: true },
       orderBy: { date: 'desc' },
-      take: 50,
     });
 
     res.json(breakdowns.map((b) => {
@@ -826,6 +858,135 @@ router.delete('/breakdown/:id', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// ── POST /api/breakdown-update ─────────────────────────
+// Edit work order fields. Flat path — id in body (same pattern as
+// breakdown-close; Vercel edge routing returns 404 for nested paths
+// like /breakdown/:id before Express is even reached).
+router.post('/breakdown-update', async (req, res, next) => {
+  try {
+    const id = Number(req.body.id);
+    if (!id) return res.status(400).json({ error: 'Invalid id' });
+    const { cause, resolution, action, category, pic_gh, pic_mtn, date, start_time, end_date, end_time, duration_hrs, repair_date, repair_time, machine_name } = req.body;
+    const data = {};
+    if (cause      !== undefined) data.cause      = String(cause);
+    if (resolution !== undefined) data.resolution = resolution ? String(resolution) : null;
+    if (action     !== undefined) data.action     = action ? String(action) : null;
+    if (category   !== undefined) data.category   = String(category);
+    if (pic_gh     !== undefined) data.picGh      = pic_gh ? String(pic_gh) : null;
+    if (pic_mtn    !== undefined) data.picMtn     = pic_mtn ? String(pic_mtn) : null;
+    if (date       !== undefined) data.date       = new Date(date);
+    if (start_time !== undefined) data.startTime  = start_time || null;
+    if (end_date   !== undefined) data.endDate    = end_date ? new Date(end_date) : null;
+    if (end_time   !== undefined) data.endTime    = end_time || null;
+    if (repair_date !== undefined) data.repairDate = repair_date ? new Date(repair_date) : null;
+    if (repair_time !== undefined) data.repairTime = repair_time || null;
+    // Auto-calculate durationHrs when end_date+end_time are present
+    if (end_date && end_time) {
+      const existing = await prisma.breakdown.findUnique({ where: { id }, select: { date: true, startTime: true } });
+      if (existing) {
+        const d = date ? new Date(date) : existing.date;
+        const t = start_time !== undefined ? start_time : existing.startTime;
+        data.durationHrs = computeDurationBetween(d, t, new Date(end_date), end_time);
+      }
+    } else if (duration_hrs !== undefined) {
+      data.durationHrs = parseFloat(duration_hrs) || 0;
+    }
+    if (machine_name !== undefined && String(machine_name).trim()) {
+      const machine = await prisma.machine.findUnique({ where: { name: String(machine_name).trim() } });
+      if (machine) data.machineId = machine.id;
+    }
+    await prisma.breakdown.update({ where: { id }, data });
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+// ── POST /api/breakdown-delete ─────────────────────────
+// Delete a work order. Flat path — id in body (same pattern as
+// breakdown-update to avoid Vercel nested-path routing issue).
+router.post('/breakdown-delete', async (req, res, next) => {
+  try {
+    const id = Number(req.body.id);
+    if (!id) return res.status(400).json({ error: 'Invalid id' });
+    await prisma.breakdown.delete({ where: { id } });
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+// ── POST /api/recalculate-downtime ────────────────────
+// Batch-fix all breakdowns where durationHrs=0 but endDate+endTime
+// are set. Computes the correct value from date/startTime→endDate/endTime.
+router.post('/recalculate-downtime', async (req, res, next) => {
+  try {
+    const records = await prisma.breakdown.findMany({
+      where: { durationHrs: 0, endDate: { not: null }, endTime: { not: null } },
+      select: { id: true, date: true, startTime: true, endDate: true, endTime: true },
+    });
+    let updated = 0;
+    for (const r of records) {
+      const hrs = computeDurationBetween(r.date, r.startTime, r.endDate, r.endTime);
+      if (hrs > 0) {
+        await prisma.breakdown.update({ where: { id: r.id }, data: { durationHrs: hrs } });
+        updated++;
+      }
+    }
+    res.json({ updated, total: records.length });
+  } catch (err) { next(err); }
+});
+
+// ── POST /api/remove-duplicate-breakdowns ─────────────
+// Scan seluruh database, temukan breakdown dengan fingerprint sama
+// (machineId + tanggal + startTime + cause), hapus yang ID-nya lebih baru,
+// pertahankan yang paling lama (ID terkecil).
+router.post('/remove-duplicate-breakdowns', async (req, res, next) => {
+  try {
+    const all = await prisma.breakdown.findMany({
+      select: { id: true, machineId: true, date: true, startTime: true, cause: true },
+      orderBy: { id: 'asc' },
+    });
+
+    const seen = new Map();
+    const toDelete = [];
+    for (const b of all) {
+      const d = b.date instanceof Date ? b.date : new Date(b.date);
+      const causeKey = String(b.cause || '').trim().toLowerCase().slice(0, 50);
+      const fp = `${b.machineId}|${d.toISOString().slice(0, 10)}|${b.startTime || ''}|${causeKey}`;
+      if (seen.has(fp)) {
+        toDelete.push(b.id);
+      } else {
+        seen.set(fp, b.id);
+      }
+    }
+
+    if (toDelete.length > 0) {
+      await prisma.breakdown.deleteMany({ where: { id: { in: toDelete } } });
+    }
+
+    res.json({ removed: toDelete.length, total: all.length });
+  } catch (err) { next(err); }
+});
+
+// ── POST /api/machine-merge ────────────────────────────
+// Move all breakdowns from one machine to another, then delete the source.
+// Used to consolidate duplicate machine names created during CSV import.
+router.post('/machine-merge', async (req, res, next) => {
+  try {
+    const { fromName, toName } = req.body;
+    if (!fromName || !toName || fromName === toName) {
+      return res.status(400).json({ error: 'fromName and toName must be different non-empty strings' });
+    }
+    const from = await prisma.machine.findUnique({ where: { name: fromName } });
+    const to   = await prisma.machine.findUnique({ where: { name: toName } });
+    if (!from) return res.status(404).json({ error: `Machine "${fromName}" not found` });
+    if (!to)   return res.status(404).json({ error: `Machine "${toName}" not found` });
+    const moved = await prisma.breakdown.updateMany({
+      where: { machineId: from.id },
+      data:  { machineId: to.id },
+    });
+    await prisma.machine.delete({ where: { id: from.id } });
+    res.json({ moved: moved.count, from: fromName, to: toName });
+  } catch (err) { next(err); }
+});
+
 // ── POST /api/machines-active ──────────────────────────
 // Toggle aktif/nonaktif flag. Only active machines contribute to KPI.
 router.post('/machines-active', async (req, res, next) => {
@@ -974,12 +1135,11 @@ router.post('/import', async (req, res, next) => {
     }
 
     // Resolve any rows that still carry machineName instead of machineId
-    const safeData = inputRows
+    const resolvedRows = inputRows
       .map((row) => {
         const { machineName, ...rest } = row;
         const machineId = rest.machineId ?? nameToId.get(machineName);
         if (!machineId) return null;
-        // Coerce date strings → Date objects for Prisma
         return {
           ...rest,
           machineId,
@@ -989,11 +1149,48 @@ router.post('/import', async (req, res, next) => {
       })
       .filter(Boolean);
 
-    await prisma.breakdown.createMany({ data: safeData });
+    // Build a fingerprint to detect duplicates: machineId|date|startTime|cause(50)
+    function mkFp(machineId, date, startTime, cause) {
+      const d = date instanceof Date ? date : new Date(date);
+      const causeKey = String(cause || '').trim().toLowerCase().slice(0, 50);
+      return `${machineId}|${d.toISOString().slice(0, 10)}|${startTime || ''}|${causeKey}`;
+    }
+
+    // Query existing breakdowns in the relevant machine+date window
+    const machineIds = [...new Set(resolvedRows.map((r) => r.machineId))];
+    const allDates   = resolvedRows.map((r) => r.date instanceof Date ? r.date : new Date(r.date));
+    const minDate    = new Date(Math.min(...allDates));
+    const maxDate    = new Date(Math.max(...allDates));
+
+    const existing = await prisma.breakdown.findMany({
+      where: { machineId: { in: machineIds }, date: { gte: minDate, lte: maxDate } },
+      select: { machineId: true, date: true, startTime: true, cause: true },
+    });
+
+    const existingFps = new Set(
+      existing.map((e) => mkFp(e.machineId, e.date, e.startTime, e.cause))
+    );
+
+    const newRows = [];
+    const duplicateRows = [];
+    for (const row of resolvedRows) {
+      const fp = mkFp(row.machineId, row.date, row.startTime, row.cause);
+      if (existingFps.has(fp)) {
+        duplicateRows.push(row);
+      } else {
+        existingFps.add(fp); // prevent within-file duplication too
+        newRows.push(row);
+      }
+    }
+
+    if (newRows.length > 0) {
+      await prisma.breakdown.createMany({ data: newRows });
+    }
 
     const matched = inputRows.filter((r) => r.machineId).length;
     res.json({
-      imported: safeData.length,
+      imported: newRows.length,
+      duplicates: duplicateRows.length,
       total: inputRows.length,
       matchedMachines: matched,
       newMachines: newMachineNames.length,
@@ -1089,13 +1286,13 @@ router.post('/analytics-compute', async (req, res, next) => {
       },
     });
 
+    const wcRows = await fetchWcRows(start, end);
     const results = [];
     for (const m of machines) {
       const bds = m.breakdowns;
       const totalBreakdowns = bds.length;
       const totalDowntime = bds.reduce((s, b) => s + b.durationHrs, 0);
-      const days = Math.max(1, (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-      const plannedHours = m.plannedHours * days;
+      const plannedHours = calcPlannedHours(start, end, m.plannedHours, wcRows);
       const uptime = Math.max(0, plannedHours - totalDowntime);
       const availability = plannedHours > 0
         ? Math.max(0, Math.min(100, (uptime / plannedHours) * 100))

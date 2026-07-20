@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { X, Pencil, Clock, AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
+import { X, Pencil, Clock, AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight, Trash2, GitMerge, ExternalLink } from 'lucide-react';
 import { useUI } from '../UIContext.jsx';
 import { useApp } from '../AppContext.jsx';
 import { useToast } from '../ToastContext.jsx';
@@ -17,7 +17,7 @@ function fmtHrs(hrs) {
 }
 
 export default function DetailPanel() {
-  const { detailMachine, detailList, closeDetail, showDetail, openModal } = useUI();
+  const { detailMachine, detailList, closeDetail, showDetail, openModal, navigateToMaintenance } = useUI();
   const { machines, loadAll } = useApp();
   const showToast = useToast();
   const { logout } = useAuth();
@@ -25,6 +25,9 @@ export default function DetailPanel() {
   const [history, setHistory]       = useState([]);
   const [filterYear, setFilterYear]   = useState('');
   const [filterMonth, setFilterMonth] = useState('');
+  const [mergeMode, setMergeMode]     = useState(false);
+  const [mergeTarget, setMergeTarget] = useState('');
+  const [mergeBusy, setMergeBusy]     = useState(false);
 
   const m = machines.find((x) => x.name === detailMachine);
 
@@ -32,10 +35,24 @@ export default function DetailPanel() {
   useEffect(() => {
     if (!detailMachine) { setHistory([]); return; }
     setFilterYear(''); setFilterMonth('');
+    setMergeMode(false); setMergeTarget('');
     apiFetch(`/machine-history?machine=${encodeURIComponent(detailMachine)}`, [], logout)
       .then(setHistory)
       .catch(() => {});
   }, [detailMachine]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function doMerge() {
+    if (!mergeTarget || !m) return;
+    if (!window.confirm(`Gabungkan "${m.name}" → "${mergeTarget}"?\n\nSemua data breakdown dari "${m.name}" akan dipindahkan ke "${mergeTarget}", lalu "${m.name}" dihapus dari daftar mesin.\n\nLanjutkan?`)) return;
+    setMergeBusy(true);
+    try {
+      const result = await apiSend('/machine-merge', 'POST', { fromName: m.name, toName: mergeTarget }, logout);
+      showToast(`${result.moved} breakdown dipindahkan ke "${mergeTarget}"`, 'green');
+      closeDetail();
+      loadAll();
+    } catch (e) { showToast(e.message || 'Gagal menggabungkan', 'red'); }
+    setMergeBusy(false);
+  }
 
   // Available years from history
   const years = useMemo(() =>
@@ -151,6 +168,14 @@ export default function DetailPanel() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span className="detail-section-title" style={{ margin: 0 }}>History Riwayat</span>
               <span className="detail-history-count">{rBDs.length}</span>
+              <button
+                className="btn"
+                style={{ padding: '2px 7px', fontSize: 10, height: 22, display: 'inline-flex', alignItems: 'center', gap: 3 }}
+                title="Buka semua di Log Work Order Maintenance"
+                onClick={() => navigateToMaintenance(m.name)}
+              >
+                <ExternalLink size={10} /> Log WO
+              </button>
             </div>
             {/* Filter controls */}
             <div style={{ display: 'flex', gap: 4 }}>
@@ -184,7 +209,13 @@ export default function DetailPanel() {
           ) : rBDs.map((b, i) => {
             const isOpen = b.status === 'open';
             return (
-              <div key={b.id ?? i} className="detail-bd-item">
+              <div
+                key={b.id ?? i}
+                className="detail-bd-item"
+                style={{ cursor: 'pointer' }}
+                title="Buka di Log Work Order Maintenance"
+                onClick={() => navigateToMaintenance(m.name)}
+              >
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div className="detail-bd-cause">{b.cause}</div>
                   <div className="detail-bd-meta">
@@ -211,6 +242,41 @@ export default function DetailPanel() {
           <span className="detail-active-dot"></span>
           {m.active ? 'Aktif' : 'Nonaktif'}
         </button>
+
+        {/* ── Gabungkan ke Mesin Lain ─────────── */}
+        {!mergeMode ? (
+          <button className="btn" style={{ fontSize: 12 }} onClick={() => setMergeMode(true)}>
+            <GitMerge size={12} /> Gabungkan ke Mesin Lain
+          </button>
+        ) : (
+          <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12, background: 'var(--s2)' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--muted)', marginBottom: 8 }}>
+              Gabungkan "{m.name}" ke:
+            </div>
+            <select
+              className="form-input"
+              style={{ fontSize: 12, marginBottom: 8 }}
+              value={mergeTarget}
+              onChange={(e) => setMergeTarget(e.target.value)}
+            >
+              <option value="">— Pilih mesin tujuan —</option>
+              {machines.filter((x) => x.name !== m.name).map((x) => (
+                <option key={x.name} value={x.name}>{x.name}</option>
+              ))}
+            </select>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button className="btn" style={{ flex: 1, fontSize: 12 }} onClick={() => { setMergeMode(false); setMergeTarget(''); }}>Batal</button>
+              <button
+                className="btn primary"
+                style={{ flex: 1, fontSize: 12 }}
+                disabled={!mergeTarget || mergeBusy}
+                onClick={doMerge}
+              >
+                {mergeBusy ? 'Menggabungkan…' : 'Gabungkan'}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* ── Hapus Mesin ─────────────────────── */}
         <button

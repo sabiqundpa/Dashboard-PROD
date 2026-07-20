@@ -1,14 +1,28 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { User, Lock, Maximize2, Minimize2 } from 'lucide-react';
 import { useAuth } from '../AuthContext.jsx';
+import { useTargets } from '../TargetsContext.jsx';
 
 export default function Login() {
   const { login } = useAuth();
+  const { openAdmin } = useTargets();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const logoClickCount = useRef(0);
+  const logoClickTimer = useRef(null);
+
+  function onLogoClick() {
+    logoClickCount.current += 1;
+    clearTimeout(logoClickTimer.current);
+    logoClickTimer.current = setTimeout(() => { logoClickCount.current = 0; }, 600);
+    if (logoClickCount.current >= 3) {
+      logoClickCount.current = 0;
+      openAdmin();
+    }
+  }
 
   useEffect(() => {
     const onChange = () => setIsFullscreen(!!document.fullscreenElement);
@@ -47,7 +61,7 @@ export default function Login() {
         {isFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
       </button>
       <div className="login-card">
-        <div className="logo" style={{ marginBottom: 20 }}>Maintenance<span> Dashboard</span></div>
+        <div className="logo" style={{ marginBottom: 20, cursor: 'default', userSelect: 'none' }} onClick={onLogoClick}>Maintenance<span> Dashboard</span></div>
         <div className="form-group" style={{ marginBottom: 14 }}>
           <label className="form-label">Username</label>
           <div className="input-icon-wrap">

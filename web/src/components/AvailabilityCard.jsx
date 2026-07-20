@@ -24,7 +24,7 @@ export default function AvailabilityCard({ kpi }) {
       <div className="card-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <div className="card-title">Availability</div>
-          <InfoTip text={`Persentase waktu mesin siap digunakan dalam periode ini: (Jam Kerja − Downtime) ÷ Jam Kerja × 100%. Target ≥ ${availabilityTarget}%.`} />
+          <InfoTip text={`(Jam Kerja Mesin × Hari Kerja − Downtime) ÷ (Jam Kerja Mesin × Hari Kerja) × 100%. Hari kerja sesuai Kalender Kerja di menu Pengaturan. Target ≥ ${availabilityTarget}%.`} />
         </div>
       </div>
 

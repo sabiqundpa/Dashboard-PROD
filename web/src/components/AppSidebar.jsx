@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { LayoutDashboard, Cog, AlertTriangle, FileText, BarChart2, ClipboardList } from 'lucide-react';
+import { LayoutDashboard, Cog, AlertTriangle, FileText, BarChart2, ClipboardList, SlidersHorizontal } from 'lucide-react';
 import { useUI } from '../UIContext.jsx';
 import { useTargets } from '../TargetsContext.jsx';
 
@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { page: 'maintenance', label: 'Breakdown',   icon: AlertTriangle },
   { page: 'reports',     label: 'Laporan',     icon: FileText },
   { page: 'analytics',  label: 'Analitik',    icon: BarChart2 },
+  { page: 'settings',   label: 'Pengaturan',  icon: SlidersHorizontal },
 ];
 
 export default function AppSidebar() {

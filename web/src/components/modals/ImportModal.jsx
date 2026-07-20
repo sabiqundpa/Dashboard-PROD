@@ -56,6 +56,19 @@ function parseCsvText(text) {
   });
 }
 
+function calcDuration(startDateIso, startTimeStr, endDateIso, endTimeStr) {
+  if (!startDateIso || !endDateIso || !endTimeStr) return 0;
+  const [sh, sm] = (startTimeStr || '00:00').split(':').map(Number);
+  const [eh, em] = (endTimeStr || '00:00').split(':').map(Number);
+  if ([sh, sm, eh, em].some(Number.isNaN)) return 0;
+  const start = new Date(startDateIso);
+  start.setHours(sh, sm, 0, 0);
+  const end = new Date(endDateIso);
+  end.setHours(eh, em, 0, 0);
+  const diffMs = end - start;
+  return diffMs > 0 ? Number((diffMs / 3600000).toFixed(2)) : 0;
+}
+
 function parseDate(val) {
   if (!val) return null;
   const s = String(val).trim();
@@ -120,6 +133,12 @@ export default function ImportModal() {
           const btRaw      = row['Downtime'] ?? row['Breakdown Time'] ?? row['Waktu Pengerjaan'];
           let durationHrs  = 0;
           if (btRaw && !isNaN(parseFloat(btRaw))) durationHrs = parseFloat(btRaw);
+          // Auto-calculate if Downtime column is empty/zero but start+end dates are available
+          if (durationHrs === 0 && endDate && endTime) {
+            const calcDate = startDate ?? reportDate;
+            const calcTime = String(row['Waktu Lapor'] ?? startTime ?? '').trim() || '00:00';
+            durationHrs = calcDuration(calcDate, calcTime, endDate, endTime);
+          }
 
           const statusRaw = String(row['Status'] ?? '').toLowerCase();
           const status = statusRaw === 'open' ? 'open'
@@ -151,9 +170,19 @@ export default function ImportModal() {
           newMachineNames: [...newMachineNames],
         }, logout);
 
+        const dups      = result.duplicates ?? 0;
         const matchInfo = ` · ${result.matchedMachines ?? 0} mesin cocok, ${result.newMachines ?? 0} mesin baru`;
-        showToast(`Import berhasil: ${result.imported}/${result.total} baris${matchInfo}`, 'green');
-        addNotif('CSV data imported', 'green');
+        const dupInfo   = dups > 0 ? ` · ${dups} data duplikat dilewati` : '';
+        const color     = dups > 0 && result.imported === 0 ? 'yellow' : 'green';
+        showToast(`Import: ${result.imported} baris baru${dupInfo}${matchInfo}`, color);
+        if (dups > 0) {
+          addNotif(
+            `⚠ ${dups} baris data sudah ada di database dan dilewati (duplikat berdasarkan mesin + tanggal + waktu + problem).`,
+            'yellow'
+          );
+        } else {
+          addNotif('CSV data imported', 'green');
+        }
         closeModal();
         loadAll();
       } catch (err) {

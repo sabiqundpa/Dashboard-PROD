@@ -1,14 +1,42 @@
 import { useState, useMemo } from 'react';
-import { FolderUp, Factory, Search } from 'lucide-react';
+import { FolderUp, Factory, Search, Wrench, Trash2 } from 'lucide-react';
 import { useApp } from '../AppContext.jsx';
 import { useUI } from '../UIContext.jsx';
+import { useToast } from '../ToastContext.jsx';
+import { useAuth } from '../AuthContext.jsx';
+import { apiSend } from '../api.js';
 
 export default function Machines() {
-  const { machines } = useApp();
+  const { machines, loadAll } = useApp();
   const { showDetail, openModal } = useUI();
+  const showToast = useToast();
+  const { logout } = useAuth();
   const [search, setSearch] = useState('');
   const [filterCluster, setFilterCluster] = useState('');
   const [filterLine, setFilterLine] = useState('');
+  const [fixingDt, setFixingDt] = useState(false);
+  const [removingDup, setRemovingDup] = useState(false);
+
+  async function handleFixDowntime() {
+    setFixingDt(true);
+    try {
+      const r = await apiSend('/recalculate-downtime', 'POST', {}, logout);
+      showToast(`${r.updated} dari ${r.total} record downtime diperbaiki`, r.updated > 0 ? 'green' : 'yellow');
+      if (r.updated > 0) loadAll();
+    } catch (e) { showToast(e.message || 'Gagal', 'red'); }
+    setFixingDt(false);
+  }
+
+  async function handleRemoveDuplicates() {
+    if (!window.confirm('Hapus semua data breakdown duplikat dari database?\n\nData yang dianggap duplikat: mesin + tanggal + waktu lapor + problem sama. Data pertama (ID terkecil) dipertahankan, sisanya dihapus.\n\nLanjutkan?')) return;
+    setRemovingDup(true);
+    try {
+      const r = await apiSend('/remove-duplicate-breakdowns', 'POST', {}, logout);
+      showToast(`${r.removed} data duplikat dihapus dari ${r.total} total record`, r.removed > 0 ? 'green' : 'yellow');
+      if (r.removed > 0) loadAll();
+    } catch (e) { showToast(e.message || 'Gagal', 'red'); }
+    setRemovingDup(false);
+  }
 
   const clusters = useMemo(() => [...new Set(machines.map((m) => m.cluster).filter(Boolean))].sort(), [machines]);
   const lines = useMemo(() => {
@@ -30,6 +58,12 @@ export default function Machines() {
       <div className="page-header">
         <div><div className="page-title">Semua Mesin</div></div>
         <div className="header-actions">
+          <button className="btn" disabled={fixingDt} onClick={handleFixDowntime} title="Perbaiki semua downtime = 0 yang memiliki waktu selesai">
+            <Wrench size={14} /> {fixingDt ? 'Memperbaiki…' : 'Perbaiki Downtime'}
+          </button>
+          <button className="btn" disabled={removingDup} onClick={handleRemoveDuplicates} title="Hapus data breakdown duplikat dari database" style={{ color: 'var(--red)', borderColor: 'rgba(255,68,85,.35)' }}>
+            <Trash2 size={14} /> {removingDup ? 'Menghapus…' : 'Hapus Duplikat'}
+          </button>
           <button className="btn" onClick={() => openModal('import', { mode: 'machines' })}><FolderUp size={14} /> Import Mesin</button>
           <button className="btn" onClick={() => openModal('addMachine')}><Factory size={14} /> Tambah Mesin</button>
         </div>

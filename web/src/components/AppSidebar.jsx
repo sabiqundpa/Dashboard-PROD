@@ -1,19 +1,15 @@
 import { useRef } from 'react';
-import { LayoutDashboard, Cog, AlertTriangle, FileText, BarChart2, ClipboardList, SlidersHorizontal } from 'lucide-react';
+import { BarChart3, FolderUp, Download, FileText, Factory, SlidersHorizontal, LogOut } from 'lucide-react';
 import { useUI } from '../UIContext.jsx';
+import { useToast } from '../ToastContext.jsx';
+import { useAuth } from '../AuthContext.jsx';
 import { useTargets } from '../TargetsContext.jsx';
-
-const NAV_ITEMS = [
-  { page: 'dashboard',   label: 'Dashboard',  icon: LayoutDashboard },
-  { page: 'machines',    label: 'Mesin',       icon: Cog },
-  { page: 'maintenance', label: 'Breakdown',   icon: AlertTriangle },
-  { page: 'reports',     label: 'Laporan',     icon: FileText },
-  { page: 'analytics',  label: 'Analitik',    icon: BarChart2 },
-  { page: 'settings',   label: 'Pengaturan',  icon: SlidersHorizontal },
-];
+import { apiDownload } from '../api.js';
 
 export default function AppSidebar() {
-  const { page, navigate } = useUI();
+  const { navigate, openModal } = useUI();
+  const { logout } = useAuth();
+  const showToast = useToast();
   const { openAdmin } = useTargets();
   const clickCount = useRef(0);
   const clickTimer = useRef(null);
@@ -22,31 +18,46 @@ export default function AppSidebar() {
     clickCount.current += 1;
     clearTimeout(clickTimer.current);
     clickTimer.current = setTimeout(() => { clickCount.current = 0; }, 600);
-    if (clickCount.current >= 3) {
-      clickCount.current = 0;
-      openAdmin();
-    }
+    if (clickCount.current >= 3) { clickCount.current = 0; openAdmin(); }
+  }
+
+  async function doExport() {
+    try {
+      await apiDownload('/export-machines', `mesin-history-${new Date().toISOString().slice(0, 10)}.csv`, logout);
+      showToast('Diekspor ke CSV', 'green');
+    } catch (e) { showToast(e.message, 'red'); }
   }
 
   return (
     <aside className="app-sidebar">
-      <div className="asb-section">Navigasi</div>
-      {NAV_ITEMS.map((n) => (
-        <div
-          key={n.page}
-          className={`asb-item${page === n.page ? ' active' : ''}`}
-          onClick={() => navigate(n.page)}
-        >
-          <n.icon size={15} />
-          {n.label}
-        </div>
-      ))}
-      <div className="asb-section" style={{ marginTop: 8 }}>Produksi</div>
-      <div className="asb-item" onClick={() => window.open('/rmo', '_blank')} title="Buka di tab baru">
-        <ClipboardList size={15} />
-        RMO
+      <div className="sb-section">Gambaran Umum</div>
+      <div className="sb-item" onClick={() => navigate('analytics')}>
+        <span className="sb-icon"><BarChart3 size={15} /></span>Analitik
       </div>
-      <div className="asb-version" onClick={onVersionClick} title="">v1.0</div>
+
+      <div className="sb-section">Data</div>
+      <div className="sb-item" onClick={() => openModal('import')}>
+        <span className="sb-icon"><FolderUp size={15} /></span>Import CSV
+      </div>
+      <div className="sb-item" onClick={doExport}>
+        <span className="sb-icon"><Download size={15} /></span>Export Mesin (CSV)
+      </div>
+      <div className="sb-item" onClick={() => openModal('exportWorkOrders')}>
+        <span className="sb-icon"><FileText size={15} /></span>Export Log Work Order
+      </div>
+      <div className="sb-item" onClick={() => openModal('addMachine')}>
+        <span className="sb-icon"><Factory size={15} /></span>Tambah Mesin
+      </div>
+
+      <div className="sb-section">Akun</div>
+      <div className="sb-item" onClick={() => navigate('settings')}>
+        <span className="sb-icon"><SlidersHorizontal size={15} /></span>Pengaturan
+      </div>
+      <div className="sb-item" onClick={logout}>
+        <span className="sb-icon"><LogOut size={15} /></span>Log Out
+      </div>
+
+      <div className="asb-version" onClick={onVersionClick}>v1.0</div>
     </aside>
   );
 }

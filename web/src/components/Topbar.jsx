@@ -35,12 +35,11 @@ function tickLabel() {
 }
 
 const NAV_ITEMS = [
-  { page: 'dashboard', label: 'Dashboard' },
-  { page: 'machines', label: 'Mesin' },
+  { page: 'dashboard',   label: 'Dashboard' },
+  { page: 'machines',    label: 'Mesin' },
   { page: 'maintenance', label: 'Breakdown' },
-  { page: 'reports', label: 'Laporan' },
-  { page: 'analytics', label: 'Analitik' },
-  { page: 'settings', label: 'Pengaturan' },
+  { href: '/rmo',        label: 'RMO' },
+  { page: 'analytics',  label: 'Analitik' },
 ];
 
 export default function Topbar() {
@@ -112,7 +111,11 @@ export default function Topbar() {
         </div>
         <nav className="nav-links">
           {NAV_ITEMS.map((n) => (
-            <span key={n.page} className={'nav-item' + (page === n.page ? ' active' : '')} onClick={() => navigate(n.page)}>{n.label}</span>
+            <span
+              key={n.page || n.href}
+              className={'nav-item' + (n.page && page === n.page ? ' active' : '')}
+              onClick={() => n.href ? window.open(n.href, '_blank') : navigate(n.page)}
+            >{n.label}</span>
           ))}
         </nav>
       </div>

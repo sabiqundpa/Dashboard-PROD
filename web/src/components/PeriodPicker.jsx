@@ -2,9 +2,10 @@ import { useState, useRef, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, CalendarDays } from 'lucide-react';
 
 const PERIOD_OPTIONS = [
-  { key: 'today', label: 'Hari' },
-  { key: 'month', label: 'Bulan' },
-  { key: 'all', label: 'All Time' },
+  { key: 'today', label: 'Harian' },
+  { key: 'month', label: 'Bulanan' },
+  { key: 'year',  label: 'Tahunan' },
+  { key: 'all',   label: 'All Time' },
 ];
 const MONTH_ID = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
 const DOW_ID   = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
@@ -20,12 +21,14 @@ function toStr(d) {
 function formatLabel(period, dateStr) {
   if (period === 'all') return 'Semua Waktu';
   const d = parseLocal(dateStr);
+  if (period === 'year')  return `${d.getFullYear()}`;
   if (period === 'month') return `${MONTH_ID[d.getMonth()]} ${d.getFullYear()}`;
   return `${d.getDate()} ${MONTH_ID[d.getMonth()]} ${d.getFullYear()}`;
 }
 function shiftDate(period, dateStr, dir) {
   const d = parseLocal(dateStr);
-  if (period === 'month') d.setMonth(d.getMonth() + dir);
+  if (period === 'year')  d.setFullYear(d.getFullYear() + dir);
+  else if (period === 'month') d.setMonth(d.getMonth() + dir);
   else d.setDate(d.getDate() + dir);
   return toStr(d);
 }
@@ -39,6 +42,31 @@ function buildCells(vm) {
   for (let n = 1; n <= dim; n++) cells.push({ n, mo: 0 });
   while (cells.length % 7 !== 0) cells.push({ n: cells.length - dim - startDow + 1, mo: 1 });
   return cells;
+}
+
+function YearPicker({ dateStr, onChange }) {
+  const sel = parseLocal(dateStr);
+  const thisYear = new Date().getFullYear();
+  const [base, setBase] = useState(Math.floor(sel.getFullYear() / 10) * 10);
+  const years = Array.from({ length: 12 }, (_, i) => base + i);
+  return (
+    <div className="dp-popup">
+      <div className="dp-header">
+        <button className="dp-nav" onClick={() => setBase(b => b - 10)}><ChevronsLeft size={13}/></button>
+        <span className="dp-title">{base} – {base + 11}</span>
+        <button className="dp-nav" onClick={() => setBase(b => b + 10)}><ChevronsRight size={13}/></button>
+      </div>
+      <div className="dp-month-grid">
+        {years.map(y => (
+          <button key={y}
+            className={'dp-month-cell' + (y === sel.getFullYear() ? ' sel' : '') + (y === thisYear ? ' today' : '')}
+            onClick={() => onChange(toStr(new Date(y, 0, 1)))}>
+            {y}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function MonthGrid({ dateStr, onChange }) {
@@ -100,7 +128,6 @@ function DayCalendar({ dateStr, onChange }) {
   );
 }
 
-// pill=true → compact rounded pill style (used by Dashboard filter bar)
 export default function PeriodPicker({ period, setPeriod, refDate, setRefDate, pill }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
@@ -123,14 +150,14 @@ export default function PeriodPicker({ period, setPeriod, refDate, setRefDate, p
 
       {!isAll && (
         <button className="pp-nav" onClick={() => setRefDate(shiftDate(period, refDate, -1))} title="Periode sebelumnya">
-          <ChevronLeft size={14}/>
+          <ChevronLeft size={16}/>
         </button>
       )}
 
       <button
         className={`pp-label${isAll ? ' pp-label-tail' : ''}`}
         onClick={!isAll ? () => setOpen(v => !v) : undefined}
-        style={isAll ? { cursor: 'default', minWidth: isAll && !pill ? 100 : undefined } : undefined}
+        style={isAll ? { cursor: 'default' } : undefined}
       >
         <span>{label}</span>
         {!isAll && <CalendarDays size={13} style={{ color: 'var(--muted)', flexShrink: 0 }}/>}
@@ -138,14 +165,14 @@ export default function PeriodPicker({ period, setPeriod, refDate, setRefDate, p
 
       {!isAll && (
         <button className="pp-nav pp-nav-tail" onClick={() => setRefDate(shiftDate(period, refDate, 1))} title="Periode berikutnya">
-          <ChevronRight size={14}/>
+          <ChevronRight size={16}/>
         </button>
       )}
 
       {open && !isAll && (
-        period === 'month'
-          ? <MonthGrid dateStr={refDate} onChange={d => { setRefDate(d); setOpen(false); }} />
-          : <DayCalendar dateStr={refDate} onChange={d => { setRefDate(d); setOpen(false); }} />
+        period === 'year'  ? <YearPicker  dateStr={refDate} onChange={d => { setRefDate(d); setOpen(false); }} /> :
+        period === 'month' ? <MonthGrid   dateStr={refDate} onChange={d => { setRefDate(d); setOpen(false); }} /> :
+                             <DayCalendar dateStr={refDate} onChange={d => { setRefDate(d); setOpen(false); }} />
       )}
     </div>
   );

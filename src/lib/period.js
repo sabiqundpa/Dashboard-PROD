@@ -16,7 +16,11 @@ function getPeriodRange(period, refDateStr, rangeStartStr, rangeEndStr) {
   const ref = refDateStr ? new Date(refDateStr) : new Date();
   let start, end;
 
-  if (period === 'week') {
+  if (period === 'year') {
+    const year = ref.getFullYear();
+    start = new Date(year, 0, 1);
+    end   = new Date(year, 11, 31, 23, 59, 59, 999);
+  } else if (period === 'week') {
     const dayOfWeek = ref.getDay(); // 0 = Sunday .. 6 = Saturday
     const mondayOffset = (dayOfWeek + 6) % 7;
     start = new Date(ref);

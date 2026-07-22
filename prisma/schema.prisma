@@ -69,6 +69,59 @@ model WorkingCalendar {
   @@map("WorkingCalendar")
 }
 
+// Master data routing produksi: untuk setiap Part, proses apa saja yang
+// dilalui, di mesin/line/cluster mana, siapa MP default-nya, dan CT standar.
+// Diisi lewat import CSV (menu Actions di form /rmo).
+model PartRouting {
+  id         Int      @id @default(autoincrement())
+  cluster    String                                  // AD | BC | EF | FI
+  line       String   @map("line_produksi")
+  partName   String   @map("part_name")
+  partNumber String   @default("") @map("part_number")
+  proses     String                                  // tahapan proses, mis. "CNC", "Milling Finish"
+  mesin      String                                  // Nama Mesin
+  manPower   String?  @map("man_power")
+  cycleTime  Float    @default(0) @map("cycle_time")  // detik/pcs
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@unique([partName, proses, mesin])
+  @@map("PartRouting")
+}
+
+// Resume Control Harian Produksi — satu baris per Part + Proses + Mesin per
+// hari/shift, diisi via halaman /rmo (form publik tanpa login).
+// Struktur & rumus AR/AVB/PERF/YIELD/OEE mengikuti format Excel existing.
+model ProduksiHarian {
+  id             Int      @id @default(autoincrement())
+  tanggal        DateTime
+  shift          String
+  cluster        String
+  line           String   @map("line_produksi")
+
+  noLot          String?  @map("no_lot")
+  partName       String   @map("part_name")
+  partNumber     String?  @map("part_number")
+  proses         String
+  mesin          String
+  manPower       String?  @map("man_power")
+  cycleTime      Float    @default(0) @map("cycle_time")       // detik/pcs
+  waktuEfektif   Float    @default(0) @map("waktu_efektif")    // jam
+  plan           Int      @default(0)
+
+  ok1            Int      @default(0)
+  ok2            Int      @default(0)
+  rework         Int      @default(0) @map("rwk")
+  reject         Int      @default(0) @map("rjct")
+
+  breakdownMesin Float    @default(0) @map("breakdown_mesin")  // menit
+  lostTime       Float    @default(0) @map("lost_time")        // menit
+  keterangan     String?
+
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@map("ProduksiHarian")
+}
+
 model Breakdown {
   id          Int       @id @default(autoincrement())
   machineId   Int       @map("machine_id")

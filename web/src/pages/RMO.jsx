@@ -20,7 +20,7 @@ function SuccessView({ data, onReset }) {
       <CheckCircle2 size={56} style={{ color: 'var(--green)' }} />
       <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-.4px' }}>Work Order Berhasil Dibuat</div>
       <div style={{ color: 'var(--muted)', fontSize: 13, lineHeight: 1.6 }}>
-        RMO untuk <strong style={{ color: 'var(--text)' }}>{data.machine}</strong> telah tercatat dan diteruskan ke tim Maintenance.
+        RMO untuk <strong style={{ color: 'var(--text)' }}>{data.machine}</strong> telah tercatat dan diteruskan ke tim Produksi.
       </div>
       <div className="card" style={{ width: '100%', padding: '14px 16px', gap: 8, display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
         {[
@@ -116,7 +116,7 @@ export default function RMO() {
           <ClipboardList size={18} style={{ color: 'var(--accent)' }} />
           <div>
             <div className="page-title">Repair Machine Order</div>
-            <div className="page-sub">Laporan kerusakan mesin untuk tim Maintenance</div>
+            <div className="page-sub">Laporan kerusakan mesin untuk tim Produksi</div>
           </div>
         </div>
       </div>
@@ -206,7 +206,7 @@ export default function RMO() {
         <div style={{ paddingTop: 16, borderTop: '1px solid var(--border)', marginTop: 4 }}>
           <button ref={submitRef} className="btn primary" style={{ width: '100%', padding: 11 }}
             disabled={busy} onClick={submit}>
-            {busy ? 'Menyimpan…' : 'Kirim ke Maintenance'}
+            {busy ? 'Menyimpan…' : 'Kirim ke Produksi'}
           </button>
         </div>
       </div>

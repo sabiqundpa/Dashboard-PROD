@@ -1,10 +1,10 @@
-import { BarChart3, Zap, FolderUp, Download, FileText, Wrench } from 'lucide-react';
+import { BarChart3, Zap, FolderUp, Download, FileText } from 'lucide-react';
 import { useUI } from '../UIContext.jsx';
 import { useToast } from '../ToastContext.jsx';
 import { useAuth } from '../AuthContext.jsx';
 import { apiDownload } from '../api.js';
 
-const REPORT_NAMES = { availability: 'Rangkuman Availability', breakdown: 'Analisis Breakdown', pm: 'Jadwal Preventive Maintenance' };
+const REPORT_NAMES = { availability: 'Rangkuman Availability', breakdown: 'Analisis Breakdown' };
 
 export default function Reports() {
   const { openModal } = useUI();
@@ -49,10 +49,6 @@ export default function Reports() {
         <div className="report-card" onClick={() => openModal('exportWorkOrders')}>
           <div className="report-icon"><FileText size={22} /></div><div className="report-title">Export Log Work Order (CSV)</div>
           <div className="report-desc">Unduh seluruh riwayat RMO untuk Excel — sama dengan view "work_order_export" di pgAdmin</div>
-        </div>
-        <div className="report-card" onClick={() => genReport('pm')}>
-          <div className="report-icon"><Wrench size={22} /></div><div className="report-title">Jadwal Preventive Maintenance</div>
-          <div className="report-desc">Rencana Pekerjaan Preventive Maintenance</div>
         </div>
       </div>
     </div>

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Menu, Sun, Moon, ClipboardList, Bell, LogOut, Maximize2, Minimize2, PanelLeft, SlidersHorizontal } from 'lucide-react';
+import { Menu, Sun, Moon, ClipboardList, Bell, LogOut, Maximize2, Minimize2, PanelLeft } from 'lucide-react';
 import { useUI } from '../UIContext.jsx';
 import { useApp } from '../AppContext.jsx';
 import { useAuth } from '../AuthContext.jsx';
@@ -36,10 +36,7 @@ function tickLabel() {
 
 const NAV_ITEMS = [
   { page: 'dashboard',   label: 'Dashboard' },
-  { page: 'machines',    label: 'Mesin' },
-  { page: 'maintenance', label: 'Breakdown' },
-  { href: '/rmo',        label: 'RMO' },
-  { page: 'analytics',  label: 'Analitik' },
+  { href: '/rmo',        label: 'RESUME CONTROL HARIAN PRODUKSI' },
 ];
 
 export default function Topbar() {
@@ -107,7 +104,7 @@ export default function Topbar() {
       <div className="brand-nav">
         <div className="logo" onClick={() => navigate('dashboard')} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
           <BrandIcon size={24} />
-          Maintenance<span> - DPA</span>
+          Produksi<span> - DPA</span>
         </div>
         <nav className="nav-links">
           {NAV_ITEMS.map((n) => (
@@ -145,9 +142,6 @@ export default function Topbar() {
             {(username || 'OP').slice(0, 2).toUpperCase()}
           </div>
           <div className={'avatar-menu' + (avatarOpen ? ' show' : '')}>
-            <div className="avatar-menu-item" onClick={() => { navigate('settings'); setAvatarOpen(false); }}>
-              <SlidersHorizontal size={14} /> Pengaturan
-            </div>
             <div className="avatar-menu-item" onClick={logout}><LogOut size={14} /> Log Out</div>
           </div>
         </div>

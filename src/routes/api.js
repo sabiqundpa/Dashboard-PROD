@@ -3,7 +3,7 @@ const multer = require('multer');
 const bcrypt = require('bcryptjs');
 const prisma = require('../db');
 const { getPeriodRange, daysInRange, calcPlannedHours } = require('../lib/period');
-const { signToken, requireAuth } = require('../lib/auth');
+const { signToken } = require('../lib/auth');
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -57,73 +57,207 @@ router.post('/login', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// ── GET /api/machines-public ─────────────────────────
-// Public — daftar mesin aktif untuk form RMO standalone (tanpa login).
-router.get('/machines-public', async (req, res, next) => {
+// ── GET /api/part-routing ─────────────────────────────
+// Public — master data Part/Line/Proses/Mesin per Cluster, untuk dropdown
+// bertingkat di form /rmo.
+router.get('/part-routing', async (req, res, next) => {
   try {
-    const machines = await prisma.machine.findMany({
-      where: { active: true },
-      select: { name: true, cluster: true, line: true },
-      orderBy: { name: 'asc' },
-    });
-    res.json(machines);
+    const rows = await prisma.partRouting.findMany({ orderBy: [{ cluster: 'asc' }, { line: 'asc' }, { partName: 'asc' }] });
+    res.json(rows);
   } catch (err) { next(err); }
 });
 
-// ── POST /api/public-rmo ─────────────────────────────
-// Public — submit RMO dari halaman produksi standalone (tanpa login).
-router.post('/public-rmo', async (req, res, next) => {
+// ── POST /api/part-routing/import ─────────────────────
+// Public — import CSV master data routing: Cluster, Line, Part Name,
+// Part Number, Proses, Nama Mesin, Man Power, Cycle Time.
+router.post('/part-routing/import', upload.single('file'), async (req, res, next) => {
   try {
-    const { machine_code, breakdown_date, start_time, failure_cause, pic_gh } = req.body;
-    if (!machine_code || !failure_cause) {
-      return res.status(400).json({ error: 'machine_code and failure_cause are required' });
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    const rows = parseCsv(req.file.buffer.toString('utf-8'));
+
+    const upserts = [];
+    let skipped = 0;
+    for (const row of rows) {
+      const lookup = {};
+      Object.keys(row).forEach((k) => { lookup[k.trim().toLowerCase()] = row[k]; });
+      const field = (...keys) => {
+        for (const key of keys) {
+          const v = lookup[key.toLowerCase()];
+          if (v !== undefined && v !== '') return String(v).trim();
+        }
+        return '';
+      };
+
+      const cluster = field('Cluster').toUpperCase();
+      const line = field('Line', 'Line Produksi');
+      const partName = field('Part Name', 'Nama Part', 'NAMA PARTS');
+      const proses = field('Proses', 'PROSES');
+      const mesin = field('Nama Mesin', 'Mesin', 'MESIN');
+      if (!cluster || !line || !partName || !proses || !mesin) { skipped++; continue; }
+
+      const cycleTimeRaw = field('Cycle Time', 'CT');
+      upserts.push({
+        cluster, line, partName, proses, mesin,
+        partNumber: field('Part Number', 'No Part', 'No Lot'),
+        manPower: field('Man Power', 'MP') || null,
+        cycleTime: cycleTimeRaw && !isNaN(Number(cycleTimeRaw)) ? Number(cycleTimeRaw) : 0,
+      });
     }
-    const machine = await prisma.machine.findUnique({ where: { name: machine_code } });
-    if (!machine) return res.status(404).json({ error: `Machine "${machine_code}" not found` });
-    const breakdown = await prisma.breakdown.create({
+
+    let imported = 0;
+    for (const u of upserts) {
+      await prisma.partRouting.upsert({
+        where: { partName_proses_mesin: { partName: u.partName, proses: u.proses, mesin: u.mesin } },
+        update: u,
+        create: u,
+      });
+      imported++;
+    }
+
+    res.json({ imported, skipped, total: rows.length });
+  } catch (err) { next(err); }
+});
+
+// ── POST /api/produksi-harian ─────────────────────────
+// Public — submit satu baris Resume Control Harian Produksi (Part + Proses +
+// Mesin) dari halaman /rmo (tanpa login).
+router.post('/produksi-harian', async (req, res, next) => {
+  try {
+    const {
+      tanggal, shift, cluster, line,
+      no_lot, part_name, part_number, proses, mesin, man_power, cycle_time,
+      waktu_efektif, plan, ok1, ok2, rwk, rjct,
+      breakdown_mesin, lost_time, keterangan,
+    } = req.body;
+
+    if (!tanggal || !shift || !cluster || !line || !part_name || !proses || !mesin) {
+      return res.status(400).json({ error: 'tanggal, shift, cluster, line, part, proses, dan mesin wajib diisi' });
+    }
+
+    const record = await prisma.produksiHarian.create({
       data: {
-        machineId: machine.id,
-        cause: failure_cause,
-        category: 'Mechanical',
-        severity: 'warning',
-        status: 'open',
-        date: breakdown_date ? new Date(breakdown_date) : new Date(),
-        startTime: start_time || null,
-        picGh: pic_gh || null,
+        tanggal: new Date(tanggal),
+        shift, cluster, line,
+        noLot: no_lot || null,
+        partName: part_name,
+        partNumber: part_number || null,
+        proses, mesin,
+        manPower: man_power || null,
+        cycleTime: cycle_time ? Number(cycle_time) : 0,
+        waktuEfektif: waktu_efektif ? Number(waktu_efektif) : 0,
+        plan: plan ? Number(plan) : 0,
+        ok1: ok1 ? Number(ok1) : 0,
+        ok2: ok2 ? Number(ok2) : 0,
+        rework: rwk ? Number(rwk) : 0,
+        reject: rjct ? Number(rjct) : 0,
+        breakdownMesin: breakdown_mesin ? Number(breakdown_mesin) : 0,
+        lostTime: lost_time ? Number(lost_time) : 0,
+        keterangan: keterangan || null,
       },
     });
-    res.status(201).json({ id: breakdown.id, machine: machine.name });
+
+    res.status(201).json({ id: record.id, ...rowMetrics(record) });
   } catch (err) { next(err); }
 });
 
-// Everything below requires a valid login.
-router.use(requireAuth);
+// Per-row AR/AVB/PERF/YIELD/OEE — sama persis dengan rumus di format Excel.
+// Total OK = OK1 + OK2. Total Proses = OK1 + OK2 + Rework + Reject.
+function rowMetrics(r) {
+  const pct = (n, d) => d > 0 ? Math.max(0, Math.min(100, (n / d) * 100)) : 0;
+  const totalOk = r.ok1 + r.ok2;
+  const totalProses = r.ok1 + r.ok2 + r.rework + r.reject;
+  const waktuEfektifMin = r.waktuEfektif * 60;
 
-// ── GET /api/me ────────────────────────────────────────
-router.get('/me', (req, res) => {
-  res.json({ username: req.admin.username });
-});
+  const avb  = pct((waktuEfektifMin * 0.9) - r.breakdownMesin, waktuEfektifMin);
+  const perf = pct((r.cycleTime * totalOk * 1.05) / 60, waktuEfektifMin - r.lostTime);
+  const yld  = pct(totalOk, totalProses);
+  const ar   = pct(totalProses, r.plan);
+  const oee  = avb * perf * yld / 10000;
 
-// ── POST /api/change-password ──────────────────────────
-// Change the logged-in admin's password. Requires the current password.
-router.post('/change-password', async (req, res, next) => {
+  return {
+    totalOk, totalProses,
+    avb: Number(avb.toFixed(1)),
+    perf: Number(perf.toFixed(1)),
+    yield: Number(yld.toFixed(1)),
+    ar: Number(ar.toFixed(1)),
+    oee: Number(oee.toFixed(1)),
+  };
+}
+
+// ── GET /api/produksi-harian/summary ──────────────────
+// Ringkasan OEE (Availability, Performance, Yield, AR, OEE) diagregasi dari
+// semua baris Resume Control Harian Produksi dalam periode terpilih.
+router.get('/produksi-harian/summary', async (req, res, next) => {
   try {
-    const { currentPassword, newPassword } = req.body;
-    if (!currentPassword || !newPassword) {
-      return res.status(400).json({ error: 'currentPassword dan newPassword wajib diisi' });
-    }
-    if (newPassword.length < 6) {
-      return res.status(400).json({ error: 'Password baru minimal 6 karakter' });
-    }
-    const admin = await prisma.admin.findUnique({ where: { username: req.admin.username } });
-    if (!admin) return res.status(404).json({ error: 'Akun tidak ditemukan' });
-    const valid = await bcrypt.compare(currentPassword, admin.passwordHash);
-    if (!valid) return res.status(401).json({ error: 'Password saat ini salah' });
-    const newHash = await bcrypt.hash(newPassword, 10);
-    await prisma.admin.update({ where: { username: req.admin.username }, data: { passwordHash: newHash } });
-    res.json({ ok: true });
+    const { start, end } = getPeriodRange(req.query.period, req.query.date, req.query.start, req.query.end);
+    const rows = await prisma.produksiHarian.findMany({
+      where: { tanggal: { gte: start, lte: end } },
+    });
+
+    const sumWaktuEfektifMin = rows.reduce((s, r) => s + r.waktuEfektif * 60, 0);
+    const sumBreakdownMesin  = rows.reduce((s, r) => s + r.breakdownMesin, 0);
+    const sumLostTime        = rows.reduce((s, r) => s + r.lostTime, 0);
+    const sumCycleTimeOk     = rows.reduce((s, r) => s + r.cycleTime * (r.ok1 + r.ok2), 0);
+    const sumTotalOk         = rows.reduce((s, r) => s + r.ok1 + r.ok2, 0);
+    const sumTotalProses     = rows.reduce((s, r) => s + r.ok1 + r.ok2 + r.rework + r.reject, 0);
+    const sumPlan            = rows.reduce((s, r) => s + r.plan, 0);
+
+    const pct = (n, d) => d > 0 ? Math.max(0, Math.min(100, (n / d) * 100)) : 0;
+
+    const availability = pct((sumWaktuEfektifMin * 0.9) - sumBreakdownMesin, sumWaktuEfektifMin);
+    const performance   = pct((sumCycleTimeOk * 1.05) / 60, sumWaktuEfektifMin - sumLostTime);
+    const yieldPct       = pct(sumTotalOk, sumTotalProses);
+    const ar             = pct(sumTotalProses, sumPlan);
+    const oee             = availability * performance * yieldPct / 10000;
+
+    res.json({
+      availability: Number(availability.toFixed(1)),
+      performance: Number(performance.toFixed(1)),
+      yield: Number(yieldPct.toFixed(1)),
+      ar: Number(ar.toFixed(1)),
+      oee: Number(oee.toFixed(1)),
+      entries: rows.length,
+    });
   } catch (err) { next(err); }
 });
+
+// ── GET /api/produksi-harian ───────────────────────────
+// Public — daftar seluruh baris Resume Control Harian Produksi dalam
+// periode terpilih, dengan metrik AR/AVB/PERF/YIELD/OEE per baris, untuk
+// tabel hasil input di halaman /rmo.
+router.get('/produksi-harian', async (req, res, next) => {
+  try {
+    const { start, end } = getPeriodRange(req.query.period, req.query.date, req.query.start, req.query.end);
+    const rows = await prisma.produksiHarian.findMany({
+      where: { tanggal: { gte: start, lte: end } },
+      orderBy: [{ tanggal: 'desc' }, { id: 'desc' }],
+    });
+    res.json(rows.map((r) => ({
+      id: r.id,
+      tanggal: r.tanggal.toISOString().slice(0, 10),
+      shift: r.shift,
+      cluster: r.cluster,
+      line: r.line,
+      noLot: r.noLot,
+      partName: r.partName,
+      proses: r.proses,
+      mesin: r.mesin,
+      manPower: r.manPower,
+      cycleTime: r.cycleTime,
+      waktuEfektif: r.waktuEfektif,
+      plan: r.plan,
+      ok1: r.ok1,
+      ok2: r.ok2,
+      rework: r.rework,
+      reject: r.reject,
+      breakdownMesin: r.breakdownMesin,
+      lostTime: r.lostTime,
+      keterangan: r.keterangan,
+      ...rowMetrics(r),
+    })));
+  } catch (err) { next(err); }
+});
+
 
 // ── GET /api/machines ──────────────────────────────
 router.get('/machines', async (req, res, next) => {
@@ -1366,7 +1500,7 @@ router.get('/analytics', async (req, res, next) => {
 
 // ── GET /api/working-calendar?year=YYYY ───────────────
 // Hari kerja per bulan yang dikonfigurasi via menu Analitik.
-router.get('/working-calendar', requireAuth, async (req, res, next) => {
+router.get('/working-calendar', async (req, res, next) => {
   try {
     const year = parseInt(req.query.year) || new Date().getFullYear();
     const records = await prisma.workingCalendar.findMany({ where: { year }, orderBy: { month: 'asc' } });
@@ -1376,7 +1510,7 @@ router.get('/working-calendar', requireAuth, async (req, res, next) => {
 
 // ── PUT /api/working-calendar ──────────────────────────
 // Upsert hari kerja untuk bulan tertentu: { year, month, workingDays }
-router.put('/working-calendar', requireAuth, async (req, res, next) => {
+router.put('/working-calendar', async (req, res, next) => {
   try {
     const year = parseInt(req.body.year);
     const month = parseInt(req.body.month);

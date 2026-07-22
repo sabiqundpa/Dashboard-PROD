@@ -1,19 +1,14 @@
 import { useEffect } from 'react';
 import { Minimize2 } from 'lucide-react';
-import { AuthProvider, useAuth } from './AuthContext.jsx';
+import { AuthProvider } from './AuthContext.jsx';
 import { ThemeProvider } from './ThemeContext.jsx';
 import { ToastProvider } from './ToastContext.jsx';
 import { AppProvider, useApp } from './AppContext.jsx';
 import { UIProvider, useUI } from './UIContext.jsx';
 import { TargetsProvider } from './TargetsContext.jsx';
 import TargetsModal from './components/TargetsModal.jsx';
-import Login from './pages/Login.jsx';
 import Dashboard from './pages/Dashboard.jsx';
-import Machines from './pages/Machines.jsx';
-import Maintenance from './pages/Maintenance.jsx';
 import Reports from './pages/Reports.jsx';
-import Analytics from './pages/Analytics.jsx';
-import Settings from './pages/Settings.jsx';
 import Topbar from './components/Topbar.jsx';
 import AppSidebar from './components/AppSidebar.jsx';
 import MobileDrawer from './components/MobileDrawer.jsx';
@@ -24,7 +19,7 @@ import DetailPanel from './components/DetailPanel.jsx';
 import WOPanel from './components/WOPanel.jsx';
 import ModalRoot from './components/ModalRoot.jsx';
 
-const PAGES = { dashboard: Dashboard, machines: Machines, maintenance: Maintenance, reports: Reports, analytics: Analytics, settings: Settings };
+const PAGES = { dashboard: Dashboard, reports: Reports };
 
 function Shell() {
   const { page, closeModal, setNotifOpen, closeDetail, closeWODetail, sidebarOpen, presentMode, togglePresentMode, detailWO } = useUI();
@@ -70,25 +65,17 @@ function Shell() {
   );
 }
 
-function AuthGate() {
-  const { token } = useAuth();
-  if (!token) return <Login />;
-  return (
-    <AppProvider>
-      <UIProvider>
-        <Shell />
-      </UIProvider>
-    </AppProvider>
-  );
-}
-
 export default function App() {
   return (
     <TargetsProvider>
       <ThemeProvider>
         <AuthProvider>
           <ToastProvider>
-            <AuthGate />
+            <AppProvider>
+              <UIProvider>
+                <Shell />
+              </UIProvider>
+            </AppProvider>
           </ToastProvider>
         </AuthProvider>
       </ThemeProvider>

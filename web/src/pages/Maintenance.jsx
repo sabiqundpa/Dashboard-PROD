@@ -75,7 +75,7 @@ export default function Maintenance() {
     <div className="page-view active">
       {/* ── Header ───────────────────────────── */}
       <div className="page-header">
-        <div><div className="page-title">Log Work Order Maintenance</div></div>
+        <div><div className="page-title">Log Work Order Produksi</div></div>
         <div className="header-actions">
           <button className="btn" onClick={() => openModal('import', { mode: 'workorder' })}>
             <FolderUp size={14} /> Import CSV RMO

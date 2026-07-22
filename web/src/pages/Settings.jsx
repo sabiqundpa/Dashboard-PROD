@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Target, Calendar, User, Save, RefreshCw, KeyRound, CheckCircle2, RotateCcw } from 'lucide-react';
+import { Target, Calendar, Save, RefreshCw, CheckCircle2, RotateCcw } from 'lucide-react';
 import { useTargets, DEFAULTS } from '../TargetsContext.jsx';
 import { useToast } from '../ToastContext.jsx';
 import { useAuth } from '../AuthContext.jsx';
@@ -209,84 +209,10 @@ function CalendarSection() {
   );
 }
 
-// ── Tab 3: Akun & Keamanan ───────────────────────────────
-function AccountSection() {
-  const showToast = useToast();
-  const { username, logout } = useAuth();
-  const [curPwd, setCurPwd]   = useState('');
-  const [newPwd, setNewPwd]   = useState('');
-  const [confPwd, setConfPwd] = useState('');
-  const [busy, setBusy]       = useState(false);
-
-  async function handleChangePwd(e) {
-    e.preventDefault();
-    if (!curPwd || !newPwd) { showToast('Semua field wajib diisi', 'red'); return; }
-    if (newPwd.length < 6) { showToast('Password baru minimal 6 karakter', 'red'); return; }
-    if (newPwd !== confPwd) { showToast('Konfirmasi password tidak cocok', 'red'); return; }
-    setBusy(true);
-    try {
-      await apiSend('/change-password', 'POST', { currentPassword: curPwd, newPassword: newPwd }, logout);
-      showToast('Password berhasil diubah — silakan login kembali', 'green');
-      setCurPwd(''); setNewPwd(''); setConfPwd('');
-      setTimeout(() => logout(), 1800);
-    } catch (e) { showToast(e.message || 'Gagal mengubah password', 'red'); }
-    setBusy(false);
-  }
-
-  return (
-    <div>
-      <SectionHeader icon={User} title="Akun & Keamanan" sub="Kelola kredensial login untuk panel admin" />
-
-      <div style={{ background: 'var(--s2)', borderRadius: 10, padding: '12px 16px', marginBottom: 24, border: '1px solid var(--border)' }}>
-        <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 3 }}>Login aktif sebagai</div>
-        <div style={{ fontWeight: 700, fontSize: 15, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: '50%', background: 'var(--accent)', color: '#fff', fontSize: 12, fontWeight: 800 }}>
-            {(username || 'OP').slice(0, 2).toUpperCase()}
-          </span>
-          {username}
-        </div>
-      </div>
-
-      <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.07em', color: 'var(--muted)', marginBottom: 16 }}>
-        <KeyRound size={11} style={{ verticalAlign: 'middle', marginRight: 5 }} />
-        Ganti Password
-      </div>
-
-      <form onSubmit={handleChangePwd}>
-        <div style={{ maxWidth: 380 }}>
-          <FieldRow label="Password Saat Ini">
-            <input type="password" className="form-input" value={curPwd}
-              onChange={(e) => setCurPwd(e.target.value)} placeholder="••••••••" autoComplete="current-password" />
-          </FieldRow>
-          <FieldRow label="Password Baru" hint="Minimal 6 karakter">
-            <input type="password" className="form-input" value={newPwd}
-              onChange={(e) => setNewPwd(e.target.value)} placeholder="••••••••" autoComplete="new-password" />
-          </FieldRow>
-          <FieldRow label="Konfirmasi Password Baru">
-            <input type="password" className="form-input" value={confPwd}
-              onChange={(e) => setConfPwd(e.target.value)} placeholder="••••••••" autoComplete="new-password" />
-          </FieldRow>
-          <button type="submit" className="btn primary" style={{ display: 'flex', alignItems: 'center', gap: 6 }} disabled={busy}>
-            {busy ? <><RefreshCw size={12} style={{ animation: 'spin 1s linear infinite' }} /> Menyimpan…</> : <><KeyRound size={12} /> Ubah Password</>}
-          </button>
-        </div>
-      </form>
-
-      <div style={{ marginTop: 32, borderTop: '1px solid var(--border)', paddingTop: 20 }}>
-        <div style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.6 }}>
-          <strong style={{ color: 'var(--text)' }}>Lupa username?</strong> Cek tabel Admin di Supabase SQL Editor:<br />
-          <code style={{ background: 'var(--s2)', padding: '2px 6px', borderRadius: 4, fontSize: 10.5 }}>SELECT username FROM "Admin";</code>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ── Main Settings page ───────────────────────────────────
 const TABS = [
   { key: 'targets',  label: 'Target KPI',      icon: Target },
   { key: 'calendar', label: 'Kalender Kerja',   icon: Calendar },
-  { key: 'account',  label: 'Akun',             icon: User },
 ];
 
 export default function Settings() {
@@ -297,7 +223,7 @@ export default function Settings() {
       <div className="page-header">
         <div>
           <div className="page-title">Pengaturan</div>
-          <div className="page-sub">Konfigurasi target, kalender kerja, dan akun admin</div>
+          <div className="page-sub">Konfigurasi target dan kalender kerja</div>
         </div>
       </div>
 
@@ -328,7 +254,6 @@ export default function Settings() {
         <div style={{ padding: '4px 0' }}>
           {tab === 'targets'  && <TargetSection />}
           {tab === 'calendar' && <CalendarSection />}
-          {tab === 'account'  && <AccountSection />}
         </div>
       </div>
     </div>

@@ -171,7 +171,7 @@ export default function DetailPanel() {
               <button
                 className="btn"
                 style={{ padding: '2px 7px', fontSize: 10, height: 22, display: 'inline-flex', alignItems: 'center', gap: 3 }}
-                title="Buka semua di Log Work Order Maintenance"
+                title="Buka semua di Log Work Order Produksi"
                 onClick={() => navigateToMaintenance(m.name)}
               >
                 <ExternalLink size={10} /> Log WO
@@ -213,7 +213,7 @@ export default function DetailPanel() {
                 key={b.id ?? i}
                 className="detail-bd-item"
                 style={{ cursor: 'pointer' }}
-                title="Buka di Log Work Order Maintenance"
+                title="Buka di Log Work Order Produksi"
                 onClick={() => navigateToMaintenance(m.name)}
               >
                 <div style={{ flex: 1, minWidth: 0 }}>

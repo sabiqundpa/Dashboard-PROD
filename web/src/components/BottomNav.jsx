@@ -1,4 +1,4 @@
-import { LayoutDashboard, ClipboardList } from 'lucide-react';
+import { LayoutDashboard, Table2, ClipboardList } from 'lucide-react';
 import { useUI } from '../UIContext.jsx';
 
 export default function BottomNav() {
@@ -10,6 +10,10 @@ export default function BottomNav() {
         <div className="bn-dot"></div>
         <span className="bn-icon"><LayoutDashboard size={20} /></span>
         <span className="bn-label">Dashboard</span>
+      </div>
+      <div className={'bn-item' + (page === 'dataproduksi' ? ' active' : '')} onClick={() => navigate('dataproduksi')}>
+        <span className="bn-icon"><Table2 size={20} /></span>
+        <span className="bn-label">Data Produksi</span>
       </div>
       <div className="bn-item" onClick={() => window.open('/rmo', '_blank')}>
         <span className="bn-icon"><ClipboardList size={20} /></span>

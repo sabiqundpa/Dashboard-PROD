@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { CheckCircle2, AlertTriangle, Maximize2, Minimize2, Upload, Table2, PencilLine } from 'lucide-react';
+import ProduksiTable from '../components/ProduksiTable.jsx';
 
 const API = '/api';
 const CLUSTERS = ['AD', 'BC', 'EF', 'FI'];
@@ -105,10 +106,24 @@ function FL({ children, sub }) {
   );
 }
 
-function GroupLabel({ children }) {
+/* Classic form-style tinted group box — mimics the "Input RMO" / "Maintenance"
+   panels from the reference desktop app: colored border, floating title,
+   tinted fill. */
+const TINTS = {
+  cyan:  { bg: '#e0f7f7', border: '#17a2b8' },
+  peach: { bg: '#fde7d6', border: '#e08a3c' },
+  gray:  { bg: '#eef1f1', border: '#8a9a9a' },
+};
+function Panel({ title, tint = 'cyan', children }) {
+  const c = TINTS[tint];
   return (
-    <div style={{ gridColumn: '1 / -1', fontSize: 12, fontWeight: 700, color: '#0e5a52', textTransform: 'uppercase', letterSpacing: '.06em', marginTop: 8, marginBottom: -2, borderBottom: '2px solid #0e5a52', paddingBottom: 4 }}>
-      {children}
+    <div style={{ position: 'relative', border: `2px solid ${c.border}`, borderRadius: 6, background: c.bg, padding: '18px 16px 16px', marginBottom: 18 }}>
+      <span style={{ position: 'absolute', top: -11, left: 14, background: c.bg, padding: '0 8px', fontSize: 12, fontWeight: 800, color: c.border, textTransform: 'uppercase', letterSpacing: '.05em' }}>
+        {title}
+      </span>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '14px 20px' }}>
+        {children}
+      </div>
     </div>
   );
 }
@@ -133,73 +148,21 @@ const EMPTY_FORM = {
   breakdownMesin: '', lossTime: '', keteranganLossTime: '',
 };
 
-/* ── Tabel hasil input ───────────────────────────────── */
-function DataTable({ rows, loading }) {
-  const th = { padding: '8px 10px', fontSize: 10.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.03em', color: '#3d4b4b', background: '#f5c542', border: '1px solid #d9b93a', whiteSpace: 'nowrap', position: 'sticky', top: 0 };
-  const td = { padding: '7px 10px', fontSize: 12.5, border: '1px solid #dfe6e6', whiteSpace: 'nowrap' };
-  const tdOk = { ...td, background: '#e3f3ea' };
-  const tdPct = (v, target) => ({ ...td, background: v >= target ? '#d7f0dd' : '#fdeaea', fontWeight: 700, textAlign: 'center' });
-
-  const avg = (key) => rows.length ? (rows.reduce((s, r) => s + (r[key] || 0), 0) / rows.length).toFixed(1) : '0.0';
-
+/* ── Panel pencarian/filter untuk tab Data Tabel ────── */
+function SearchBar({ query, setQuery, onRefresh }) {
   return (
-    <div style={{ flex: 1, overflow: 'auto', padding: '16px 24px', background: '#eef3f3' }}>
-      {loading ? (
-        <div style={{ padding: 40, textAlign: 'center', color: '#5a6b73' }}>Memuat…</div>
-      ) : rows.length === 0 ? (
-        <div style={{ padding: 40, textAlign: 'center', color: '#5a6b73' }}>Belum ada data.</div>
-      ) : (
-        <table style={{ borderCollapse: 'collapse', width: '100%', background: '#fff' }}>
-          <thead>
-            <tr>
-              {['Nama Parts', 'No Lot', 'Proses', 'Mesin', 'MP', 'CT', 'Waktu Efektif (Jam)', 'Plan',
-                'OK1', 'OK2', 'Rwk', 'Rjct', 'Total OK', 'Total Proses',
-                'Breakdown MC', 'Lost Time', 'Keterangan',
-                'AR', 'AVB', 'PERF', 'YIELD', 'OEE'].map((h) => (
-                <th key={h} style={th}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.id}>
-                <td style={td}>{r.partName}</td>
-                <td style={td}>{r.noLot || '—'}</td>
-                <td style={td}>{r.proses}</td>
-                <td style={td}>{r.mesin}</td>
-                <td style={td}>{r.manPower || '—'}</td>
-                <td style={td}>{r.cycleTime}</td>
-                <td style={td}>{r.waktuEfektif}</td>
-                <td style={td}>{r.plan.toLocaleString()}</td>
-                <td style={td}>{r.ok1.toLocaleString()}</td>
-                <td style={td}>{r.ok2.toLocaleString()}</td>
-                <td style={td}>{r.rework || ''}</td>
-                <td style={td}>{r.reject || ''}</td>
-                <td style={tdOk}>{r.totalOk.toLocaleString()}</td>
-                <td style={tdOk}>{r.totalProses.toLocaleString()}</td>
-                <td style={td}>{r.breakdownMesin || ''}</td>
-                <td style={td}>{r.lostTime || ''}</td>
-                <td style={{ ...td, whiteSpace: 'normal', minWidth: 160 }}>{r.keterangan || ''}</td>
-                <td style={tdPct(r.ar, 100)}>{r.ar}%</td>
-                <td style={tdPct(r.avb, 90)}>{r.avb}%</td>
-                <td style={tdPct(r.perf, 95)}>{r.perf}%</td>
-                <td style={tdPct(r.yield, 100)}>{r.yield}%</td>
-                <td style={tdPct(r.oee, 85)}>{r.oee}%</td>
-              </tr>
-            ))}
-          </tbody>
-          <tfoot>
-            <tr>
-              <td style={{ ...td, fontWeight: 700, background: '#f5c542' }} colSpan={17}>PENCAPAIAN RATA-RATA</td>
-              <td style={{ ...td, fontWeight: 700, background: '#f5c542', textAlign: 'center' }}>{avg('ar')}%</td>
-              <td style={{ ...td, fontWeight: 700, background: '#f5c542', textAlign: 'center' }}>{avg('avb')}%</td>
-              <td style={{ ...td, fontWeight: 700, background: '#f5c542', textAlign: 'center' }}>{avg('perf')}%</td>
-              <td style={{ ...td, fontWeight: 700, background: '#f5c542', textAlign: 'center' }}>{avg('yield')}%</td>
-              <td style={{ ...td, fontWeight: 700, background: '#f5c542', textAlign: 'center' }}>{avg('oee')}%</td>
-            </tr>
-          </tfoot>
-        </table>
-      )}
+    <div className="group-box" style={{ margin: '16px 24px 0', background: '#fff' }}>
+      <span className="group-box-title">Pencarian</span>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12 }}>
+        <div style={{ flex: 1, maxWidth: 360 }}>
+          <FL>Cari Part / Mesin / No Lot</FL>
+          <input type="text" style={{ background: '#fff', border: '1px solid #c9d4d4', borderRadius: 7, padding: '9px 12px', fontSize: 13, width: '100%', boxSizing: 'border-box' }}
+            value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Ketik untuk mencari…" />
+        </div>
+        <button onClick={onRefresh} style={{ padding: '9px 20px', fontSize: 13, borderRadius: 7, background: '#0e5a52', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 700 }}>
+          Refresh
+        </button>
+      </div>
     </div>
   );
 }
@@ -220,6 +183,7 @@ export default function RMOPublic() {
   const [importBusy, setImportBusy]     = useState(false);
   const [tableRows, setTableRows]       = useState([]);
   const [tableLoading, setTableLoading] = useState(false);
+  const [tableQuery, setTableQuery]     = useState('');
 
   const fileInputRef = useRef(null);
 
@@ -229,7 +193,7 @@ export default function RMOPublic() {
     const prev = document.documentElement.getAttribute('data-theme');
     document.documentElement.setAttribute('data-theme', 'light');
     return () => {
-      document.title = 'MTN-DPA Monitoring';
+      document.title = 'PROD';
       if (prev) document.documentElement.setAttribute('data-theme', prev);
       else document.documentElement.removeAttribute('data-theme');
     };
@@ -257,6 +221,17 @@ export default function RMOPublic() {
       setTableLoading(false);
     }).catch(() => setTableLoading(false));
   }, []);
+
+  const filteredTableRows = useMemo(() => {
+    const q = tableQuery.trim().toLowerCase();
+    if (!q) return tableRows;
+    return tableRows.filter((r) =>
+      r.partName.toLowerCase().includes(q) ||
+      r.mesin.toLowerCase().includes(q) ||
+      (r.noLot || '').toLowerCase().includes(q) ||
+      (r.proses || '').toLowerCase().includes(q),
+    );
+  }, [tableRows, tableQuery]);
   useEffect(() => { if (tab === 'table') loadTable(); }, [tab, loadTable]);
 
   function set(key, value) { setForm((f) => ({ ...f, [key]: value })); }
@@ -399,125 +374,132 @@ export default function RMOPublic() {
 
       {/* ── Konten ────────────────────────────────────── */}
       {tab === 'table' ? (
-        <DataTable rows={tableRows} loading={tableLoading} />
+        <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
+          <SearchBar query={tableQuery} setQuery={setTableQuery} onRefresh={loadTable} />
+          <div style={{ padding: '16px 24px' }}>
+            <div style={{ position: 'relative', border: '2px solid #17a2b8', borderRadius: 6, background: '#fff', padding: '18px 12px 12px' }}>
+              <span style={{ position: 'absolute', top: -11, left: 14, background: '#fff', padding: '0 8px', fontSize: 12, fontWeight: 800, color: '#17a2b8', textTransform: 'uppercase', letterSpacing: '.05em' }}>
+                Tabel Resume Produksi
+              </span>
+              <ProduksiTable rows={filteredTableRows} loading={tableLoading} />
+            </div>
+          </div>
+        </div>
       ) : done ? (
         <SuccessView data={done} metrics={doneMetrics} onReset={reset} />
       ) : (
         <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column', padding: '20px 40px 16px', maxWidth: 1000, width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
 
-          <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '14px 20px', alignContent: 'start' }}>
+          <div style={{ flex: 1 }}>
 
-            {/* Tanggal, Shift, No Lot */}
-            <div>
-              <FL>Tanggal *</FL>
-              <input type="date" style={inp} value={form.tanggal} onChange={(e) => set('tanggal', e.target.value)} />
-            </div>
-            <div>
-              <FL>Shift *</FL>
-              <select style={inp} value={form.shift} onChange={(e) => set('shift', e.target.value)}>
-                {SHIFTS.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </div>
-            <div>
-              <FL>No Lot</FL>
-              <input type="text" style={inp} value={form.noLot} onChange={(e) => set('noLot', e.target.value)} />
-            </div>
-            <div />
+            <Panel title="Input Produksi" tint="cyan">
+              <div>
+                <FL>Tanggal *</FL>
+                <input type="date" style={inp} value={form.tanggal} onChange={(e) => set('tanggal', e.target.value)} />
+              </div>
+              <div>
+                <FL>Shift *</FL>
+                <select style={inp} value={form.shift} onChange={(e) => set('shift', e.target.value)}>
+                  {SHIFTS.map((s) => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+              <div>
+                <FL>No Lot</FL>
+                <input type="text" style={inp} value={form.noLot} onChange={(e) => set('noLot', e.target.value)} />
+              </div>
+              <div />
 
-            {/* Cluster, Line Produksi, Part Name, Proses */}
-            <GroupLabel>Routing Produksi</GroupLabel>
-            <div>
-              <FL>Cluster *</FL>
-              <select style={errors.cluster ? inpErr : inp} value={form.cluster} onChange={(e) => pickCluster(e.target.value)}>
-                <option value="">Pilih…</option>
-                {CLUSTERS.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-            <div>
-              <FL>Line Produksi *</FL>
-              <select style={errors.line ? inpErr : inp} value={form.line} disabled={!form.cluster} onChange={(e) => pickLine(e.target.value)}>
-                <option value="">Pilih…</option>
-                {lines.map((l) => <option key={l} value={l}>{l}</option>)}
-              </select>
-            </div>
-            <div>
-              <FL>Part Name *</FL>
-              <select style={errors.partName ? inpErr : inp} value={form.partName} disabled={!form.line} onChange={(e) => pickPart(e.target.value)}>
-                <option value="">Pilih…</option>
-                {partNames.map((p) => <option key={p} value={p}>{p}</option>)}
-              </select>
-            </div>
-            <div>
-              <FL>Proses *</FL>
-              <select style={errors.proses ? inpErr : inp} value={form.proses} disabled={!form.partName} onChange={(e) => pickProses(e.target.value)}>
-                <option value="">Pilih…</option>
-                {prosesList.map((p) => <option key={p} value={p}>{p}</option>)}
-              </select>
-            </div>
+              <div>
+                <FL>Cluster *</FL>
+                <select style={errors.cluster ? inpErr : inp} value={form.cluster} onChange={(e) => pickCluster(e.target.value)}>
+                  <option value="">Pilih…</option>
+                  {CLUSTERS.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <FL>Line Produksi *</FL>
+                <select style={errors.line ? inpErr : inp} value={form.line} disabled={!form.cluster} onChange={(e) => pickLine(e.target.value)}>
+                  <option value="">Pilih…</option>
+                  {lines.map((l) => <option key={l} value={l}>{l}</option>)}
+                </select>
+              </div>
+              <div>
+                <FL>Part Name *</FL>
+                <select style={errors.partName ? inpErr : inp} value={form.partName} disabled={!form.line} onChange={(e) => pickPart(e.target.value)}>
+                  <option value="">Pilih…</option>
+                  {partNames.map((p) => <option key={p} value={p}>{p}</option>)}
+                </select>
+              </div>
+              <div>
+                <FL>Proses *</FL>
+                <select style={errors.proses ? inpErr : inp} value={form.proses} disabled={!form.partName} onChange={(e) => pickProses(e.target.value)}>
+                  <option value="">Pilih…</option>
+                  {prosesList.map((p) => <option key={p} value={p}>{p}</option>)}
+                </select>
+              </div>
 
-            {/* Mesin, Man Power, Cycle Time, Waktu Efektif */}
-            <div>
-              <FL>Mesin *</FL>
-              <select style={errors.mesin ? inpErr : inp} value={form.mesin} disabled={!form.proses} onChange={(e) => pickMesin(e.target.value)}>
-                <option value="">Pilih…</option>
-                {mesinList.map((r) => <option key={r.mesin} value={r.mesin}>{r.mesin}</option>)}
-              </select>
-            </div>
-            <div>
-              <FL>Man Power</FL>
-              <input type="text" style={inp} value={form.manPower} onChange={(e) => set('manPower', e.target.value)} />
-            </div>
-            <div>
-              <FL sub="detik/pcs">Cycle Time</FL>
-              <input type="number" style={inp} value={form.cycleTime} onChange={(e) => set('cycleTime', e.target.value)} />
-            </div>
-            <div>
-              <FL sub="jam">Waktu Efektif</FL>
-              <input type="number" style={inp} value={form.waktuEfektif} onChange={(e) => set('waktuEfektif', e.target.value)} />
-            </div>
+              <div>
+                <FL>Mesin *</FL>
+                <select style={errors.mesin ? inpErr : inp} value={form.mesin} disabled={!form.proses} onChange={(e) => pickMesin(e.target.value)}>
+                  <option value="">Pilih…</option>
+                  {mesinList.map((r) => <option key={r.mesin} value={r.mesin}>{r.mesin}</option>)}
+                </select>
+              </div>
+              <div>
+                <FL>Man Power</FL>
+                <input type="text" style={inp} value={form.manPower} onChange={(e) => set('manPower', e.target.value)} />
+              </div>
+              <div>
+                <FL sub="detik/pcs">Cycle Time</FL>
+                <input type="number" style={inp} value={form.cycleTime} onChange={(e) => set('cycleTime', e.target.value)} />
+              </div>
+              <div>
+                <FL sub="jam">Waktu Efektif</FL>
+                <input type="number" style={inp} value={form.waktuEfektif} onChange={(e) => set('waktuEfektif', e.target.value)} />
+              </div>
+            </Panel>
 
-            {/* Plan, OK1, OK2, Rework */}
-            <GroupLabel>Aktual</GroupLabel>
-            <div>
-              <FL sub="pcs">Plan</FL>
-              <input type="number" style={inp} value={form.plan} onChange={(e) => set('plan', e.target.value)} />
-            </div>
-            <div>
-              <FL sub="pcs">OK 1</FL>
-              <input type="number" style={inp} value={form.ok1} onChange={(e) => set('ok1', e.target.value)} />
-            </div>
-            <div>
-              <FL sub="pcs">OK 2</FL>
-              <input type="number" style={inp} value={form.ok2} onChange={(e) => set('ok2', e.target.value)} />
-            </div>
-            <div>
-              <FL sub="pcs">Rework</FL>
-              <input type="number" style={inp} value={form.rwk} onChange={(e) => set('rwk', e.target.value)} />
-            </div>
+            <Panel title="Aktual Produksi" tint="peach">
+              <div>
+                <FL sub="pcs">Plan</FL>
+                <input type="number" style={inp} value={form.plan} onChange={(e) => set('plan', e.target.value)} />
+              </div>
+              <div>
+                <FL sub="pcs">OK 1</FL>
+                <input type="number" style={inp} value={form.ok1} onChange={(e) => set('ok1', e.target.value)} />
+              </div>
+              <div>
+                <FL sub="pcs">OK 2</FL>
+                <input type="number" style={inp} value={form.ok2} onChange={(e) => set('ok2', e.target.value)} />
+              </div>
+              <div>
+                <FL sub="pcs">Rework</FL>
+                <input type="number" style={inp} value={form.rwk} onChange={(e) => set('rwk', e.target.value)} />
+              </div>
 
-            {/* Reject, Total OK, Total Proses (live computed) */}
-            <div>
-              <FL sub="pcs">Reject</FL>
-              <input type="number" style={inp} value={form.rjct} onChange={(e) => set('rjct', e.target.value)} />
-            </div>
-            <ComputedField label="Total OK" sub="= OK1 + OK2" value={totalOk.toLocaleString()} />
-            <ComputedField label="Total Proses" sub="= OK1+OK2+Rwk+Rjct" value={totalProses.toLocaleString()} />
-            <div />
+              <div>
+                <FL sub="pcs">Reject</FL>
+                <input type="number" style={inp} value={form.rjct} onChange={(e) => set('rjct', e.target.value)} />
+              </div>
+              <ComputedField label="Total OK" sub="= OK1 + OK2" value={totalOk.toLocaleString()} />
+              <ComputedField label="Total Proses" sub="= OK1+OK2+Rwk+Rjct" value={totalProses.toLocaleString()} />
+              <div />
+            </Panel>
 
-            {/* Breakdown, Loss Time, Keterangan */}
-            <GroupLabel>Downtime</GroupLabel>
-            <div>
-              <FL sub="menit">Breakdown Mesin</FL>
-              <input type="number" style={inp} value={form.breakdownMesin} onChange={(e) => set('breakdownMesin', e.target.value)} />
-            </div>
-            <div>
-              <FL sub="menit">Loss Time</FL>
-              <input type="number" style={inp} value={form.lossTime} onChange={(e) => set('lossTime', e.target.value)} />
-            </div>
-            <div style={{ gridColumn: 'span 2' }}>
-              <FL>Keterangan Loss Time</FL>
-              <input type="text" style={inp} value={form.keteranganLossTime} onChange={(e) => set('keteranganLossTime', e.target.value)} />
-            </div>
+            <Panel title="Downtime" tint="gray">
+              <div>
+                <FL sub="menit">Breakdown Mesin</FL>
+                <input type="number" style={inp} value={form.breakdownMesin} onChange={(e) => set('breakdownMesin', e.target.value)} />
+              </div>
+              <div>
+                <FL sub="menit">Loss Time</FL>
+                <input type="number" style={inp} value={form.lossTime} onChange={(e) => set('lossTime', e.target.value)} />
+              </div>
+              <div style={{ gridColumn: 'span 2' }}>
+                <FL>Keterangan Loss Time</FL>
+                <input type="text" style={inp} value={form.keteranganLossTime} onChange={(e) => set('keteranganLossTime', e.target.value)} />
+              </div>
+            </Panel>
 
           </div>
 

@@ -8,6 +8,7 @@ import { UIProvider, useUI } from './UIContext.jsx';
 import { TargetsProvider } from './TargetsContext.jsx';
 import TargetsModal from './components/TargetsModal.jsx';
 import Dashboard from './pages/Dashboard.jsx';
+import DataProduksi from './pages/DataProduksi.jsx';
 import Reports from './pages/Reports.jsx';
 import Topbar from './components/Topbar.jsx';
 import AppSidebar from './components/AppSidebar.jsx';
@@ -19,7 +20,7 @@ import DetailPanel from './components/DetailPanel.jsx';
 import WOPanel from './components/WOPanel.jsx';
 import ModalRoot from './components/ModalRoot.jsx';
 
-const PAGES = { dashboard: Dashboard, reports: Reports };
+const PAGES = { dashboard: Dashboard, dataproduksi: DataProduksi, reports: Reports };
 
 function Shell() {
   const { page, closeModal, setNotifOpen, closeDetail, closeWODetail, sidebarOpen, presentMode, togglePresentMode, detailWO } = useUI();

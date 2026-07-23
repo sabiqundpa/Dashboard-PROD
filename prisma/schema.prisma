@@ -94,9 +94,11 @@ model PartRouting {
 model ProduksiHarian {
   id             Int      @id @default(autoincrement())
   tanggal        DateTime
+  waktu          String?                                        // jam input, format HH:MM
   shift          String
   cluster        String
   line           String   @map("line_produksi")
+  grupHead       String?  @map("grup_head")
 
   noLot          String?  @map("no_lot")
   partName       String   @map("part_name")
@@ -120,6 +122,21 @@ model ProduksiHarian {
   createdAt      DateTime @default(now()) @map("created_at")
 
   @@map("ProduksiHarian")
+}
+
+// Log problem/root-cause untuk kasus AR/produksi rendah — ditampilkan di
+// halaman detail AR (tabel Problem, Root Cause, Temporary/Permanent Action).
+model ProblemLog {
+  id                Int       @id @default(autoincrement())
+  problem           String
+  rootCause         String?   @map("root_cause")
+  temporaryAction   String?   @map("temporary_action")
+  permanentAction   String?   @map("permanent_action")
+  dueDate           DateTime? @map("due_date")
+  status            String    @default("open") // open | in_progress | closed
+  createdAt         DateTime  @default(now()) @map("created_at")
+
+  @@map("ProblemLog")
 }
 
 model Breakdown {

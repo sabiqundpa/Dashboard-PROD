@@ -4,9 +4,10 @@ const MIN_VISIBLE = 3;
 const ROTATE_THRESH = 35;
 const ROTATE_ANGLE = -(40 * Math.PI) / 180;
 
-function formatAxisLabel(label) {
+function formatAxisLabel(label, hourly) {
   const s = String(label ?? '').trim();
   if (s === 'TOTAL' || s === 'Avg') return s;
+  if (!hourly) return s;
   const h = parseInt(s, 10);
   if (!isNaN(h) && h >= 0 && h <= 23 && /^\d{1,2}$/.test(s)) {
     if (h === 0)  return '12AM';
@@ -26,7 +27,7 @@ function calcMovingAvg(arr, w = 3) {
 }
 
 function ChartCanvas({
-  data, valueKey, targetKey, color, unit,
+  data, valueKey, targetKey, color, unit, hourly,
   showMovingAvg, movingAvgColor, overTargetColor, targetColor,
 }) {
   const canvasRef = useRef(null);
@@ -187,7 +188,7 @@ function ChartCanvas({
     visibleData.forEach((d, i) => {
       if (i % step !== 0 && i !== m - 1) return;
       const isT  = d.day === 'TOTAL' || d.day === 'Avg';
-      const label = formatAxisLabel(d.day);
+      const label = formatAxisLabel(d.day, hourly);
       ctx.fillStyle = isT ? accent2 : muted;
       ctx.font      = isT
         ? `bold ${FONT}px Inter, sans-serif`
@@ -216,7 +217,7 @@ function ChartCanvas({
         tip.style.left    = Math.min(xOf(cl), W - 110) + 'px';
         tip.style.top     = (Math.max(pad.t, yOf(vals[cl])) - 32) + 'px';
         const tgt = targetKey && targets[cl] ? ` · target ${targets[cl].toFixed(1)}` : '';
-        tip.textContent = `${formatAxisLabel(visibleData[cl].day)}: ${vals[cl].toFixed(1)} ${unit}${tgt}`;
+        tip.textContent = `${formatAxisLabel(visibleData[cl].day, hourly)}: ${vals[cl].toFixed(1)} ${unit}${tgt}`;
       } else {
         tip.style.display = 'none';
       }
@@ -225,7 +226,7 @@ function ChartCanvas({
     canvas.onmouseleave = () => { tip.style.display = 'none'; };
     canvas.ontouchmove  = (e) => { e.preventDefault(); showTip(e.touches[0].clientX, canvas.getBoundingClientRect()); };
     canvas.ontouchend   = () => setTimeout(() => { tip.style.display = 'none'; }, 1500);
-  }, [visibleData, valueKey, targetKey, color, unit, showMovingAvg, movingAvgColor, overTargetColor, tick]);
+  }, [visibleData, valueKey, targetKey, color, unit, hourly, showMovingAvg, movingAvgColor, overTargetColor, tick]);
 
   useEffect(() => {
     const id = requestAnimationFrame(() => setTick((t) => t + 1));
@@ -241,7 +242,7 @@ function ChartCanvas({
 }
 
 export default function LineTrendChart({
-  title, data, valueKey, targetKey, color, unit,
+  title, data, valueKey, targetKey, color, unit, hourly = false,
   showMovingAvg = false, movingAvgColor = '#f0a500',
   overTargetColor = null, targetColor = 'rgba(150,150,180,.7)',
   legendItems = null,
@@ -258,10 +259,10 @@ export default function LineTrendChart({
       <div className="card-header">
         <div className="card-title">{title}</div>
       </div>
-      <div className="axis-unit-label">Waktu (Jam)</div>
+      <div className="axis-unit-label">{unit === '%' ? 'Persentase (%)' : 'Waktu (Jam)'}</div>
       <ChartCanvas
         data={data} valueKey={valueKey} targetKey={targetKey}
-        color={color} unit={unit}
+        color={color} unit={unit} hourly={hourly}
         showMovingAvg={showMovingAvg} movingAvgColor={movingAvgColor}
         overTargetColor={overTargetColor} targetColor={targetColor}
       />

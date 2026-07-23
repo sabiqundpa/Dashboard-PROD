@@ -5,13 +5,13 @@ const COLORS = ['#f0a500', '#4488ff', '#a855f7', '#00d084', '#ff6b35', '#ff4455'
 // Donut chart breakdown of the top causes/machines, paired with a colored
 // legend (dot + label + % + count) so the proportions are readable at a
 // glance, same idea as FusionSolar's device-share donut.
-export default function DonutChart({ data, labelKey, valueKey = 'count', centerLabel = 'penyebab' }) {
+export default function DonutChart({ data, labelKey, valueKey = 'count', centerLabel = 'penyebab', size: sizeProp, showLegend = true }) {
   const canvasRef = useRef(null);
 
   useEffect(() => {
     if (!data?.length || !canvasRef.current) return;
     const canvas = canvasRef.current;
-    const size = canvas.parentElement.offsetWidth || 140;
+    const size = sizeProp || canvas.parentElement.offsetWidth || 140;
     const dpr = window.devicePixelRatio || 1;
     canvas.width = size * dpr; canvas.height = size * dpr;
     canvas.style.width = size + 'px'; canvas.style.height = size + 'px';
@@ -45,24 +45,28 @@ export default function DonutChart({ data, labelKey, valueKey = 'count', centerL
     ctx.font = '500 8px Inter, sans-serif';
     ctx.fillStyle = rootStyle.getPropertyValue('--muted');
     ctx.fillText(centerLabel, cx, cy + 9);
-  }, [data, labelKey, valueKey, centerLabel]);
+  }, [data, labelKey, valueKey, centerLabel, sizeProp]);
 
   if (!data?.length) return null;
 
+  const boxSize = sizeProp || 100;
+
   return (
     <div style={{ display: 'flex', gap: 14, alignItems: 'center', marginBottom: 10 }}>
-      <div style={{ width: 100, height: 100, flexShrink: 0 }}>
+      <div style={{ width: boxSize, height: boxSize, flexShrink: 0 }}>
         <canvas ref={canvasRef}></canvas>
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 5, flex: 1, minWidth: 0 }}>
-        {data.slice(0, 5).map((d, i) => (
-          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5 }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: COLORS[i % COLORS.length], flexShrink: 0 }}></span>
-            <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text)' }}>{d[labelKey]}</span>
-            <span style={{ color: 'var(--muted)', fontFamily: 'var(--mono)', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>{d.pct}%</span>
-          </div>
-        ))}
-      </div>
+      {showLegend && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, flex: 1, minWidth: 0 }}>
+          {data.slice(0, 5).map((d, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5 }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: COLORS[i % COLORS.length], flexShrink: 0 }}></span>
+              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text)' }}>{d[labelKey]}</span>
+              <span style={{ color: 'var(--muted)', fontFamily: 'var(--mono)', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>{d.pct}%</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

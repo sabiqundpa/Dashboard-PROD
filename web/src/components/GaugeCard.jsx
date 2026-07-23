@@ -1,10 +1,26 @@
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, ChevronRight } from 'lucide-react';
 import InfoTip from './InfoTip.jsx';
 
-export default function GaugeCard({ title, value, target, infoText }) {
+export default function GaugeCard({ title, value, target, infoText, onClick, comingSoon, invert = false }) {
+  if (comingSoon) {
+    return (
+      <div className="card" style={{ opacity: .55 }}>
+        <div className="card-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <div className="card-title">{title}</div>
+            {infoText && <InfoTip text={infoText} />}
+          </div>
+        </div>
+        <div style={{ textAlign: 'center', padding: '38px 0' }}>
+          <div style={{ fontSize: 12, color: 'var(--muted)' }}>Data belum tersedia</div>
+        </div>
+      </div>
+    );
+  }
+
   const v = value ?? 0;
-  const isOk   = v >= target;
-  const isWarn = v >= target * 0.85 && !isOk;
+  const isOk   = invert ? v <= target : v >= target;
+  const isWarn = !isOk && (invert ? v <= target * 1.15 : v >= target * 0.85);
   const colVar = isOk ? 'var(--green)' : isWarn ? 'var(--yellow)' : 'var(--red)';
   const colHex = isOk ? '#00d084'      : isWarn ? '#f0a500'        : '#ff4455';
 
@@ -13,12 +29,13 @@ export default function GaugeCard({ title, value, target, infoText }) {
   const filled = Math.min(v / 100, 1) * circ;
 
   return (
-    <div className="card">
+    <div className="card" onClick={onClick} style={onClick ? { cursor: 'pointer' } : undefined}>
       <div className="card-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <div className="card-title">{title}</div>
           {infoText && <InfoTip text={infoText} />}
         </div>
+        {onClick && <ChevronRight size={15} style={{ color: 'var(--muted)' }} />}
       </div>
 
       <div style={{ textAlign: 'center', padding: '4px 0 8px' }}>
@@ -46,10 +63,10 @@ export default function GaugeCard({ title, value, target, infoText }) {
         {isOk ? (
           <>
             <CheckCircle2 size={13} style={{ color: colVar, flexShrink: 0 }} />
-            <span style={{ color: colVar }}>Target {target}% — terlampaui</span>
+            <span style={{ color: colVar }}>Target {invert ? '≤' : ''}{target}% — tercapai</span>
           </>
         ) : (
-          <span style={{ color: 'var(--muted)' }}>Target {target}% — belum tercapai</span>
+          <span style={{ color: 'var(--muted)' }}>Target {invert ? '≤' : ''}{target}% — belum tercapai</span>
         )}
       </div>
     </div>

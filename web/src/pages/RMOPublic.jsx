@@ -3,7 +3,6 @@ import { CheckCircle2, AlertTriangle, Maximize2, Minimize2, Upload, Table2, Penc
 import ProduksiTable from '../components/ProduksiTable.jsx';
 
 const API = '/api';
-const CLUSTERS = ['AD', 'BC', 'EF', 'FI'];
 const SHIFTS = ['Shift 1', 'Shift 2', 'Shift 3'];
 
 function todayStr() { return new Date().toISOString().slice(0, 10); }
@@ -140,12 +139,15 @@ function ComputedField({ label, sub, value }) {
   );
 }
 
+function nowTimeStr() { return new Date().toTimeString().slice(0, 5); }
+
 const EMPTY_FORM = {
-  tanggal: todayStr(), shift: SHIFTS[0],
+  tanggal: todayStr(), waktu: nowTimeStr(), shift: SHIFTS[0], grupHead: '',
   cluster: '', line: '', partName: '', proses: '', mesin: '', manPower: '', cycleTime: '',
   noLot: '', waktuEfektif: '', plan: '',
-  ok1: '', ok2: '', rwk: '', rjct: '',
+  qtyOk: '', rwk: '', rjct: '',
   breakdownMesin: '', lossTime: '', keteranganLossTime: '',
+  problem: '', rootCause: '',
 };
 
 /* ── Panel pencarian/filter untuk tab Data Tabel ────── */
@@ -236,7 +238,12 @@ export default function RMOPublic() {
 
   function set(key, value) { setForm((f) => ({ ...f, [key]: value })); }
 
-  /* Cascading options derived from master data */
+  /* Cascading options derived from master data — only clusters that actually
+     have master data behind them, so the dropdown never leads to a dead end. */
+  const clusterOptions = useMemo(
+    () => [...new Set(routing.map((r) => r.cluster))].sort(),
+    [routing],
+  );
   const lines = useMemo(
     () => [...new Set(routing.filter((r) => r.cluster === form.cluster).map((r) => r.line))].sort(),
     [routing, form.cluster],
@@ -255,7 +262,7 @@ export default function RMOPublic() {
   );
 
   /* Live-computed Total OK / Total Proses */
-  const totalOk = useMemo(() => num(form.ok1) + num(form.ok2), [form.ok1, form.ok2]);
+  const totalOk = useMemo(() => num(form.qtyOk), [form.qtyOk]);
   const totalProses = useMemo(() => totalOk + num(form.rwk) + num(form.rjct), [totalOk, form.rwk, form.rjct]);
 
   function pickCluster(v) { setForm((f) => ({ ...f, cluster: v, line: '', partName: '', proses: '', mesin: '', manPower: '', cycleTime: '' })); }
@@ -267,7 +274,7 @@ export default function RMOPublic() {
     setForm((f) => ({ ...f, mesin: v, manPower: match?.manPower || f.manPower, cycleTime: match?.cycleTime || f.cycleTime }));
   }
 
-  const hasInput = Object.entries(form).some(([k, v]) => !['tanggal', 'shift'].includes(k) && !!v);
+  const hasInput = Object.entries(form).some(([k, v]) => !['tanggal', 'waktu', 'shift'].includes(k) && !!v);
 
   function handleCancel() { if (hasInput) setCancelWarn(true); else reset(); }
   function reset() {
@@ -280,6 +287,7 @@ export default function RMOPublic() {
 
   async function submit() {
     const nextErrors = {};
+    if (!form.grupHead.trim()) nextErrors.grupHead = 'Wajib diisi';
     if (!form.cluster) nextErrors.cluster = 'Wajib dipilih';
     if (!form.line) nextErrors.line = 'Wajib dipilih';
     if (!form.partName) nextErrors.partName = 'Wajib dipilih';
@@ -294,17 +302,31 @@ export default function RMOPublic() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          tanggal: form.tanggal, shift: form.shift, cluster: form.cluster, line: form.line,
+          tanggal: form.tanggal, waktu: form.waktu, shift: form.shift, grup_head: form.grupHead,
+          cluster: form.cluster, line: form.line,
           no_lot: form.noLot, part_name: form.partName, proses: form.proses, mesin: form.mesin,
           man_power: form.manPower, cycle_time: form.cycleTime,
           waktu_efektif: form.waktuEfektif, plan: form.plan,
-          ok1: form.ok1, ok2: form.ok2, rwk: form.rwk, rjct: form.rjct,
+          ok1: form.qtyOk, ok2: 0, rwk: form.rwk, rjct: form.rjct,
           breakdown_mesin: form.breakdownMesin, lost_time: form.lossTime,
           keterangan: form.keteranganLossTime,
         }),
       });
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(data.error || 'Gagal mengirim');
+
+      if (form.problem.trim()) {
+        fetch(`${API}/problem-log`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            problem: form.problem,
+            root_cause: form.rootCause,
+            status: 'open',
+          }),
+        }).catch(() => {});
+      }
+
       setDoneMetrics(data);
       setDone({ ...form });
     } catch (e) { alert(e.message); }
@@ -392,10 +414,23 @@ export default function RMOPublic() {
 
           <div style={{ flex: 1 }}>
 
+            <div className="group-box" style={{ marginBottom: 18 }}>
+              <span className="group-box-title">Grup Head</span>
+              <div style={{ maxWidth: 340 }}>
+                <FL>Nama Grup Head *</FL>
+                <input type="text" style={errors.grupHead ? inpErr : inp} value={form.grupHead} onChange={(e) => set('grupHead', e.target.value)} />
+                {errors.grupHead && <div style={{ color: '#d9534f', fontSize: 12, marginTop: 5 }}>{errors.grupHead}</div>}
+              </div>
+            </div>
+
             <Panel title="Input Produksi" tint="cyan">
               <div>
                 <FL>Tanggal *</FL>
                 <input type="date" style={inp} value={form.tanggal} onChange={(e) => set('tanggal', e.target.value)} />
+              </div>
+              <div>
+                <FL>Waktu *</FL>
+                <input type="time" style={inp} value={form.waktu} onChange={(e) => set('waktu', e.target.value)} />
               </div>
               <div>
                 <FL>Shift *</FL>
@@ -407,13 +442,12 @@ export default function RMOPublic() {
                 <FL>No Lot</FL>
                 <input type="text" style={inp} value={form.noLot} onChange={(e) => set('noLot', e.target.value)} />
               </div>
-              <div />
 
               <div>
                 <FL>Cluster *</FL>
                 <select style={errors.cluster ? inpErr : inp} value={form.cluster} onChange={(e) => pickCluster(e.target.value)}>
                   <option value="">Pilih…</option>
-                  {CLUSTERS.map((c) => <option key={c} value={c}>{c}</option>)}
+                  {clusterOptions.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
               <div>
@@ -465,24 +499,21 @@ export default function RMOPublic() {
                 <input type="number" style={inp} value={form.plan} onChange={(e) => set('plan', e.target.value)} />
               </div>
               <div>
-                <FL sub="pcs">OK 1</FL>
-                <input type="number" style={inp} value={form.ok1} onChange={(e) => set('ok1', e.target.value)} />
-              </div>
-              <div>
-                <FL sub="pcs">OK 2</FL>
-                <input type="number" style={inp} value={form.ok2} onChange={(e) => set('ok2', e.target.value)} />
+                <FL sub="pcs">QTY Produksi OK</FL>
+                <input type="number" style={inp} value={form.qtyOk} onChange={(e) => set('qtyOk', e.target.value)} />
               </div>
               <div>
                 <FL sub="pcs">Rework</FL>
                 <input type="number" style={inp} value={form.rwk} onChange={(e) => set('rwk', e.target.value)} />
               </div>
-
               <div>
                 <FL sub="pcs">Reject</FL>
                 <input type="number" style={inp} value={form.rjct} onChange={(e) => set('rjct', e.target.value)} />
               </div>
-              <ComputedField label="Total OK" sub="= OK1 + OK2" value={totalOk.toLocaleString()} />
-              <ComputedField label="Total Proses" sub="= OK1+OK2+Rwk+Rjct" value={totalProses.toLocaleString()} />
+
+              <ComputedField label="Total OK" sub="= QTY Produksi OK" value={totalOk.toLocaleString()} />
+              <ComputedField label="Total Proses" sub="= OK+Rwk+Rjct" value={totalProses.toLocaleString()} />
+              <div />
               <div />
             </Panel>
 
@@ -498,6 +529,17 @@ export default function RMOPublic() {
               <div style={{ gridColumn: 'span 2' }}>
                 <FL>Keterangan Loss Time</FL>
                 <input type="text" style={inp} value={form.keteranganLossTime} onChange={(e) => set('keteranganLossTime', e.target.value)} />
+              </div>
+            </Panel>
+
+            <Panel title="Problem & Root Cause (opsional)" tint="peach">
+              <div style={{ gridColumn: 'span 2' }}>
+                <FL>Problem</FL>
+                <input type="text" style={inp} value={form.problem} onChange={(e) => set('problem', e.target.value)} placeholder="Isi jika ada masalah yang perlu ditindaklanjuti" />
+              </div>
+              <div style={{ gridColumn: 'span 2' }}>
+                <FL>Root Cause</FL>
+                <input type="text" style={inp} value={form.rootCause} onChange={(e) => set('rootCause', e.target.value)} />
               </div>
             </Panel>
 

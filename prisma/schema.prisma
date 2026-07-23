@@ -69,23 +69,47 @@ model WorkingCalendar {
   @@map("WorkingCalendar")
 }
 
-// Master data routing produksi: untuk setiap Part, proses apa saja yang
-// dilalui, di mesin/line/cluster mana, siapa MP default-nya, dan CT standar.
-// Diisi lewat import CSV (menu Actions di form /rmo).
-model PartRouting {
-  id         Int      @id @default(autoincrement())
-  cluster    String                                  // AD | BC | EF | FI
-  line       String   @map("line_produksi")
-  partName   String   @map("part_name")
-  partNumber String   @default("") @map("part_number")
-  proses     String                                  // tahapan proses, mis. "CNC", "Milling Finish"
-  mesin      String                                  // Nama Mesin
-  manPower   String?  @map("man_power")
-  cycleTime  Float    @default(0) @map("cycle_time")  // detik/pcs
-  createdAt  DateTime @default(now()) @map("created_at")
+// Master data lookup — dikelola langsung oleh user lewat Supabase (Table
+// Editor), bukan lewat migrasi/import di aplikasi. Masing-masing tabel
+// cuma daftar nilai independen (bukan gabungan/relasi), dipakai sebagai
+// isi dropdown di form Resume Control Harian Produksi.
+model MasterCluster {
+  id      Int    @id @default(autoincrement())
+  cluster String @map("CLUSTER")
 
-  @@unique([partName, proses, mesin])
-  @@map("PartRouting")
+  @@map("CLUSTER")
+}
+
+model MasterMp {
+  id  Int    @id @default(autoincrement())
+  mp  String @map("MP")
+  no  String? @map("No")
+
+  @@map("MP")
+}
+
+model MasterMesin {
+  id    Int    @id @default(autoincrement())
+  no    String? @map("No")
+  mesin String @map("Mesin")
+
+  @@map("Mesin")
+}
+
+model MasterNamaPart {
+  id        Int    @id @default(autoincrement())
+  namaParts String @map("Nama Parts")
+  no        String? @map("No")
+
+  @@map("Nama Parts")
+}
+
+model MasterProses {
+  id     Int    @id @default(autoincrement())
+  no     String? @map("No")
+  proses String @map("Proses")
+
+  @@map("Proses")
 }
 
 // Resume Control Harian Produksi — satu baris per Part + Proses + Mesin per

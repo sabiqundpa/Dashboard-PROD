@@ -1,12 +1,13 @@
 import { useEffect } from 'react';
 import { Minimize2 } from 'lucide-react';
-import { AuthProvider } from './AuthContext.jsx';
+import { AuthProvider, useAuth } from './AuthContext.jsx';
 import { ThemeProvider } from './ThemeContext.jsx';
 import { ToastProvider } from './ToastContext.jsx';
 import { AppProvider, useApp } from './AppContext.jsx';
 import { UIProvider, useUI } from './UIContext.jsx';
 import { TargetsProvider } from './TargetsContext.jsx';
 import TargetsModal from './components/TargetsModal.jsx';
+import Login from './pages/Login.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import DataProduksi from './pages/DataProduksi.jsx';
 import ARDetail from './pages/ARDetail.jsx';
@@ -67,17 +68,25 @@ function Shell() {
   );
 }
 
+function AuthGate() {
+  const { token } = useAuth();
+  if (!token) return <Login />;
+  return (
+    <AppProvider>
+      <UIProvider>
+        <Shell />
+      </UIProvider>
+    </AppProvider>
+  );
+}
+
 export default function App() {
   return (
     <TargetsProvider>
       <ThemeProvider>
         <AuthProvider>
           <ToastProvider>
-            <AppProvider>
-              <UIProvider>
-                <Shell />
-              </UIProvider>
-            </AppProvider>
+            <AuthGate />
           </ToastProvider>
         </AuthProvider>
       </ThemeProvider>

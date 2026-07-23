@@ -38,7 +38,8 @@
 :root[data-theme="light"] .conn-dot.connecting{background:var(--yellow)}
 :root[data-theme="light"] .overlay{background:rgba(20,20,30,.45)}
 :root[data-theme="light"] .mobile-overlay{background:rgba(20,20,30,.35)}
-html{height:100%;-webkit-text-size-adjust:100%}
+html{height:100%;background:var(--bg);-webkit-text-size-adjust:100%}
+html:fullscreen{background:var(--bg)}
 body{min-height:100%;background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;overflow-x:hidden}
 ::-webkit-scrollbar{width:7px;height:7px}
 ::-webkit-scrollbar-track{background:var(--s2);border-radius:4px}

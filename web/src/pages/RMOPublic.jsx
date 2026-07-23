@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { CheckCircle2, AlertTriangle, Maximize2, Minimize2, Upload, Table2, PencilLine } from 'lucide-react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { CheckCircle2, AlertTriangle, Maximize2, Minimize2, Table2, PencilLine } from 'lucide-react';
 import ProduksiTable from '../components/ProduksiTable.jsx';
 
 const API = '/api';
@@ -69,32 +69,6 @@ function CancelModal({ onConfirm, onDismiss }) {
   );
 }
 
-/* ── Popup hasil import master data ─────────────────── */
-function ImportResultModal({ result, error, onClose }) {
-  return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 999, background: 'rgba(0,0,0,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={onClose}>
-      <div style={{ background: '#fff', border: '1px solid #d7e0e0', borderRadius: 12, padding: '28px', maxWidth: 380, width: '88%', textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
-        {error ? (
-          <>
-            <AlertTriangle size={36} style={{ color: '#d9534f', marginBottom: 10 }} />
-            <div style={{ fontWeight: 700, marginBottom: 8 }}>Import Gagal</div>
-            <div style={{ fontSize: 13, color: '#5a6b73' }}>{error}</div>
-          </>
-        ) : (
-          <>
-            <CheckCircle2 size={36} style={{ color: '#00a884', marginBottom: 10 }} />
-            <div style={{ fontWeight: 700, marginBottom: 8 }}>Import Selesai</div>
-            <div style={{ fontSize: 13, color: '#5a6b73' }}>
-              {result.imported} baris master data diimpor, {result.skipped} dilewati (data tidak lengkap), dari total {result.total} baris.
-            </div>
-          </>
-        )}
-        <button style={{ marginTop: 18, padding: '9px 24px', fontSize: 13, background: '#0e5a52', color: '#fff', border: 'none', borderRadius: 7, cursor: 'pointer', fontWeight: 600 }} onClick={onClose}>Tutup</button>
-      </div>
-    </div>
-  );
-}
-
 /* ── Label helper ───────────────────────────────────── */
 function FL({ children, sub }) {
   return (
@@ -150,6 +124,8 @@ const EMPTY_FORM = {
   problem: '', rootCause: '',
 };
 
+const EMPTY_MASTER = { clusters: [], partNames: [], proses: [], mesin: [], manPower: [] };
+
 /* ── Panel pencarian/filter untuk tab Data Tabel ────── */
 function SearchBar({ query, setQuery, onRefresh }) {
   return (
@@ -172,7 +148,7 @@ function SearchBar({ query, setQuery, onRefresh }) {
 /* ── Halaman utama ──────────────────────────────────── */
 export default function RMOPublic() {
   const [tab, setTab]                   = useState('input'); // input | table
-  const [routing, setRouting]           = useState([]);
+  const [master, setMaster]             = useState(EMPTY_MASTER);
   const [form, setForm]                 = useState(EMPTY_FORM);
   const [busy, setBusy]                 = useState(false);
   const [errors, setErrors]             = useState({});
@@ -180,14 +156,9 @@ export default function RMOPublic() {
   const [doneMetrics, setDoneMetrics]   = useState(null);
   const [cancelWarn, setCancelWarn]     = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [importResult, setImportResult] = useState(null);
-  const [importError, setImportError]   = useState(null);
-  const [importBusy, setImportBusy]     = useState(false);
   const [tableRows, setTableRows]       = useState([]);
   const [tableLoading, setTableLoading] = useState(false);
   const [tableQuery, setTableQuery]     = useState('');
-
-  const fileInputRef = useRef(null);
 
   /* Tab title + force light theme */
   useEffect(() => {
@@ -211,10 +182,10 @@ export default function RMOPublic() {
     else document.exitFullscreen().catch(() => {});
   }, []);
 
-  const loadRouting = useCallback(() => {
-    fetch(`${API}/part-routing`).then((r) => r.json()).then(setRouting).catch(() => {});
+  const loadMaster = useCallback(() => {
+    fetch(`${API}/master`).then((r) => r.json()).then(setMaster).catch(() => {});
   }, []);
-  useEffect(() => { loadRouting(); }, [loadRouting]);
+  useEffect(() => { loadMaster(); }, [loadMaster]);
 
   const loadTable = useCallback(() => {
     setTableLoading(true);
@@ -238,41 +209,9 @@ export default function RMOPublic() {
 
   function set(key, value) { setForm((f) => ({ ...f, [key]: value })); }
 
-  /* Cascading options derived from master data — only clusters that actually
-     have master data behind them, so the dropdown never leads to a dead end. */
-  const clusterOptions = useMemo(
-    () => [...new Set(routing.map((r) => r.cluster))].sort(),
-    [routing],
-  );
-  const lines = useMemo(
-    () => [...new Set(routing.filter((r) => r.cluster === form.cluster).map((r) => r.line))].sort(),
-    [routing, form.cluster],
-  );
-  const partNames = useMemo(
-    () => [...new Set(routing.filter((r) => r.cluster === form.cluster && r.line === form.line).map((r) => r.partName))].sort(),
-    [routing, form.cluster, form.line],
-  );
-  const prosesList = useMemo(
-    () => [...new Set(routing.filter((r) => r.cluster === form.cluster && r.line === form.line && r.partName === form.partName).map((r) => r.proses))],
-    [routing, form.cluster, form.line, form.partName],
-  );
-  const mesinList = useMemo(
-    () => routing.filter((r) => r.cluster === form.cluster && r.line === form.line && r.partName === form.partName && r.proses === form.proses),
-    [routing, form.cluster, form.line, form.partName, form.proses],
-  );
-
   /* Live-computed Total OK / Total Proses */
   const totalOk = useMemo(() => num(form.qtyOk), [form.qtyOk]);
   const totalProses = useMemo(() => totalOk + num(form.rwk) + num(form.rjct), [totalOk, form.rwk, form.rjct]);
-
-  function pickCluster(v) { setForm((f) => ({ ...f, cluster: v, line: '', partName: '', proses: '', mesin: '', manPower: '', cycleTime: '' })); }
-  function pickLine(v) { setForm((f) => ({ ...f, line: v, partName: '', proses: '', mesin: '', manPower: '', cycleTime: '' })); }
-  function pickPart(v) { setForm((f) => ({ ...f, partName: v, proses: '', mesin: '', manPower: '', cycleTime: '' })); }
-  function pickProses(v) { setForm((f) => ({ ...f, proses: v, mesin: '', manPower: '', cycleTime: '' })); }
-  function pickMesin(v) {
-    const match = mesinList.find((r) => r.mesin === v);
-    setForm((f) => ({ ...f, mesin: v, manPower: match?.manPower || f.manPower, cycleTime: match?.cycleTime || f.cycleTime }));
-  }
 
   const hasInput = Object.entries(form).some(([k, v]) => !['tanggal', 'waktu', 'shift'].includes(k) && !!v);
 
@@ -289,7 +228,7 @@ export default function RMOPublic() {
     const nextErrors = {};
     if (!form.grupHead.trim()) nextErrors.grupHead = 'Wajib diisi';
     if (!form.cluster) nextErrors.cluster = 'Wajib dipilih';
-    if (!form.line) nextErrors.line = 'Wajib dipilih';
+    if (!form.line.trim()) nextErrors.line = 'Wajib diisi';
     if (!form.partName) nextErrors.partName = 'Wajib dipilih';
     if (!form.proses) nextErrors.proses = 'Wajib dipilih';
     if (!form.mesin) nextErrors.mesin = 'Wajib dipilih';
@@ -333,25 +272,6 @@ export default function RMOPublic() {
     setBusy(false);
   }
 
-  async function handleImportFile(e) {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file) return;
-    setImportBusy(true);
-    setImportError(null);
-    setImportResult(null);
-    try {
-      const fd = new FormData();
-      fd.append('file', file);
-      const r = await fetch(`${API}/part-routing/import`, { method: 'POST', body: fd });
-      const data = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(data.error || 'Gagal import');
-      setImportResult(data);
-      loadRouting();
-    } catch (err) { setImportError(err.message); }
-    setImportBusy(false);
-  }
-
   /* Styles */
   const inp = {
     background: '#fff', border: '1px solid #c9d4d4',
@@ -383,15 +303,7 @@ export default function RMOPublic() {
         <div style={{ fontSize: 20, fontWeight: 700, color: '#fff', letterSpacing: '.05em', textTransform: 'uppercase', textAlign: 'center' }}>
           Resume Control Harian Produksi
         </div>
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          disabled={importBusy}
-          title="Import Master Data (CSV: Cluster, Line, Part Name, Part Number, Proses, Nama Mesin, Man Power, Cycle Time)"
-          style={{ background: 'rgba(255,255,255,.15)', border: '1px solid rgba(255,255,255,.4)', borderRadius: 7, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}
-        >
-          <Upload size={16} />
-        </button>
-        <input ref={fileInputRef} type="file" accept=".csv" style={{ display: 'none' }} onChange={handleImportFile} />
+        <div style={{ width: 32 }} />
       </div>
 
       {/* ── Konten ────────────────────────────────────── */}
@@ -445,43 +357,43 @@ export default function RMOPublic() {
 
               <div>
                 <FL>Cluster *</FL>
-                <select style={errors.cluster ? inpErr : inp} value={form.cluster} onChange={(e) => pickCluster(e.target.value)}>
+                <select style={errors.cluster ? inpErr : inp} value={form.cluster} onChange={(e) => set('cluster', e.target.value)}>
                   <option value="">Pilih…</option>
-                  {clusterOptions.map((c) => <option key={c} value={c}>{c}</option>)}
+                  {master.clusters.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
               <div>
                 <FL>Line Produksi *</FL>
-                <select style={errors.line ? inpErr : inp} value={form.line} disabled={!form.cluster} onChange={(e) => pickLine(e.target.value)}>
-                  <option value="">Pilih…</option>
-                  {lines.map((l) => <option key={l} value={l}>{l}</option>)}
-                </select>
+                <input type="text" style={errors.line ? inpErr : inp} value={form.line} onChange={(e) => set('line', e.target.value)} />
               </div>
               <div>
                 <FL>Part Name *</FL>
-                <select style={errors.partName ? inpErr : inp} value={form.partName} disabled={!form.line} onChange={(e) => pickPart(e.target.value)}>
+                <select style={errors.partName ? inpErr : inp} value={form.partName} onChange={(e) => set('partName', e.target.value)}>
                   <option value="">Pilih…</option>
-                  {partNames.map((p) => <option key={p} value={p}>{p}</option>)}
+                  {master.partNames.map((p) => <option key={p} value={p}>{p}</option>)}
                 </select>
               </div>
               <div>
                 <FL>Proses *</FL>
-                <select style={errors.proses ? inpErr : inp} value={form.proses} disabled={!form.partName} onChange={(e) => pickProses(e.target.value)}>
+                <select style={errors.proses ? inpErr : inp} value={form.proses} onChange={(e) => set('proses', e.target.value)}>
                   <option value="">Pilih…</option>
-                  {prosesList.map((p) => <option key={p} value={p}>{p}</option>)}
+                  {master.proses.map((p) => <option key={p} value={p}>{p}</option>)}
                 </select>
               </div>
 
               <div>
                 <FL>Mesin *</FL>
-                <select style={errors.mesin ? inpErr : inp} value={form.mesin} disabled={!form.proses} onChange={(e) => pickMesin(e.target.value)}>
+                <select style={errors.mesin ? inpErr : inp} value={form.mesin} onChange={(e) => set('mesin', e.target.value)}>
                   <option value="">Pilih…</option>
-                  {mesinList.map((r) => <option key={r.mesin} value={r.mesin}>{r.mesin}</option>)}
+                  {master.mesin.map((m) => <option key={m} value={m}>{m}</option>)}
                 </select>
               </div>
               <div>
                 <FL>Man Power</FL>
-                <input type="text" style={inp} value={form.manPower} onChange={(e) => set('manPower', e.target.value)} />
+                <select style={inp} value={form.manPower} onChange={(e) => set('manPower', e.target.value)}>
+                  <option value="">Pilih…</option>
+                  {master.manPower.map((m) => <option key={m} value={m}>{m}</option>)}
+                </select>
               </div>
               <div>
                 <FL sub="detik/pcs">Cycle Time</FL>
@@ -570,9 +482,6 @@ export default function RMOPublic() {
       </button>
 
       {cancelWarn && <CancelModal onConfirm={reset} onDismiss={() => setCancelWarn(false)} />}
-      {(importResult || importError) && (
-        <ImportResultModal result={importResult} error={importError} onClose={() => { setImportResult(null); setImportError(null); }} />
-      )}
 
     </div>
   );

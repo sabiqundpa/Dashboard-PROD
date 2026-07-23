@@ -61,7 +61,7 @@ export default function Login() {
         {isFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
       </button>
       <div className="login-card">
-        <div className="logo" style={{ marginBottom: 20, cursor: 'default', userSelect: 'none' }} onClick={onLogoClick}>Maintenance<span> Dashboard</span></div>
+        <div className="logo" style={{ marginBottom: 20, cursor: 'default', userSelect: 'none' }} onClick={onLogoClick}>Produksi<span> Dashboard</span></div>
         <div className="form-group" style={{ marginBottom: 14 }}>
           <label className="form-label">Username</label>
           <div className="input-icon-wrap">

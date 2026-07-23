@@ -3,7 +3,7 @@ const multer = require('multer');
 const bcrypt = require('bcryptjs');
 const prisma = require('../db');
 const { getPeriodRange, daysInRange, calcPlannedHours } = require('../lib/period');
-const { signToken } = require('../lib/auth');
+const { signToken, requireAuth } = require('../lib/auth');
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -57,64 +57,27 @@ router.post('/login', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// ── GET /api/part-routing ─────────────────────────────
-// Public — master data Part/Line/Proses/Mesin per Cluster, untuk dropdown
-// bertingkat di form /rmo.
-router.get('/part-routing', async (req, res, next) => {
+// ── GET /api/master ────────────────────────────────────
+// Public — 5 daftar master data independen (dikelola user langsung di
+// Supabase Table Editor): Cluster, Part Name, Proses, Mesin, Man Power.
+// Dipakai sebagai isi dropdown di form /rmo — tidak ada relasi/kombinasi
+// antar tabel, jadi tiap dropdown berdiri sendiri.
+router.get('/master', async (req, res, next) => {
   try {
-    const rows = await prisma.partRouting.findMany({ orderBy: [{ cluster: 'asc' }, { line: 'asc' }, { partName: 'asc' }] });
-    res.json(rows);
-  } catch (err) { next(err); }
-});
-
-// ── POST /api/part-routing/import ─────────────────────
-// Public — import CSV master data routing: Cluster, Line, Part Name,
-// Part Number, Proses, Nama Mesin, Man Power, Cycle Time.
-router.post('/part-routing/import', upload.single('file'), async (req, res, next) => {
-  try {
-    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-    const rows = parseCsv(req.file.buffer.toString('utf-8'));
-
-    const upserts = [];
-    let skipped = 0;
-    for (const row of rows) {
-      const lookup = {};
-      Object.keys(row).forEach((k) => { lookup[k.trim().toLowerCase()] = row[k]; });
-      const field = (...keys) => {
-        for (const key of keys) {
-          const v = lookup[key.toLowerCase()];
-          if (v !== undefined && v !== '') return String(v).trim();
-        }
-        return '';
-      };
-
-      const cluster = field('Cluster').toUpperCase();
-      const line = field('Line', 'Line Produksi');
-      const partName = field('Part Name', 'Nama Part', 'NAMA PARTS');
-      const proses = field('Proses', 'PROSES');
-      const mesin = field('Nama Mesin', 'Mesin', 'MESIN');
-      if (!cluster || !line || !partName || !proses || !mesin) { skipped++; continue; }
-
-      const cycleTimeRaw = field('Cycle Time', 'CT');
-      upserts.push({
-        cluster, line, partName, proses, mesin,
-        partNumber: field('Part Number', 'No Part', 'No Lot'),
-        manPower: field('Man Power', 'MP') || null,
-        cycleTime: cycleTimeRaw && !isNaN(Number(cycleTimeRaw)) ? Number(cycleTimeRaw) : 0,
-      });
-    }
-
-    let imported = 0;
-    for (const u of upserts) {
-      await prisma.partRouting.upsert({
-        where: { partName_proses_mesin: { partName: u.partName, proses: u.proses, mesin: u.mesin } },
-        update: u,
-        create: u,
-      });
-      imported++;
-    }
-
-    res.json({ imported, skipped, total: rows.length });
+    const [clusters, parts, proses, mesin, mp] = await Promise.all([
+      prisma.masterCluster.findMany({ orderBy: { cluster: 'asc' } }),
+      prisma.masterNamaPart.findMany({ orderBy: { namaParts: 'asc' } }),
+      prisma.masterProses.findMany({ orderBy: { proses: 'asc' } }),
+      prisma.masterMesin.findMany({ orderBy: { mesin: 'asc' } }),
+      prisma.masterMp.findMany({ orderBy: { mp: 'asc' } }),
+    ]);
+    res.json({
+      clusters: clusters.map((r) => r.cluster).filter(Boolean),
+      partNames: parts.map((r) => r.namaParts).filter(Boolean),
+      proses: proses.map((r) => r.proses).filter(Boolean),
+      mesin: mesin.map((r) => r.mesin).filter(Boolean),
+      manPower: mp.map((r) => r.mp).filter(Boolean),
+    });
   } catch (err) { next(err); }
 });
 
@@ -189,7 +152,7 @@ function rowMetrics(r) {
 // ── GET /api/produksi-harian/summary ──────────────────
 // Ringkasan OEE (Availability, Performance, Yield, AR, OEE) diagregasi dari
 // semua baris Resume Control Harian Produksi dalam periode terpilih.
-router.get('/produksi-harian/summary', async (req, res, next) => {
+router.get('/produksi-harian/summary', requireAuth, async (req, res, next) => {
   try {
     const { start, end } = getPeriodRange(req.query.period, req.query.date, req.query.start, req.query.end);
     const rows = await prisma.produksiHarian.findMany({
@@ -229,7 +192,7 @@ router.get('/produksi-harian/summary', async (req, res, next) => {
 // ── GET /api/produksi-harian/ar-by-cluster ─────────────
 // AR rata-rata per Cluster (AD/BC/EF/FI) dalam periode terpilih — untuk pie
 // chart drill-down AR di dashboard.
-router.get('/produksi-harian/ar-by-cluster', async (req, res, next) => {
+router.get('/produksi-harian/ar-by-cluster', requireAuth, async (req, res, next) => {
   try {
     const { start, end } = getPeriodRange(req.query.period, req.query.date, req.query.start, req.query.end);
     const rows = await prisma.produksiHarian.findMany({
@@ -255,7 +218,7 @@ router.get('/produksi-harian/ar-by-cluster', async (req, res, next) => {
 // ── GET /api/produksi-harian/ar-by-line ────────────────
 // AR rata-rata per Line Produksi dalam periode terpilih — untuk ranking
 // 5 Line AR tertinggi/terendah di halaman detail AR.
-router.get('/produksi-harian/ar-by-line', async (req, res, next) => {
+router.get('/produksi-harian/ar-by-line', requireAuth, async (req, res, next) => {
   try {
     const { start, end } = getPeriodRange(req.query.period, req.query.date, req.query.start, req.query.end);
     const rows = await prisma.produksiHarian.findMany({
@@ -285,7 +248,7 @@ router.get('/produksi-harian/ar-by-line', async (req, res, next) => {
 //                   tidak menyimpan jam
 //   period=month -> per hari dalam bulan dari ?date
 //   period=year  -> per bulan dalam tahun dari ?date
-router.get('/produksi-harian/ar-trend', async (req, res, next) => {
+router.get('/produksi-harian/ar-trend', requireAuth, async (req, res, next) => {
   try {
     const period = req.query.period || 'month';
     const ref = req.query.date ? new Date(req.query.date) : new Date();
@@ -349,7 +312,7 @@ router.get('/produksi-harian/ar-trend', async (req, res, next) => {
 
 // ── GET /api/problem-log ───────────────────────────────
 // Public — daftar problem/root-cause log, untuk tabel di halaman detail AR.
-router.get('/problem-log', async (req, res, next) => {
+router.get('/problem-log', requireAuth, async (req, res, next) => {
   try {
     const rows = await prisma.problemLog.findMany({ orderBy: { id: 'desc' } });
     res.json(rows.map((r) => ({
@@ -387,7 +350,7 @@ router.post('/problem-log', async (req, res, next) => {
 // ── POST /api/problem-log-update ───────────────────────
 // Edit status/field problem log (mis. tandai selesai). Flat path — id di
 // body (Vercel edge routing 404 untuk nested path /problem-log/:id).
-router.post('/problem-log-update', async (req, res, next) => {
+router.post('/problem-log-update', requireAuth, async (req, res, next) => {
   try {
     const id = Number(req.body.id);
     if (!id) return res.status(400).json({ error: 'Invalid id' });
@@ -405,7 +368,7 @@ router.post('/problem-log-update', async (req, res, next) => {
 });
 
 // ── POST /api/problem-log-delete ───────────────────────
-router.post('/problem-log-delete', async (req, res, next) => {
+router.post('/problem-log-delete', requireAuth, async (req, res, next) => {
   try {
     const id = Number(req.body.id);
     if (!id) return res.status(400).json({ error: 'Invalid id' });

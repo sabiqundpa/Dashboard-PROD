@@ -180,11 +180,15 @@ export default function DataProduksi() {
           <div className="row4" style={{ gridTemplateColumns: '1fr', marginBottom: 12 }}>
             <LineTrendChart
               title={`Tren AR — Cluster ${cluster}`}
-              data={trends[cluster] || []}
+              data={(trends[cluster] || []).map((d) => ({ ...d, target: 100 }))}
               valueKey="ar"
+              targetKey="target"
               color={CLUSTER_COLORS[cluster]}
               unit="%"
               hourly={period === 'today'}
+              showMovingAvg
+              movingAvgColor="var(--red)"
+              targetColor="var(--red)"
             />
           </div>
 

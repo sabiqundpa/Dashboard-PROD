@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { ArrowLeft, ChevronRight } from 'lucide-react';
 import { useUI } from '../UIContext.jsx';
 import { useAuth } from '../AuthContext.jsx';
@@ -54,6 +54,7 @@ export default function ARDetail() {
   useEffect(() => { loadTrend(); }, [loadTrend]);
 
   const avgAr = byCluster.length ? Number((byCluster.reduce((s, c) => s + c.ar, 0) / byCluster.length).toFixed(1)) : 0;
+  const trendWithTarget = useMemo(() => trend.map((d) => ({ ...d, target: 100 })), [trend]);
 
   const top5 = byLine.slice(0, 5);
   const bottom5 = [...byLine].reverse().slice(0, 5);
@@ -97,11 +98,15 @@ export default function ARDetail() {
           </div>
           <LineTrendChart
             title=""
-            data={trend}
+            data={trendWithTarget}
             valueKey="ar"
+            targetKey="target"
             color="#0e5a52"
             unit="%"
             hourly={trendPeriod === 'today'}
+            showMovingAvg
+            movingAvgColor="var(--red)"
+            targetColor="var(--red)"
           />
         </div>
       </div>

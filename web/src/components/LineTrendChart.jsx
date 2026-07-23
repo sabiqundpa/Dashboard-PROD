@@ -28,7 +28,7 @@ function calcMovingAvg(arr, w = 3) {
 
 function ChartCanvas({
   data, valueKey, targetKey, color, unit, hourly,
-  showMovingAvg, movingAvgColor, overTargetColor, targetColor,
+  showMovingAvg, movingAvgColor, overTargetColor, targetColor, fixedMax,
 }) {
   const canvasRef = useRef(null);
   const tipRef    = useRef(null);
@@ -98,10 +98,21 @@ function ChartCanvas({
     const styles  = getComputedStyle(document.documentElement);
     const muted   = styles.getPropertyValue('--muted').trim() || '#5a5a78';
     const accent2 = styles.getPropertyValue('--accent2').trim() || '#ff6b35';
+    // Canvas tidak resolve custom property CSS (var(--x)) sendiri — kalau
+    // warna dikirim sebagai var(--x), ambil nilai aktualnya di sini.
+    const resolveColor = (c) => {
+      const m = /^var\((--[\w-]+)\)$/.exec((c || '').trim());
+      return m ? (styles.getPropertyValue(m[1]).trim() || c) : c;
+    };
+    const resolvedMovingAvgColor = resolveColor(movingAvgColor);
+    const resolvedTargetColor    = resolveColor(targetColor);
 
     const vals    = visibleData.map((d) => d[valueKey] ?? 0);
     const targets = targetKey ? visibleData.map((d) => d[targetKey] ?? 0) : [];
-    const maxV    = Math.max(...vals, ...(targetKey ? targets : []), 1) * 1.15;
+    // Sumbu Y persentase dikunci 0-100 dengan kelipatan konstan (bukan
+    // auto-scale ke angka aneh kayak 115/77/38) supaya gampang dibaca.
+    const maxV      = fixedMax || Math.max(...vals, ...(targetKey ? targets : []), 1) * 1.15;
+    const axisSteps = fixedMax ? 5 : 3; // 5 -> 0,20,...,100 ; 3 -> pola lama (non-persen)
     const barW    = Math.max(3, Math.min(slotW * 0.5, 40));
     const xOf     = (i) => pad.l + i * slotW + (slotW - barW) / 2;
     const cxOf    = (i) => pad.l + i * slotW + slotW / 2;
@@ -113,12 +124,12 @@ function ChartCanvas({
     // Grid + Y-axis labels
     ctx.font = `${FONT}px Inter, sans-serif`;
     ctx.fillStyle = muted; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
-    for (let i = 0; i < 4; i++) {
-      const y = pad.t + iH * (i / 3);
+    for (let i = 0; i <= axisSteps; i++) {
+      const y = pad.t + iH * (i / axisSteps);
       ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y);
       ctx.strokeStyle = 'rgba(150,150,180,.18)';
       ctx.setLineDash([2, 5]); ctx.lineWidth = 1; ctx.stroke(); ctx.setLineDash([]);
-      const tv = maxV * (1 - i / 3);
+      const tv = maxV * (1 - i / axisSteps);
       ctx.fillText(tv.toFixed(tv < 10 ? 1 : 0), pad.l - 5, y);
     }
 
@@ -150,7 +161,7 @@ function ChartCanvas({
 
     // Target line — solid with dot markers so it's clearly visible
     if (targetKey && targets.some((t) => t > 0)) {
-      const tColor = targetColor || 'rgba(150,150,180,.7)';
+      const tColor = resolvedTargetColor || 'rgba(150,150,180,.7)';
       ctx.beginPath(); ctx.lineWidth = 1.5;
       ctx.strokeStyle = tColor;
       ctx.lineCap = 'round'; ctx.lineJoin = 'round';
@@ -168,7 +179,7 @@ function ChartCanvas({
     // Moving average line
     if (showMovingAvg && vals.length >= 2) {
       const mavg = calcMovingAvg(vals.map((v) => (typeof v === 'number' ? v : 0)));
-      ctx.beginPath(); ctx.lineWidth = 2; ctx.strokeStyle = movingAvgColor;
+      ctx.beginPath(); ctx.lineWidth = 2; ctx.strokeStyle = resolvedMovingAvgColor;
       ctx.lineCap = 'round'; ctx.lineJoin = 'round';
       mavg.forEach((v, i) => {
         if (i === 0) ctx.moveTo(cxOf(0), yOf(v)); else ctx.lineTo(cxOf(i), yOf(v));
@@ -176,7 +187,7 @@ function ChartCanvas({
       ctx.stroke();
       mavg.forEach((v, i) => {
         ctx.beginPath(); ctx.arc(cxOf(i), yOf(v), 2.5, 0, Math.PI * 2);
-        ctx.fillStyle = movingAvgColor; ctx.fill();
+        ctx.fillStyle = resolvedMovingAvgColor; ctx.fill();
       });
     }
 
@@ -226,7 +237,7 @@ function ChartCanvas({
     canvas.onmouseleave = () => { tip.style.display = 'none'; };
     canvas.ontouchmove  = (e) => { e.preventDefault(); showTip(e.touches[0].clientX, canvas.getBoundingClientRect()); };
     canvas.ontouchend   = () => setTimeout(() => { tip.style.display = 'none'; }, 1500);
-  }, [visibleData, valueKey, targetKey, color, unit, hourly, showMovingAvg, movingAvgColor, overTargetColor, tick]);
+  }, [visibleData, valueKey, targetKey, color, unit, hourly, showMovingAvg, movingAvgColor, overTargetColor, fixedMax, tick]);
 
   useEffect(() => {
     const id = requestAnimationFrame(() => setTick((t) => t + 1));
@@ -247,10 +258,11 @@ export default function LineTrendChart({
   overTargetColor = null, targetColor = 'rgba(150,150,180,.7)',
   legendItems = null,
 }) {
+  const fixedMax = unit === '%' ? 100 : null;
   const legend = legendItems || (() => {
     const items = [{ type: 'dot', color, label: `${unit} (nilai)` }];
-    if (showMovingAvg) items.push({ type: 'line', color: movingAvgColor, label: 'Rata-rata bergerak' });
-    if (targetKey) items.push({ type: 'dash', color: 'rgba(150,150,180,.7)', label: 'Target' });
+    if (showMovingAvg) items.push({ type: 'line', color: movingAvgColor, label: 'Tren' });
+    if (targetKey) items.push({ type: 'dash', color: targetColor, label: 'Target' });
     return items;
   })();
 
@@ -265,6 +277,7 @@ export default function LineTrendChart({
         color={color} unit={unit} hourly={hourly}
         showMovingAvg={showMovingAvg} movingAvgColor={movingAvgColor}
         overTargetColor={overTargetColor} targetColor={targetColor}
+        fixedMax={fixedMax}
       />
       <div className="chart-legend" style={{ marginTop: 8 }}>
         {legend.map((l, i) => (

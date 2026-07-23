@@ -143,10 +143,18 @@ router.post('/master-part-name-update', requireAuth, async (req, res, next) => {
     const id = Number(req.body.id);
     if (!id) return res.status(400).json({ error: 'Invalid id' });
     const { part_name, cluster, cycle_time } = req.body;
+    const existing = await prisma.masterPartName.findUnique({ where: { id } });
+    if (!existing) return res.status(404).json({ error: 'Not found' });
     const data = {};
     if (part_name !== undefined) data.partName = part_name;
     if (cluster !== undefined) data.cluster = cluster;
     if (cycle_time !== undefined) data.cycleTime = Number(cycle_time) || 0;
+    // partName di MasterProses cuma string biasa (bukan foreign key), jadi
+    // kalau nama Part Name diganti harus ikut diupdate di semua Proses
+    // turunannya supaya tidak jadi yatim (tidak muncul lagi di dropdown).
+    if (part_name !== undefined && part_name !== existing.partName) {
+      await prisma.masterProses.updateMany({ where: { partName: existing.partName }, data: { partName: part_name } });
+    }
     const record = await prisma.masterPartName.update({ where: { id }, data });
     res.json(record);
   } catch (err) { next(err); }

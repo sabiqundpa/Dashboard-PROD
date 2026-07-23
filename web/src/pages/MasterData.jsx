@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Plus, Trash2, Upload } from 'lucide-react';
+import { Plus, Trash2, Upload, Pencil, Check, X } from 'lucide-react';
 import { useAuth } from '../AuthContext.jsx';
 import { apiFetch, apiSend, apiSendForm } from '../api.js';
 import { useToast } from '../ToastContext.jsx';
@@ -167,6 +167,9 @@ function GroupHeadTab({ data, loading, onChanged, logout }) {
   const [name, setName] = useState('');
   const [cluster, setCluster] = useState('');
   const [busy, setBusy] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [editName, setEditName] = useState('');
+  const [editCluster, setEditCluster] = useState('');
 
   async function add() {
     if (!name.trim() || !cluster) return;
@@ -179,8 +182,25 @@ function GroupHeadTab({ data, loading, onChanged, logout }) {
     setBusy(false);
   }
   async function remove(id) {
+    if (!window.confirm('Hapus Grup Head ini?')) return;
     try { await apiSend('/master-group-head-delete', 'POST', { id }, logout); onChanged(); }
     catch (e) { showToast(e.message, 'red'); }
+  }
+
+  function startEdit(g) {
+    setEditingId(g.id);
+    setEditName(g.name);
+    setEditCluster(g.cluster);
+  }
+  async function saveEdit(id) {
+    if (!editName.trim() || !editCluster) return;
+    setBusy(true);
+    try {
+      await apiSend('/master-group-head-update', 'POST', { id, name: editName, cluster: editCluster }, logout);
+      setEditingId(null);
+      onChanged();
+    } catch (e) { showToast(e.message, 'red'); }
+    setBusy(false);
   }
 
   return (
@@ -205,7 +225,7 @@ function GroupHeadTab({ data, loading, onChanged, logout }) {
           <tr>
             <th style={th}>Nama Grup Head</th>
             <th style={th}>Cluster</th>
-            <th style={{ ...th, width: 40 }}></th>
+            <th style={{ ...th, width: 70 }}></th>
           </tr>
         </thead>
         <tbody>
@@ -213,11 +233,31 @@ function GroupHeadTab({ data, loading, onChanged, logout }) {
             <tr><td colSpan={3} style={td}>Memuat…</td></tr>
           ) : data.length === 0 ? (
             <tr><td colSpan={3} style={td}>Belum ada data.</td></tr>
-          ) : data.map((g) => (
+          ) : data.map((g) => editingId === g.id ? (
+            <tr key={g.id}>
+              <td style={td}><input className="form-input" style={editInp} value={editName} onChange={(e) => setEditName(e.target.value)} /></td>
+              <td style={td}>
+                <select className="form-input" style={editInp} value={editCluster} onChange={(e) => setEditCluster(e.target.value)}>
+                  {CLUSTERS.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </td>
+              <td style={td}>
+                <div style={{ display: 'flex', gap: 4 }}>
+                  <button disabled={busy} onClick={() => saveEdit(g.id)} style={iconBtn} title="Simpan"><Check size={13} /></button>
+                  <button onClick={() => setEditingId(null)} style={iconBtn} title="Batal"><X size={13} /></button>
+                </div>
+              </td>
+            </tr>
+          ) : (
             <tr key={g.id}>
               <td style={td}>{g.name}</td>
               <td style={td}>{g.cluster}</td>
-              <td style={td}><button onClick={() => remove(g.id)} style={iconBtn}><Trash2 size={13} /></button></td>
+              <td style={td}>
+                <div style={{ display: 'flex', gap: 4 }}>
+                  <button onClick={() => startEdit(g)} style={iconBtn} title="Edit"><Pencil size={13} /></button>
+                  <button onClick={() => remove(g.id)} style={{ ...iconBtn, color: 'var(--red)' }} title="Hapus"><Trash2 size={13} /></button>
+                </div>
+              </td>
             </tr>
           ))}
         </tbody>
@@ -233,6 +273,10 @@ function PartNameTab({ data, loading, onChanged, logout, suggestions = [] }) {
   const [cluster, setCluster] = useState('');
   const [cycleTime, setCycleTime] = useState('');
   const [busy, setBusy] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [editPartName, setEditPartName] = useState('');
+  const [editCluster, setEditCluster] = useState('');
+  const [editCycleTime, setEditCycleTime] = useState('');
 
   async function add() {
     if (!partName.trim() || !cluster) return;
@@ -245,8 +289,26 @@ function PartNameTab({ data, loading, onChanged, logout, suggestions = [] }) {
     setBusy(false);
   }
   async function remove(id) {
+    if (!window.confirm('Hapus Part Name ini?')) return;
     try { await apiSend('/master-part-name-delete', 'POST', { id }, logout); onChanged(); }
     catch (e) { showToast(e.message, 'red'); }
+  }
+
+  function startEdit(p) {
+    setEditingId(p.id);
+    setEditPartName(p.partName);
+    setEditCluster(p.cluster);
+    setEditCycleTime(p.cycleTime);
+  }
+  async function saveEdit(id) {
+    if (!editPartName.trim() || !editCluster) return;
+    setBusy(true);
+    try {
+      await apiSend('/master-part-name-update', 'POST', { id, part_name: editPartName, cluster: editCluster, cycle_time: editCycleTime }, logout);
+      setEditingId(null);
+      onChanged();
+    } catch (e) { showToast(e.message, 'red'); }
+    setBusy(false);
   }
 
   return (
@@ -278,7 +340,7 @@ function PartNameTab({ data, loading, onChanged, logout, suggestions = [] }) {
             <th style={th}>Part Name</th>
             <th style={th}>Cluster</th>
             <th style={th}>Cycle Time</th>
-            <th style={{ ...th, width: 40 }}></th>
+            <th style={{ ...th, width: 70 }}></th>
           </tr>
         </thead>
         <tbody>
@@ -286,12 +348,33 @@ function PartNameTab({ data, loading, onChanged, logout, suggestions = [] }) {
             <tr><td colSpan={4} style={td}>Memuat…</td></tr>
           ) : data.length === 0 ? (
             <tr><td colSpan={4} style={td}>Belum ada data.</td></tr>
-          ) : data.map((p) => (
+          ) : data.map((p) => editingId === p.id ? (
+            <tr key={p.id}>
+              <td style={td}><input className="form-input" style={editInp} list="dl-part-names" value={editPartName} onChange={(e) => setEditPartName(e.target.value)} /></td>
+              <td style={td}>
+                <select className="form-input" style={editInp} value={editCluster} onChange={(e) => setEditCluster(e.target.value)}>
+                  {CLUSTERS.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </td>
+              <td style={td}><input type="number" className="form-input" style={editInp} value={editCycleTime} onChange={(e) => setEditCycleTime(e.target.value)} /></td>
+              <td style={td}>
+                <div style={{ display: 'flex', gap: 4 }}>
+                  <button disabled={busy} onClick={() => saveEdit(p.id)} style={iconBtn} title="Simpan"><Check size={13} /></button>
+                  <button onClick={() => setEditingId(null)} style={iconBtn} title="Batal"><X size={13} /></button>
+                </div>
+              </td>
+            </tr>
+          ) : (
             <tr key={p.id}>
               <td style={td}>{p.partName}</td>
               <td style={td}>{p.cluster}</td>
               <td style={td}>{p.cycleTime}</td>
-              <td style={td}><button onClick={() => remove(p.id)} style={iconBtn}><Trash2 size={13} /></button></td>
+              <td style={td}>
+                <div style={{ display: 'flex', gap: 4 }}>
+                  <button onClick={() => startEdit(p)} style={iconBtn} title="Edit"><Pencil size={13} /></button>
+                  <button onClick={() => remove(p.id)} style={{ ...iconBtn, color: 'var(--red)' }} title="Hapus"><Trash2 size={13} /></button>
+                </div>
+              </td>
             </tr>
           ))}
         </tbody>
@@ -309,6 +392,8 @@ function ProsesTab({ data, partNames, loading, onChanged, logout, legacy = { pro
   const [mesin, setMesin] = useState('');
   const [manPower, setManPower] = useState('');
   const [busy, setBusy] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [ed, setEd] = useState({ proses: '', partName: '', line: '', mesin: '', manPower: '' });
 
   async function add() {
     if (!proses.trim() || !partName || !line.trim() || !mesin.trim()) return;
@@ -321,8 +406,25 @@ function ProsesTab({ data, partNames, loading, onChanged, logout, legacy = { pro
     setBusy(false);
   }
   async function remove(id) {
+    if (!window.confirm('Hapus Proses ini?')) return;
     try { await apiSend('/master-proses-delete', 'POST', { id }, logout); onChanged(); }
     catch (e) { showToast(e.message, 'red'); }
+  }
+
+  function startEdit(p) {
+    setEditingId(p.id);
+    setEd({ proses: p.proses, partName: p.partName, line: p.line, mesin: p.mesin, manPower: p.manPower });
+  }
+  function setEdField(k, v) { setEd((f) => ({ ...f, [k]: v })); }
+  async function saveEdit(id) {
+    if (!ed.proses.trim() || !ed.partName || !ed.line.trim() || !ed.mesin.trim()) return;
+    setBusy(true);
+    try {
+      await apiSend('/master-proses-update', 'POST', { id, proses: ed.proses, part_name: ed.partName, line: ed.line, mesin: ed.mesin, man_power: ed.manPower }, logout);
+      setEditingId(null);
+      onChanged();
+    } catch (e) { showToast(e.message, 'red'); }
+    setBusy(false);
   }
 
   return (
@@ -363,7 +465,7 @@ function ProsesTab({ data, partNames, loading, onChanged, logout, legacy = { pro
               <th style={th}>Line Produksi</th>
               <th style={th}>Mesin</th>
               <th style={th}>Man Power</th>
-              <th style={{ ...th, width: 40 }}></th>
+              <th style={{ ...th, width: 70 }}></th>
             </tr>
           </thead>
           <tbody>
@@ -371,14 +473,37 @@ function ProsesTab({ data, partNames, loading, onChanged, logout, legacy = { pro
               <tr><td colSpan={6} style={td}>Memuat…</td></tr>
             ) : data.length === 0 ? (
               <tr><td colSpan={6} style={td}>Belum ada data.</td></tr>
-            ) : data.map((p) => (
+            ) : data.map((p) => editingId === p.id ? (
+              <tr key={p.id}>
+                <td style={td}><input className="form-input" style={editInp} list="dl-proses" value={ed.proses} onChange={(e) => setEdField('proses', e.target.value)} /></td>
+                <td style={td}>
+                  <select className="form-input" style={editInp} value={ed.partName} onChange={(e) => setEdField('partName', e.target.value)}>
+                    {partNames.map((pn) => <option key={pn.id} value={pn.partName}>{pn.partName}</option>)}
+                  </select>
+                </td>
+                <td style={td}><input className="form-input" style={editInp} value={ed.line} onChange={(e) => setEdField('line', e.target.value)} /></td>
+                <td style={td}><input className="form-input" style={editInp} list="dl-mesin" value={ed.mesin} onChange={(e) => setEdField('mesin', e.target.value)} /></td>
+                <td style={td}><input className="form-input" style={editInp} list="dl-mp" value={ed.manPower} onChange={(e) => setEdField('manPower', e.target.value)} /></td>
+                <td style={td}>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    <button disabled={busy} onClick={() => saveEdit(p.id)} style={iconBtn} title="Simpan"><Check size={13} /></button>
+                    <button onClick={() => setEditingId(null)} style={iconBtn} title="Batal"><X size={13} /></button>
+                  </div>
+                </td>
+              </tr>
+            ) : (
               <tr key={p.id}>
                 <td style={td}>{p.proses}</td>
                 <td style={td}>{p.partName}</td>
                 <td style={td}>{p.line}</td>
                 <td style={td}>{p.mesin}</td>
                 <td style={td}>{p.manPower}</td>
-                <td style={td}><button onClick={() => remove(p.id)} style={iconBtn}><Trash2 size={13} /></button></td>
+                <td style={td}>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    <button onClick={() => startEdit(p)} style={iconBtn} title="Edit"><Pencil size={13} /></button>
+                    <button onClick={() => remove(p.id)} style={{ ...iconBtn, color: 'var(--red)' }} title="Hapus"><Trash2 size={13} /></button>
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -390,4 +515,5 @@ function ProsesTab({ data, partNames, loading, onChanged, logout, legacy = { pro
 
 const th = { textAlign: 'left', padding: '8px 10px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--muted)', borderBottom: '2px solid var(--border)', whiteSpace: 'nowrap' };
 const td = { padding: '8px 10px', fontSize: 13, borderBottom: '1px solid var(--border)', color: 'var(--text)' };
-const iconBtn = { background: 'none', border: 'none', cursor: 'pointer', color: 'var(--red)', padding: 4, display: 'flex' };
+const iconBtn = { background: 'none', border: '1px solid var(--border)', borderRadius: 5, cursor: 'pointer', color: 'var(--text)', padding: 4, display: 'flex' };
+const editInp = { padding: '5px 8px', fontSize: 12.5 };

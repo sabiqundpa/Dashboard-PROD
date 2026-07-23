@@ -23,7 +23,7 @@ export default function VerticalBarList({ data, showLegend = true, mode = null }
               <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>{d.ar}%</div>
               <div style={{ width: '100%', maxWidth: 34, height: `${hPct}%`, minHeight: 2, background: color, borderRadius: '5px 5px 0 0', transition: 'height .6s ease' }}></div>
               <div
-                style={{ width: '100%', fontSize: 11, color: 'var(--muted)', marginTop: 6, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                style={{ width: '100%', fontSize: 11, fontWeight: 600, color: 'var(--text)', marginTop: 6, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                 title={d.line}
               >{d.line}</div>
               <span style={{ fontSize: 10, fontWeight: 700, color: clusterColor, marginTop: 2 }}>{d.cluster}</span>

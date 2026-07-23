@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Plus, Trash2, Upload } from 'lucide-react';
 import { useAuth } from '../AuthContext.jsx';
 import { apiFetch, apiSend, apiSendForm } from '../api.js';
@@ -7,6 +7,7 @@ import { useToast } from '../ToastContext.jsx';
 const CLUSTERS = ['AD', 'BC', 'EF', 'FI'];
 
 const TABS = [
+  { key: 'ringkasan', label: 'Ringkasan' },
   { key: 'groupHead', label: 'Grup Head' },
   { key: 'partName', label: 'Part Name' },
   { key: 'proses', label: 'Proses' },
@@ -24,7 +25,7 @@ function Field({ label, children }) {
 export default function MasterData() {
   const { logout } = useAuth();
   const showToast = useToast();
-  const [tab, setTab] = useState('groupHead');
+  const [tab, setTab] = useState('ringkasan');
   const [master, setMaster] = useState({ clusters: CLUSTERS, groupHeads: [], partNames: [], proses: [] });
   const [legacy, setLegacy] = useState({ manPower: [], mesin: [], proses: [], partNames: [] });
   const [loading, setLoading] = useState(true);
@@ -41,6 +42,30 @@ export default function MasterData() {
   useEffect(() => {
     apiFetch('/legacy-lookups', { manPower: [], mesin: [], proses: [], partNames: [] }, logout).then(setLegacy);
   }, [logout]);
+
+  // Gabungan Group Head -> Cluster -> Part Name (+Cycle Time) -> Proses
+  // (+Line/Mesin/Man Power) jadi satu tabel, tanpa mengubah cara data
+  // disimpan (tetap 3 tabel terpisah supaya edit satu tempat tidak perlu
+  // ubah banyak baris berulang). Baris terkecil = tiap Proses; join ke atas
+  // by cluster/partName.
+  const ringkasanRows = useMemo(() => {
+    return master.proses.map((p) => {
+      const partName = master.partNames.find((pn) => pn.partName === p.partName);
+      const cluster = partName?.cluster || '';
+      const groupHeads = master.groupHeads.filter((g) => g.cluster === cluster).map((g) => g.name);
+      return {
+        key: p.id,
+        groupHead: groupHeads.join(', ') || '—',
+        cluster: cluster || '—',
+        partName: p.partName,
+        cycleTime: partName?.cycleTime ?? '—',
+        proses: p.proses,
+        line: p.line,
+        mesin: p.mesin,
+        manPower: p.manPower,
+      };
+    });
+  }, [master]);
 
   async function handleImport(e) {
     const file = e.target.files?.[0];
@@ -85,9 +110,58 @@ export default function MasterData() {
         ))}
       </div>
 
+      {tab === 'ringkasan' && <RingkasanTab rows={ringkasanRows} loading={loading} />}
       {tab === 'groupHead' && <GroupHeadTab data={master.groupHeads} loading={loading} onChanged={load} logout={logout} />}
       {tab === 'partName' && <PartNameTab data={master.partNames} loading={loading} onChanged={load} logout={logout} suggestions={legacy.partNames} />}
       {tab === 'proses' && <ProsesTab data={master.proses} partNames={master.partNames} loading={loading} onChanged={load} logout={logout} legacy={legacy} />}
+    </div>
+  );
+}
+
+/* ── Tab: Ringkasan (tampilan gabungan, read-only) ──── */
+// Bukan tabel fisik baru -- ini cuma JOIN tampilan dari 3 tabel master
+// (GroupHead/PartName/Proses) yang sudah ada, jadi edit/tambah data tetap
+// lewat tab Grup Head / Part Name / Proses (satu tempat per jenis data,
+// tidak perlu ubah banyak baris kalau ada perubahan).
+function RingkasanTab({ rows, loading }) {
+  return (
+    <div className="card">
+      <div className="card-header">
+        <div className="card-title">Ringkasan Relasi Master Data</div>
+      </div>
+      <div className="card-sub" style={{ marginBottom: 12 }}>
+        Tampilan gabungan Grup Head → Cluster → Part Name → Cycle Time → Proses → Line Produksi → Mesin → Man Power.
+        Ini cuma tampilan baca — untuk ubah datanya, pakai tab Grup Head / Part Name / Proses supaya perubahan cukup di satu tempat.
+      </div>
+      <div style={{ overflow: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr>
+              {['Grup Head', 'Cluster', 'Part Name', 'Cycle Time', 'Proses', 'Line Produksi', 'Mesin', 'Man Power'].map((h) => (
+                <th key={h} style={th}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr><td colSpan={8} style={td}>Memuat…</td></tr>
+            ) : rows.length === 0 ? (
+              <tr><td colSpan={8} style={td}>Belum ada data. Isi dulu lewat tab Grup Head, Part Name, dan Proses.</td></tr>
+            ) : rows.map((r) => (
+              <tr key={r.key}>
+                <td style={td}>{r.groupHead}</td>
+                <td style={td}>{r.cluster}</td>
+                <td style={td}>{r.partName}</td>
+                <td style={td}>{r.cycleTime}</td>
+                <td style={td}>{r.proses}</td>
+                <td style={td}>{r.line}</td>
+                <td style={td}>{r.mesin}</td>
+                <td style={td}>{r.manPower}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

@@ -8,7 +8,7 @@ const STATUS_OPTS = ['open', 'in_progress', 'closed'];
 const STATUS_LABEL = { open: 'Open', in_progress: 'In Progress', closed: 'Closed' };
 const STATUS_COLOR = { open: 'var(--red)', in_progress: 'var(--yellow)', closed: 'var(--green)' };
 
-const EMPTY = { problem: '', rootCause: '', temporaryAction: '', permanentAction: '', dueDate: '', status: 'open' };
+const EMPTY = { tanggal: '', line: '', partName: '', problem: '', rootCause: '', temporaryAction: '', permanentAction: '', dueDate: '', status: 'open' };
 
 const inp = {
   background: 'var(--input-bg)', border: '1px solid var(--input-border)',
@@ -41,6 +41,9 @@ export default function ProblemLogPage() {
     setBusy(true);
     try {
       await apiSend('/problem-log', 'POST', {
+        tanggal: form.tanggal || null,
+        line: form.line,
+        part_name: form.partName,
         problem: form.problem,
         root_cause: form.rootCause,
         temporary_action: form.temporaryAction,
@@ -99,13 +102,17 @@ export default function ProblemLogPage() {
         <div className="card" style={{ marginBottom: 16 }}>
           <div className="card-header"><div className="card-title">Problem Baru</div></div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <input type="date" placeholder="Tanggal" style={inp} value={form.tanggal} onChange={(e) => set('tanggal', e.target.value)} />
+            <input placeholder="Line Produksi" style={inp} value={form.line} onChange={(e) => set('line', e.target.value)} />
+            <input placeholder="Part Name" style={inp} value={form.partName} onChange={(e) => set('partName', e.target.value)} />
+            <div />
             <div style={{ gridColumn: '1 / -1' }}>
               <input placeholder="Problem *" style={inp} value={form.problem} onChange={(e) => set('problem', e.target.value)} />
             </div>
             <input placeholder="Root Cause" style={inp} value={form.rootCause} onChange={(e) => set('rootCause', e.target.value)} />
             <input placeholder="Temporary Action" style={inp} value={form.temporaryAction} onChange={(e) => set('temporaryAction', e.target.value)} />
             <input placeholder="Permanent Action" style={inp} value={form.permanentAction} onChange={(e) => set('permanentAction', e.target.value)} />
-            <input type="date" style={inp} value={form.dueDate} onChange={(e) => set('dueDate', e.target.value)} />
+            <input type="date" placeholder="Due Date" style={inp} value={form.dueDate} onChange={(e) => set('dueDate', e.target.value)} />
           </div>
           <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
             <button disabled={busy} onClick={submit} style={{ padding: '8px 18px', fontSize: 13, borderRadius: 7, background: 'var(--accent)', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 700 }}>
@@ -123,20 +130,23 @@ export default function ProblemLogPage() {
           <table style={{ borderCollapse: 'collapse', width: '100%' }}>
             <thead>
               <tr>
-                {['No', 'Problem', 'Root Cause', 'Temporary Action', 'Permanent Action', 'Due Date', 'Status', 'Ditutup', ''].map((h) => (
+                {['No', 'Tanggal', 'Line Produksi', 'Part Name', 'Problem', 'Root Cause', 'Temporary Action', 'Permanent Action', 'Due Date', 'Status', 'Ditutup', ''].map((h) => (
                   <th key={h} style={{ padding: '8px 10px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--muted)', borderBottom: '2px solid var(--border)', textAlign: 'left', whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={9} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>Memuat…</td></tr>
+                <tr><td colSpan={12} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>Memuat…</td></tr>
               ) : shown.length === 0 ? (
-                <tr><td colSpan={9} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>Belum ada data.</td></tr>
+                <tr><td colSpan={12} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>Belum ada data.</td></tr>
               ) : shown.map((r, i) => (
                 <>
                   <tr key={r.id}>
                     <td style={td}>{i + 1}</td>
+                    <td style={td}>{r.tanggal || '—'}</td>
+                    <td style={td}>{r.line || '—'}</td>
+                    <td style={td}>{r.partName || '—'}</td>
                     <td style={td}>{r.problem}</td>
                     <td style={td}>{r.rootCause || '—'}</td>
                     <td style={td}>{r.temporaryAction || '—'}</td>
@@ -162,7 +172,7 @@ export default function ProblemLogPage() {
                   </tr>
                   {closingId === r.id && (
                     <tr>
-                      <td colSpan={9} style={{ padding: '10px', background: 'var(--s2)', borderBottom: '1px solid var(--border)' }}>
+                      <td colSpan={12} style={{ padding: '10px', background: 'var(--s2)', borderBottom: '1px solid var(--border)' }}>
                         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                           <input
                             autoFocus
@@ -184,7 +194,7 @@ export default function ProblemLogPage() {
                   )}
                   {r.status === 'closed' && r.closeComment && (
                     <tr>
-                      <td colSpan={9} style={{ padding: '6px 10px 12px 10px', fontSize: 12, color: 'var(--muted)', borderBottom: '1px solid var(--border)', fontStyle: 'italic' }}>
+                      <td colSpan={12} style={{ padding: '6px 10px 12px 10px', fontSize: 12, color: 'var(--muted)', borderBottom: '1px solid var(--border)', fontStyle: 'italic' }}>
                         Komentar penutupan: {r.closeComment}
                       </td>
                     </tr>

@@ -567,6 +567,9 @@ router.get('/problem-log', requireAuth, async (req, res, next) => {
     const rows = await prisma.problemLog.findMany({ orderBy: { id: 'desc' } });
     res.json(rows.map((r) => ({
       id: r.id,
+      tanggal: r.tanggal ? r.tanggal.toISOString().slice(0, 10) : null,
+      line: r.line,
+      partName: r.partName,
       problem: r.problem,
       rootCause: r.rootCause,
       temporaryAction: r.temporaryAction,
@@ -581,13 +584,18 @@ router.get('/problem-log', requireAuth, async (req, res, next) => {
 });
 
 // ── POST /api/problem-log ──────────────────────────────
-// Public — tambah baris problem/root-cause log baru.
+// Public — tambah baris problem/root-cause log baru. Dikirim juga dari
+// form /rmo saat isi Resume Control Harian (ikut tanggal/line/part yang
+// lagi diisi) supaya problem-nya jelas terkait line & part yang mana.
 router.post('/problem-log', async (req, res, next) => {
   try {
-    const { problem, root_cause, temporary_action, permanent_action, due_date, status } = req.body;
+    const { tanggal, line, part_name, problem, root_cause, temporary_action, permanent_action, due_date, status } = req.body;
     if (!problem) return res.status(400).json({ error: 'problem wajib diisi' });
     const record = await prisma.problemLog.create({
       data: {
+        tanggal: tanggal ? new Date(tanggal) : null,
+        line: line || null,
+        partName: part_name || null,
         problem,
         rootCause: root_cause || null,
         temporaryAction: temporary_action || null,

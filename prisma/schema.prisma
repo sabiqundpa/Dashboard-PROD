@@ -156,6 +156,9 @@ model ProduksiHarian {
 // halaman detail AR (tabel Problem, Root Cause, Temporary/Permanent Action).
 model ProblemLog {
   id                Int       @id @default(autoincrement())
+  tanggal           DateTime? // tanggal produksi saat problem terjadi (ikut form RC Harian)
+  line              String?   @map("line_produksi")
+  partName          String?   @map("part_name")
   problem           String
   rootCause         String?   @map("root_cause")
   temporaryAction   String?   @map("temporary_action")

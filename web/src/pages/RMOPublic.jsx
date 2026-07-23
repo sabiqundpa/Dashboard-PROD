@@ -292,6 +292,7 @@ export default function RMOPublic() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            tanggal: form.tanggal, line: form.line, part_name: form.partName,
             problem: form.problem,
             root_cause: form.rootCause,
             status: 'open',

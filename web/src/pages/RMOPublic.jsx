@@ -124,7 +124,7 @@ const EMPTY_FORM = {
   problem: '', rootCause: '',
 };
 
-const EMPTY_MASTER = { clusters: [], partNames: [], proses: [], mesin: [], manPower: [] };
+const EMPTY_MASTER = { clusters: [], groupHeads: [], partNames: [], proses: [] };
 
 /* ── Panel pencarian/filter untuk tab Data Tabel ────── */
 function SearchBar({ query, setQuery, onRefresh }) {
@@ -212,6 +212,39 @@ export default function RMOPublic() {
   /* Live-computed Total OK / Total Proses */
   const totalOk = useMemo(() => num(form.qtyOk), [form.qtyOk]);
   const totalProses = useMemo(() => totalOk + num(form.rwk) + num(form.rjct), [totalOk, form.rwk, form.rjct]);
+
+  /* Cascading: Grup Head -> Cluster -> Part Name (+Cycle Time) -> Proses
+     (+Line Produksi, Mesin, Man Power). */
+  const partNameOptions = useMemo(
+    () => master.partNames.filter((p) => p.cluster === form.cluster),
+    [master.partNames, form.cluster],
+  );
+  const prosesOptions = useMemo(
+    () => master.proses.filter((p) => p.partName === form.partName),
+    [master.proses, form.partName],
+  );
+
+  function pickGroupHead(name) {
+    const match = master.groupHeads.find((g) => g.name === name);
+    setForm((f) => ({
+      ...f, grupHead: name, cluster: match?.cluster || '',
+      partName: '', cycleTime: '', proses: '', line: '', mesin: '', manPower: '',
+    }));
+  }
+  function pickPartName(partName) {
+    const match = master.partNames.find((p) => p.partName === partName);
+    setForm((f) => ({
+      ...f, partName, cycleTime: match?.cycleTime ?? '',
+      proses: '', line: '', mesin: '', manPower: '',
+    }));
+  }
+  function pickProses(prosesName) {
+    const match = master.proses.find((p) => p.proses === prosesName && p.partName === form.partName);
+    setForm((f) => ({
+      ...f, proses: prosesName,
+      line: match?.line || '', mesin: match?.mesin || '', manPower: match?.manPower || '',
+    }));
+  }
 
   const hasInput = Object.entries(form).some(([k, v]) => !['tanggal', 'waktu', 'shift'].includes(k) && !!v);
 
@@ -328,10 +361,16 @@ export default function RMOPublic() {
 
             <div className="group-box" style={{ marginBottom: 18 }}>
               <span className="group-box-title">Grup Head</span>
-              <div style={{ maxWidth: 340 }}>
-                <FL>Nama Grup Head *</FL>
-                <input type="text" style={errors.grupHead ? inpErr : inp} value={form.grupHead} onChange={(e) => set('grupHead', e.target.value)} />
-                {errors.grupHead && <div style={{ color: '#d9534f', fontSize: 12, marginTop: 5 }}>{errors.grupHead}</div>}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px 20px' }}>
+                <div>
+                  <FL>Nama Grup Head *</FL>
+                  <select style={errors.grupHead ? inpErr : inp} value={form.grupHead} onChange={(e) => pickGroupHead(e.target.value)}>
+                    <option value="">Pilih…</option>
+                    {master.groupHeads.map((g) => <option key={g.id} value={g.name}>{g.name}</option>)}
+                  </select>
+                  {errors.grupHead && <div style={{ color: '#d9534f', fontSize: 12, marginTop: 5 }}>{errors.grupHead}</div>}
+                </div>
+                <ComputedField label="Cluster" sub="otomatis dari Grup Head" value={form.cluster || '—'} />
               </div>
             </div>
 
@@ -356,45 +395,23 @@ export default function RMOPublic() {
               </div>
 
               <div>
-                <FL>Cluster *</FL>
-                <select style={errors.cluster ? inpErr : inp} value={form.cluster} onChange={(e) => set('cluster', e.target.value)}>
-                  <option value="">Pilih…</option>
-                  {master.clusters.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-              <div>
-                <FL>Line Produksi *</FL>
-                <input type="text" style={errors.line ? inpErr : inp} value={form.line} onChange={(e) => set('line', e.target.value)} />
-              </div>
-              <div>
                 <FL>Part Name *</FL>
-                <select style={errors.partName ? inpErr : inp} value={form.partName} onChange={(e) => set('partName', e.target.value)}>
-                  <option value="">Pilih…</option>
-                  {master.partNames.map((p) => <option key={p} value={p}>{p}</option>)}
+                <select style={errors.partName ? inpErr : inp} value={form.partName} disabled={!form.cluster} onChange={(e) => pickPartName(e.target.value)}>
+                  <option value="">{form.cluster ? 'Pilih…' : 'Pilih Grup Head dulu'}</option>
+                  {partNameOptions.map((p) => <option key={p.id} value={p.partName}>{p.partName}</option>)}
                 </select>
               </div>
               <div>
                 <FL>Proses *</FL>
-                <select style={errors.proses ? inpErr : inp} value={form.proses} onChange={(e) => set('proses', e.target.value)}>
+                <select style={errors.proses ? inpErr : inp} value={form.proses} disabled={!form.partName} onChange={(e) => pickProses(e.target.value)}>
                   <option value="">Pilih…</option>
-                  {master.proses.map((p) => <option key={p} value={p}>{p}</option>)}
+                  {prosesOptions.map((p) => <option key={p.id} value={p.proses}>{p.proses}</option>)}
                 </select>
               </div>
+              <ComputedField label="Line Produksi" sub="otomatis dari Proses" value={form.line || '—'} />
+              <ComputedField label="Mesin" sub="otomatis dari Proses" value={form.mesin || '—'} />
 
-              <div>
-                <FL>Mesin *</FL>
-                <select style={errors.mesin ? inpErr : inp} value={form.mesin} onChange={(e) => set('mesin', e.target.value)}>
-                  <option value="">Pilih…</option>
-                  {master.mesin.map((m) => <option key={m} value={m}>{m}</option>)}
-                </select>
-              </div>
-              <div>
-                <FL>Man Power</FL>
-                <select style={inp} value={form.manPower} onChange={(e) => set('manPower', e.target.value)}>
-                  <option value="">Pilih…</option>
-                  {master.manPower.map((m) => <option key={m} value={m}>{m}</option>)}
-                </select>
-              </div>
+              <ComputedField label="Man Power" sub="otomatis dari Proses" value={form.manPower || '—'} />
               <div>
                 <FL sub="detik/pcs">Cycle Time</FL>
                 <input type="number" style={inp} value={form.cycleTime} onChange={(e) => set('cycleTime', e.target.value)} />
@@ -403,6 +420,7 @@ export default function RMOPublic() {
                 <FL sub="jam">Waktu Efektif</FL>
                 <input type="number" style={inp} value={form.waktuEfektif} onChange={(e) => set('waktuEfektif', e.target.value)} />
               </div>
+              <div />
             </Panel>
 
             <Panel title="Aktual Produksi" tint="peach">

@@ -5,11 +5,12 @@ import { useAuth } from '../AuthContext.jsx';
 import { apiFetch } from '../api.js';
 import MiniRing from '../components/MiniRing.jsx';
 import LineTrendChart from '../components/LineTrendChart.jsx';
-import ClusterBarList, { CLUSTER_COLORS } from '../components/ClusterBarList.jsx';
+import { CLUSTER_COLORS } from '../components/ClusterBarList.jsx';
+import VerticalBarList from '../components/VerticalBarList.jsx';
 import PeriodPicker from '../components/PeriodPicker.jsx';
-import ProblemLogTable from '../components/ProblemLogTable.jsx';
 
-const MAIN_SIZE = 140;
+const MAIN_SIZE = 200;
+const MINI_SIZE = 62;
 
 function todayStr() { return new Date().toISOString().slice(0, 10); }
 
@@ -24,7 +25,6 @@ export default function ARDetail() {
   const [byCluster, setByCluster] = useState([]);
   const [byLine, setByLine]       = useState([]);
   const [trend, setTrend]         = useState([]);
-  const [problems, setProblems]   = useState([]);
   const [loading, setLoading]     = useState(true);
 
   const load = useCallback(() => {
@@ -32,11 +32,9 @@ export default function ARDetail() {
     Promise.all([
       apiFetch(`/produksi-harian/ar-by-cluster?period=month&date=${refDate}`, [], logout),
       apiFetch(`/produksi-harian/ar-by-line?period=month&date=${refDate}`, [], logout),
-      apiFetch('/problem-log', [], logout),
-    ]).then(([c, l, p]) => {
+    ]).then(([c, l]) => {
       setByCluster(c);
       setByLine(l);
-      setProblems(p);
       setLoading(false);
     }).catch(() => setLoading(false));
   }, [refDate, logout]);
@@ -49,7 +47,6 @@ export default function ARDetail() {
   useEffect(() => { loadTrend(); }, [loadTrend]);
 
   const avgAr = byCluster.length ? Number((byCluster.reduce((s, c) => s + c.ar, 0) / byCluster.length).toFixed(1)) : 0;
-  const miniSize = Math.max(24, Math.round(MAIN_SIZE / Math.max(byCluster.length, 1)) - 6);
 
   const top5 = byLine.slice(0, 5);
   const bottom5 = [...byLine].reverse().slice(0, 5);
@@ -70,17 +67,17 @@ export default function ARDetail() {
 
       <div className="row4" style={{ gridTemplateColumns: '1fr 1.3fr', marginBottom: 16 }}>
         <div className="card">
-          <div className="card-header"><div className="card-title">Rata-rata AR per Cluster</div></div>
+          <div className="card-header"><div className="card-title">AR Cluster</div></div>
           {loading ? (
             <div style={{ color: 'var(--muted)', fontSize: 12 }}>Memuat…</div>
           ) : byCluster.length === 0 ? (
             <div style={{ color: 'var(--muted)', fontSize: 12 }}>Belum ada data.</div>
           ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
               <MiniRing label="Rata-rata" value={avgAr} size={MAIN_SIZE} color="var(--accent)" />
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14, justifyContent: 'space-between' }}>
                 {byCluster.map((c) => (
-                  <MiniRing key={c.cluster} label={c.cluster} value={c.ar} size={miniSize} color={CLUSTER_COLORS[c.cluster] || 'var(--accent)'} />
+                  <MiniRing key={c.cluster} label={c.cluster} value={c.ar} size={MINI_SIZE} color={CLUSTER_COLORS[c.cluster] || 'var(--accent)'} />
                 ))}
               </div>
             </div>
@@ -105,18 +102,13 @@ export default function ARDetail() {
 
       <div className="row4" style={{ gridTemplateColumns: '1fr 1fr', marginBottom: 16 }}>
         <div className="card">
-          <div className="card-header"><div className="card-title">5 Line AR Tertinggi</div></div>
-          <ClusterBarList data={top5} />
+          <div className="card-header"><div className="card-title">5 Line Produksi AR Tertinggi</div></div>
+          <VerticalBarList data={top5} />
         </div>
         <div className="card">
-          <div className="card-header"><div className="card-title">5 Line AR Terendah</div></div>
-          <ClusterBarList data={bottom5} />
+          <div className="card-header"><div className="card-title">5 Line Produksi AR Terendah</div></div>
+          <VerticalBarList data={bottom5} />
         </div>
-      </div>
-
-      <div className="card">
-        <div className="card-header"><div className="card-title">Problem & Root Cause Log</div></div>
-        <ProblemLogTable rows={problems} onChanged={load} />
       </div>
     </div>
   );

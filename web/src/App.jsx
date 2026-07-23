@@ -12,6 +12,8 @@ import Dashboard from './pages/Dashboard.jsx';
 import DataProduksi from './pages/DataProduksi.jsx';
 import ARDetail from './pages/ARDetail.jsx';
 import Reports from './pages/Reports.jsx';
+import MasterData from './pages/MasterData.jsx';
+import ProblemLogPage from './pages/ProblemLogPage.jsx';
 import Topbar from './components/Topbar.jsx';
 import AppSidebar from './components/AppSidebar.jsx';
 import MobileDrawer from './components/MobileDrawer.jsx';
@@ -22,7 +24,7 @@ import DetailPanel from './components/DetailPanel.jsx';
 import WOPanel from './components/WOPanel.jsx';
 import ModalRoot from './components/ModalRoot.jsx';
 
-const PAGES = { dashboard: Dashboard, dataproduksi: DataProduksi, ardetail: ARDetail, reports: Reports };
+const PAGES = { dashboard: Dashboard, dataproduksi: DataProduksi, ardetail: ARDetail, reports: Reports, masterdata: MasterData, problemlog: ProblemLogPage };
 
 function Shell() {
   const { page, closeModal, setNotifOpen, closeDetail, closeWODetail, sidebarOpen, presentMode, togglePresentMode, detailWO } = useUI();

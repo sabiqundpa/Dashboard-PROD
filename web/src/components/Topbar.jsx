@@ -14,6 +14,8 @@ function tickLabel() {
 const NAV_ITEMS = [
   { page: 'dashboard',     label: 'Dashboard' },
   { page: 'dataproduksi',  label: 'Data Produksi' },
+  { page: 'problemlog',    label: 'Problem & Root Cause' },
+  { page: 'masterdata',    label: 'Master Data' },
   { href: '/rmo',          label: 'RESUME CONTROL HARIAN PRODUKSI' },
 ];
 

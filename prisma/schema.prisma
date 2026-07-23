@@ -69,10 +69,10 @@ model WorkingCalendar {
   @@map("WorkingCalendar")
 }
 
-// Master data lookup — dikelola langsung oleh user lewat Supabase (Table
-// Editor), bukan lewat migrasi/import di aplikasi. Masing-masing tabel
-// cuma daftar nilai independen (bukan gabungan/relasi), dipakai sebagai
-// isi dropdown di form Resume Control Harian Produksi.
+// Master data relasional — dikelola lewat menu "Master Data" di dashboard
+// (bukan lagi lewat Supabase Table Editor langsung, supaya relasinya utuh).
+// Alur: Group Head → Cluster → Part Name (+ Cycle Time) → Proses
+// (+ Line Produksi, Mesin, Man Power). Waktu Efektif tetap input manual.
 model MasterCluster {
   id      Int    @id @default(autoincrement())
   cluster String @map("CLUSTER")
@@ -80,36 +80,40 @@ model MasterCluster {
   @@map("CLUSTER")
 }
 
-model MasterMp {
-  id  Int    @id @default(autoincrement())
-  mp  String @map("MP")
-  no  String? @map("No")
+// 1 Group Head → 1 Cluster.
+model MasterGroupHead {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  cluster   String
+  createdAt DateTime @default(now()) @map("created_at")
 
-  @@map("MP")
+  @@map("MasterGroupHead")
 }
 
-model MasterMesin {
-  id    Int    @id @default(autoincrement())
-  no    String? @map("No")
-  mesin String @map("Mesin")
+// 1 Cluster → banyak Part Name. Tiap Part Name punya 1 Cycle Time standar.
+model MasterPartName {
+  id        Int      @id @default(autoincrement())
+  partName  String   @unique @map("part_name")
+  cluster   String
+  cycleTime Float    @default(0) @map("cycle_time")
+  createdAt DateTime @default(now()) @map("created_at")
 
-  @@map("Mesin")
+  @@map("MasterPartName")
 }
 
-model MasterNamaPart {
-  id        Int    @id @default(autoincrement())
-  namaParts String @map("Nama Parts")
-  no        String? @map("No")
-
-  @@map("Nama Parts")
-}
-
+// 1 Part Name → banyak Proses. Tiap Proses terhubung ke 1 Line Produksi,
+// 1 Mesin, dan 1 Man Power.
 model MasterProses {
-  id     Int    @id @default(autoincrement())
-  no     String? @map("No")
-  proses String @map("Proses")
+  id        Int      @id @default(autoincrement())
+  proses    String
+  partName  String   @map("part_name")
+  line      String   @map("line_produksi")
+  mesin     String
+  manPower  String   @map("man_power")
+  createdAt DateTime @default(now()) @map("created_at")
 
-  @@map("Proses")
+  @@unique([proses, partName])
+  @@map("MasterProses")
 }
 
 // Resume Control Harian Produksi — satu baris per Part + Proses + Mesin per
@@ -158,6 +162,8 @@ model ProblemLog {
   permanentAction   String?   @map("permanent_action")
   dueDate           DateTime? @map("due_date")
   status            String    @default("open") // open | in_progress | closed
+  closeComment      String?   @map("close_comment")
+  closedAt          DateTime? @map("closed_at")
   createdAt         DateTime  @default(now()) @map("created_at")
 
   @@map("ProblemLog")

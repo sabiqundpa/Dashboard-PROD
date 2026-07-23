@@ -58,26 +58,189 @@ router.post('/login', async (req, res, next) => {
 });
 
 // ── GET /api/master ────────────────────────────────────
-// Public — 5 daftar master data independen (dikelola user langsung di
-// Supabase Table Editor): Cluster, Part Name, Proses, Mesin, Man Power.
-// Dipakai sebagai isi dropdown di form /rmo — tidak ada relasi/kombinasi
-// antar tabel, jadi tiap dropdown berdiri sendiri.
+// Public — master data relasional lengkap untuk dropdown bertingkat di
+// form /rmo: Group Head → Cluster → Part Name (+Cycle Time) → Proses
+// (+Line Produksi, Mesin, Man Power).
 router.get('/master', async (req, res, next) => {
   try {
-    const [clusters, parts, proses, mesin, mp] = await Promise.all([
+    const [clusters, groupHeads, partNames, proses] = await Promise.all([
       prisma.masterCluster.findMany({ orderBy: { cluster: 'asc' } }),
-      prisma.masterNamaPart.findMany({ orderBy: { namaParts: 'asc' } }),
+      prisma.masterGroupHead.findMany({ orderBy: { name: 'asc' } }),
+      prisma.masterPartName.findMany({ orderBy: { partName: 'asc' } }),
       prisma.masterProses.findMany({ orderBy: { proses: 'asc' } }),
-      prisma.masterMesin.findMany({ orderBy: { mesin: 'asc' } }),
-      prisma.masterMp.findMany({ orderBy: { mp: 'asc' } }),
     ]);
     res.json({
       clusters: clusters.map((r) => r.cluster).filter(Boolean),
-      partNames: parts.map((r) => r.namaParts).filter(Boolean),
-      proses: proses.map((r) => r.proses).filter(Boolean),
-      mesin: mesin.map((r) => r.mesin).filter(Boolean),
-      manPower: mp.map((r) => r.mp).filter(Boolean),
+      groupHeads: groupHeads.map((r) => ({ id: r.id, name: r.name, cluster: r.cluster })),
+      partNames: partNames.map((r) => ({ id: r.id, partName: r.partName, cluster: r.cluster, cycleTime: r.cycleTime })),
+      proses: proses.map((r) => ({ id: r.id, proses: r.proses, partName: r.partName, line: r.line, mesin: r.mesin, manPower: r.manPower })),
     });
+  } catch (err) { next(err); }
+});
+
+// ── Master Data CRUD (login-gated) ─────────────────────
+// Dipakai oleh menu "Master Data" di dashboard. Path flat (id di body),
+// bukan /:id — Vercel edge routing 404 untuk path bertingkat.
+
+router.post('/master/group-head', requireAuth, async (req, res, next) => {
+  try {
+    const { name, cluster } = req.body;
+    if (!name || !cluster) return res.status(400).json({ error: 'name dan cluster wajib diisi' });
+    const record = await prisma.masterGroupHead.upsert({
+      where: { name }, update: { cluster }, create: { name, cluster },
+    });
+    res.status(201).json(record);
+  } catch (err) { next(err); }
+});
+router.post('/master/group-head-update', requireAuth, async (req, res, next) => {
+  try {
+    const id = Number(req.body.id);
+    if (!id) return res.status(400).json({ error: 'Invalid id' });
+    const { name, cluster } = req.body;
+    const data = {};
+    if (name !== undefined) data.name = name;
+    if (cluster !== undefined) data.cluster = cluster;
+    const record = await prisma.masterGroupHead.update({ where: { id }, data });
+    res.json(record);
+  } catch (err) { next(err); }
+});
+router.post('/master/group-head-delete', requireAuth, async (req, res, next) => {
+  try {
+    const id = Number(req.body.id);
+    if (!id) return res.status(400).json({ error: 'Invalid id' });
+    await prisma.masterGroupHead.delete({ where: { id } });
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+router.post('/master/part-name', requireAuth, async (req, res, next) => {
+  try {
+    const { part_name, cluster, cycle_time } = req.body;
+    if (!part_name || !cluster) return res.status(400).json({ error: 'part_name dan cluster wajib diisi' });
+    const record = await prisma.masterPartName.upsert({
+      where: { partName: part_name },
+      update: { cluster, cycleTime: cycle_time ? Number(cycle_time) : 0 },
+      create: { partName: part_name, cluster, cycleTime: cycle_time ? Number(cycle_time) : 0 },
+    });
+    res.status(201).json(record);
+  } catch (err) { next(err); }
+});
+router.post('/master/part-name-update', requireAuth, async (req, res, next) => {
+  try {
+    const id = Number(req.body.id);
+    if (!id) return res.status(400).json({ error: 'Invalid id' });
+    const { part_name, cluster, cycle_time } = req.body;
+    const data = {};
+    if (part_name !== undefined) data.partName = part_name;
+    if (cluster !== undefined) data.cluster = cluster;
+    if (cycle_time !== undefined) data.cycleTime = Number(cycle_time) || 0;
+    const record = await prisma.masterPartName.update({ where: { id }, data });
+    res.json(record);
+  } catch (err) { next(err); }
+});
+router.post('/master/part-name-delete', requireAuth, async (req, res, next) => {
+  try {
+    const id = Number(req.body.id);
+    if (!id) return res.status(400).json({ error: 'Invalid id' });
+    await prisma.masterPartName.delete({ where: { id } });
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+router.post('/master/proses', requireAuth, async (req, res, next) => {
+  try {
+    const { proses, part_name, line, mesin, man_power } = req.body;
+    if (!proses || !part_name || !line || !mesin) {
+      return res.status(400).json({ error: 'proses, part_name, line, dan mesin wajib diisi' });
+    }
+    const record = await prisma.masterProses.upsert({
+      where: { proses_partName: { proses, partName: part_name } },
+      update: { line, mesin, manPower: man_power || '' },
+      create: { proses, partName: part_name, line, mesin, manPower: man_power || '' },
+    });
+    res.status(201).json(record);
+  } catch (err) { next(err); }
+});
+router.post('/master/proses-update', requireAuth, async (req, res, next) => {
+  try {
+    const id = Number(req.body.id);
+    if (!id) return res.status(400).json({ error: 'Invalid id' });
+    const { proses, part_name, line, mesin, man_power } = req.body;
+    const data = {};
+    if (proses !== undefined) data.proses = proses;
+    if (part_name !== undefined) data.partName = part_name;
+    if (line !== undefined) data.line = line;
+    if (mesin !== undefined) data.mesin = mesin;
+    if (man_power !== undefined) data.manPower = man_power;
+    const record = await prisma.masterProses.update({ where: { id }, data });
+    res.json(record);
+  } catch (err) { next(err); }
+});
+router.post('/master/proses-delete', requireAuth, async (req, res, next) => {
+  try {
+    const id = Number(req.body.id);
+    if (!id) return res.status(400).json({ error: 'Invalid id' });
+    await prisma.masterProses.delete({ where: { id } });
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+// ── POST /api/master/import ────────────────────────────
+// Login-gated — import CSV massal: Group Head, Cluster, Part Name,
+// Cycle Time, Proses, Line Produksi, Mesin, Man Power. Tiap baris mengisi
+// ketiga tabel master (upsert, aman dijalankan berulang).
+router.post('/master/import', requireAuth, upload.single('file'), async (req, res, next) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    const rows = parseCsv(req.file.buffer.toString('utf-8'));
+
+    let groupHeads = 0, partNames = 0, prosesRows = 0, skipped = 0;
+    for (const row of rows) {
+      const lookup = {};
+      Object.keys(row).forEach((k) => { lookup[k.trim().toLowerCase()] = row[k]; });
+      const field = (...keys) => {
+        for (const key of keys) {
+          const v = lookup[key.toLowerCase()];
+          if (v !== undefined && v !== '') return String(v).trim();
+        }
+        return '';
+      };
+
+      const cluster = field('Cluster').toUpperCase();
+      const groupHead = field('Group Head', 'Grup Head');
+      const partName = field('Part Name', 'Nama Part');
+      const proses = field('Proses');
+      const line = field('Line Produksi', 'Line');
+      const mesin = field('Mesin', 'Nama Mesin');
+      const manPower = field('Man Power', 'MP');
+      const cycleTimeRaw = field('Cycle Time', 'CT');
+      const cycleTime = cycleTimeRaw && !isNaN(Number(cycleTimeRaw)) ? Number(cycleTimeRaw) : 0;
+
+      if (!cluster) { skipped++; continue; }
+
+      if (groupHead) {
+        await prisma.masterGroupHead.upsert({
+          where: { name: groupHead }, update: { cluster }, create: { name: groupHead, cluster },
+        });
+        groupHeads++;
+      }
+      if (partName) {
+        await prisma.masterPartName.upsert({
+          where: { partName }, update: { cluster, cycleTime }, create: { partName, cluster, cycleTime },
+        });
+        partNames++;
+        if (proses && line && mesin) {
+          await prisma.masterProses.upsert({
+            where: { proses_partName: { proses, partName } },
+            update: { line, mesin, manPower },
+            create: { proses, partName, line, mesin, manPower },
+          });
+          prosesRows++;
+        }
+      }
+    }
+
+    res.json({ groupHeads, partNames, proses: prosesRows, skipped, total: rows.length });
   } catch (err) { next(err); }
 });
 
@@ -253,11 +416,12 @@ router.get('/produksi-harian/ar-trend', requireAuth, async (req, res, next) => {
     const period = req.query.period || 'month';
     const ref = req.query.date ? new Date(req.query.date) : new Date();
     const pct = (n, d) => d > 0 ? Math.max(0, Math.min(100, (n / d) * 100)) : 0;
+    const clusterFilter = req.query.cluster ? { cluster: req.query.cluster } : {};
 
     if (period === 'today') {
       const start = new Date(ref); start.setHours(0, 0, 0, 0);
       const end = new Date(ref); end.setHours(23, 59, 59, 999);
-      const rows = await prisma.produksiHarian.findMany({ where: { tanggal: { gte: start, lte: end } } });
+      const rows = await prisma.produksiHarian.findMany({ where: { tanggal: { gte: start, lte: end }, ...clusterFilter } });
 
       const byHour = Array.from({ length: 24 }, (_, h) => ({
         day: String(h).padStart(2, '0'), totalProses: 0, plan: 0,
@@ -277,7 +441,7 @@ router.get('/produksi-harian/ar-trend', requireAuth, async (req, res, next) => {
       const year = ref.getFullYear();
       const start = new Date(year, 0, 1);
       const end = new Date(year, 11, 31, 23, 59, 59, 999);
-      const rows = await prisma.produksiHarian.findMany({ where: { tanggal: { gte: start, lte: end } } });
+      const rows = await prisma.produksiHarian.findMany({ where: { tanggal: { gte: start, lte: end }, ...clusterFilter } });
 
       const MONTHS = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
       const byMonth = MONTHS.map((m) => ({ day: m, totalProses: 0, plan: 0 }));
@@ -293,7 +457,7 @@ router.get('/produksi-harian/ar-trend', requireAuth, async (req, res, next) => {
     const year = ref.getFullYear(), month = ref.getMonth();
     const start = new Date(year, month, 1);
     const end = new Date(year, month + 1, 0, 23, 59, 59, 999);
-    const rows = await prisma.produksiHarian.findMany({ where: { tanggal: { gte: start, lte: end } } });
+    const rows = await prisma.produksiHarian.findMany({ where: { tanggal: { gte: start, lte: end }, ...clusterFilter } });
 
     const daysInMonth = end.getDate();
     const byDay = Array.from({ length: daysInMonth }, (_, i) => ({
@@ -323,6 +487,9 @@ router.get('/problem-log', requireAuth, async (req, res, next) => {
       permanentAction: r.permanentAction,
       dueDate: r.dueDate ? r.dueDate.toISOString().slice(0, 10) : null,
       status: r.status,
+      closeComment: r.closeComment,
+      closedAt: r.closedAt ? r.closedAt.toISOString() : null,
+      createdAt: r.createdAt.toISOString(),
     })));
   } catch (err) { next(err); }
 });
@@ -354,16 +521,22 @@ router.post('/problem-log-update', requireAuth, async (req, res, next) => {
   try {
     const id = Number(req.body.id);
     if (!id) return res.status(400).json({ error: 'Invalid id' });
-    const { problem, root_cause, temporary_action, permanent_action, due_date, status } = req.body;
+    const { problem, root_cause, temporary_action, permanent_action, due_date, status, close_comment } = req.body;
     const data = {};
     if (problem !== undefined) data.problem = problem;
     if (root_cause !== undefined) data.rootCause = root_cause || null;
     if (temporary_action !== undefined) data.temporaryAction = temporary_action || null;
     if (permanent_action !== undefined) data.permanentAction = permanent_action || null;
     if (due_date !== undefined) data.dueDate = due_date ? new Date(due_date) : null;
-    if (status !== undefined) data.status = status;
-    await prisma.problemLog.update({ where: { id }, data });
-    res.json({ ok: true });
+    if (status !== undefined) {
+      data.status = status;
+      if (status === 'closed') {
+        data.closeComment = close_comment || null;
+        data.closedAt = new Date();
+      }
+    }
+    const record = await prisma.problemLog.update({ where: { id }, data });
+    res.json(record);
   } catch (err) { next(err); }
 });
 

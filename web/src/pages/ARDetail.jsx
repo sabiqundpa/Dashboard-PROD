@@ -30,8 +30,8 @@ export default function ARDetail() {
   const load = useCallback(() => {
     setLoading(true);
     Promise.all([
-      apiFetch(`/produksi-harian/ar-by-cluster?period=month&date=${refDate}`, [], logout),
-      apiFetch(`/produksi-harian/ar-by-line?period=month&date=${refDate}`, [], logout),
+      apiFetch(`/ar-by-cluster?period=month&date=${refDate}`, [], logout),
+      apiFetch(`/ar-by-line?period=month&date=${refDate}`, [], logout),
     ]).then(([c, l]) => {
       setByCluster(c);
       setByLine(l);
@@ -42,7 +42,7 @@ export default function ARDetail() {
   useEffect(() => { load(); }, [load]);
 
   const loadTrend = useCallback(() => {
-    apiFetch(`/produksi-harian/ar-trend?period=${trendPeriod}&date=${trendDate}`, [], logout).then(setTrend).catch(() => {});
+    apiFetch(`/ar-trend?period=${trendPeriod}&date=${trendDate}`, [], logout).then(setTrend).catch(() => {});
   }, [trendPeriod, trendDate, logout]);
   useEffect(() => { loadTrend(); }, [loadTrend]);
 

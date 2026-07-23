@@ -26,6 +26,7 @@ export default function MasterData() {
   const showToast = useToast();
   const [tab, setTab] = useState('groupHead');
   const [master, setMaster] = useState({ clusters: CLUSTERS, groupHeads: [], partNames: [], proses: [] });
+  const [legacy, setLegacy] = useState({ manPower: [], mesin: [], proses: [], partNames: [] });
   const [loading, setLoading] = useState(true);
   const fileInputRef = useRef(null);
 
@@ -37,6 +38,10 @@ export default function MasterData() {
   }, [logout]);
   useEffect(() => { load(); }, [load]);
 
+  useEffect(() => {
+    apiFetch('/legacy-lookups', { manPower: [], mesin: [], proses: [], partNames: [] }, logout).then(setLegacy);
+  }, [logout]);
+
   async function handleImport(e) {
     const file = e.target.files?.[0];
     e.target.value = '';
@@ -44,7 +49,7 @@ export default function MasterData() {
     try {
       const fd = new FormData();
       fd.append('file', file);
-      const data = await apiSendForm('/master/import', fd, logout);
+      const data = await apiSendForm('/master-import', fd, logout);
       showToast(`Import selesai: ${data.groupHeads} grup head, ${data.partNames} part, ${data.proses} proses (${data.skipped} dilewati)`, 'green');
       load();
     } catch (err) { showToast(err.message, 'red'); }
@@ -55,7 +60,7 @@ export default function MasterData() {
       <div className="page-header">
         <div>
           <div className="page-title">Master Data</div>
-          <div className="page-sub">Kelola Grup Head, Part Name, dan Proses beserta relasinya — dipakai sebagai dropdown di form Resume Control Harian Produksi</div>
+          <div className="page-sub">Kelola Grup Head, Part Name, dan Proses beserta relasinya — dipakai sebagai dropdown di form Resume Control Harian Produksi. Ketikan Part Name/Proses/Mesin/Man Power akan menyarankan nama dari data lama (tabel MP/Mesin/Proses/Nama Parts) supaya penamaan tetap konsisten.</div>
         </div>
         <div className="header-actions">
           <button className="btn" onClick={() => fileInputRef.current?.click()}>
@@ -81,8 +86,8 @@ export default function MasterData() {
       </div>
 
       {tab === 'groupHead' && <GroupHeadTab data={master.groupHeads} loading={loading} onChanged={load} logout={logout} />}
-      {tab === 'partName' && <PartNameTab data={master.partNames} loading={loading} onChanged={load} logout={logout} />}
-      {tab === 'proses' && <ProsesTab data={master.proses} partNames={master.partNames} loading={loading} onChanged={load} logout={logout} />}
+      {tab === 'partName' && <PartNameTab data={master.partNames} loading={loading} onChanged={load} logout={logout} suggestions={legacy.partNames} />}
+      {tab === 'proses' && <ProsesTab data={master.proses} partNames={master.partNames} loading={loading} onChanged={load} logout={logout} legacy={legacy} />}
     </div>
   );
 }
@@ -98,14 +103,14 @@ function GroupHeadTab({ data, loading, onChanged, logout }) {
     if (!name.trim() || !cluster) return;
     setBusy(true);
     try {
-      await apiSend('/master/group-head', 'POST', { name, cluster }, logout);
+      await apiSend('/master-group-head', 'POST', { name, cluster }, logout);
       setName(''); setCluster('');
       onChanged();
     } catch (e) { showToast(e.message, 'red'); }
     setBusy(false);
   }
   async function remove(id) {
-    try { await apiSend('/master/group-head-delete', 'POST', { id }, logout); onChanged(); }
+    try { await apiSend('/master-group-head-delete', 'POST', { id }, logout); onChanged(); }
     catch (e) { showToast(e.message, 'red'); }
   }
 
@@ -153,7 +158,7 @@ function GroupHeadTab({ data, loading, onChanged, logout }) {
 }
 
 /* ── Tab: Part Name ─────────────────────────────────── */
-function PartNameTab({ data, loading, onChanged, logout }) {
+function PartNameTab({ data, loading, onChanged, logout, suggestions = [] }) {
   const showToast = useToast();
   const [partName, setPartName] = useState('');
   const [cluster, setCluster] = useState('');
@@ -164,14 +169,14 @@ function PartNameTab({ data, loading, onChanged, logout }) {
     if (!partName.trim() || !cluster) return;
     setBusy(true);
     try {
-      await apiSend('/master/part-name', 'POST', { part_name: partName, cluster, cycle_time: cycleTime }, logout);
+      await apiSend('/master-part-name', 'POST', { part_name: partName, cluster, cycle_time: cycleTime }, logout);
       setPartName(''); setCluster(''); setCycleTime('');
       onChanged();
     } catch (e) { showToast(e.message, 'red'); }
     setBusy(false);
   }
   async function remove(id) {
-    try { await apiSend('/master/part-name-delete', 'POST', { id }, logout); onChanged(); }
+    try { await apiSend('/master-part-name-delete', 'POST', { id }, logout); onChanged(); }
     catch (e) { showToast(e.message, 'red'); }
   }
 
@@ -179,7 +184,10 @@ function PartNameTab({ data, loading, onChanged, logout }) {
     <div className="card" style={{ maxWidth: 860 }}>
       <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr 1fr auto', gap: 12, alignItems: 'end', marginBottom: 18 }}>
         <Field label="Part Name">
-          <input className="form-input" value={partName} onChange={(e) => setPartName(e.target.value)} />
+          <input className="form-input" list="dl-part-names" value={partName} onChange={(e) => setPartName(e.target.value)} />
+          <datalist id="dl-part-names">
+            {suggestions.map((s) => <option key={s} value={s} />)}
+          </datalist>
         </Field>
         <Field label="Cluster">
           <select className="form-input" value={cluster} onChange={(e) => setCluster(e.target.value)}>
@@ -224,7 +232,7 @@ function PartNameTab({ data, loading, onChanged, logout }) {
 }
 
 /* ── Tab: Proses ────────────────────────────────────── */
-function ProsesTab({ data, partNames, loading, onChanged, logout }) {
+function ProsesTab({ data, partNames, loading, onChanged, logout, legacy = { proses: [], mesin: [], manPower: [] } }) {
   const showToast = useToast();
   const [proses, setProses] = useState('');
   const [partName, setPartName] = useState('');
@@ -237,14 +245,14 @@ function ProsesTab({ data, partNames, loading, onChanged, logout }) {
     if (!proses.trim() || !partName || !line.trim() || !mesin.trim()) return;
     setBusy(true);
     try {
-      await apiSend('/master/proses', 'POST', { proses, part_name: partName, line, mesin, man_power: manPower }, logout);
+      await apiSend('/master-proses', 'POST', { proses, part_name: partName, line, mesin, man_power: manPower }, logout);
       setProses(''); setPartName(''); setLine(''); setMesin(''); setManPower('');
       onChanged();
     } catch (e) { showToast(e.message, 'red'); }
     setBusy(false);
   }
   async function remove(id) {
-    try { await apiSend('/master/proses-delete', 'POST', { id }, logout); onChanged(); }
+    try { await apiSend('/master-proses-delete', 'POST', { id }, logout); onChanged(); }
     catch (e) { showToast(e.message, 'red'); }
   }
 
@@ -252,7 +260,8 @@ function ProsesTab({ data, partNames, loading, onChanged, logout }) {
     <div className="card">
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr auto', gap: 12, alignItems: 'end', marginBottom: 18 }}>
         <Field label="Proses">
-          <input className="form-input" value={proses} onChange={(e) => setProses(e.target.value)} />
+          <input className="form-input" list="dl-proses" value={proses} onChange={(e) => setProses(e.target.value)} />
+          <datalist id="dl-proses">{legacy.proses.map((s) => <option key={s} value={s} />)}</datalist>
         </Field>
         <Field label="Part Name">
           <select className="form-input" value={partName} onChange={(e) => setPartName(e.target.value)}>
@@ -264,10 +273,12 @@ function ProsesTab({ data, partNames, loading, onChanged, logout }) {
           <input className="form-input" value={line} onChange={(e) => setLine(e.target.value)} />
         </Field>
         <Field label="Mesin">
-          <input className="form-input" value={mesin} onChange={(e) => setMesin(e.target.value)} />
+          <input className="form-input" list="dl-mesin" value={mesin} onChange={(e) => setMesin(e.target.value)} />
+          <datalist id="dl-mesin">{legacy.mesin.map((s) => <option key={s} value={s} />)}</datalist>
         </Field>
         <Field label="Man Power">
-          <input className="form-input" value={manPower} onChange={(e) => setManPower(e.target.value)} />
+          <input className="form-input" list="dl-mp" value={manPower} onChange={(e) => setManPower(e.target.value)} />
+          <datalist id="dl-mp">{legacy.manPower.map((s) => <option key={s} value={s} />)}</datalist>
         </Field>
         <button className="btn primary" disabled={busy} onClick={add} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <Plus size={14} /> Tambah

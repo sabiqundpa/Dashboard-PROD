@@ -29,7 +29,7 @@ export default function Dashboard() {
     setIsLoading(true);
     setDashLastUpdate('Updating…');
     const qs = period === 'all' ? 'period=all' : `period=${period}&date=${refDate}`;
-    apiFetch(`/produksi-harian/summary?${qs}`, EMPTY_SUMMARY, logout).then((s) => {
+    apiFetch(`/produksi-harian-summary?${qs}`, EMPTY_SUMMARY, logout).then((s) => {
       if (myId !== reqIdRef.current) return;
       setSummary(s);
       setDashLastUpdate('Updated ' + new Date().toLocaleTimeString());

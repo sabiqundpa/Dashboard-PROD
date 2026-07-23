@@ -1,6 +1,11 @@
+import { Pencil, Trash2 } from 'lucide-react';
+
 // Tabel hasil input Resume Control Harian Produksi — dipakai bersama oleh
-// halaman /rmo (tab "Data Tabel") dan menu "Data Produksi" di dashboard utama.
-export default function ProduksiTable({ rows, loading }) {
+// halaman /rmo (tab "Data Tabel") dan menu "Data Produksi" di dashboard
+// utama. Kolom "Aksi" (edit/hapus) hanya muncul kalau onEdit diberikan —
+// dipakai di Data Produksi (login-gated), tidak di /rmo publik.
+export default function ProduksiTable({ rows, loading, onEdit, onDelete }) {
+  const editable = !!onEdit;
   const th = { padding: '8px 10px', fontSize: 10.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.03em', color: '#3d4b4b', background: '#f5c542', border: '1px solid #d9b93a', whiteSpace: 'nowrap', position: 'sticky', top: 0 };
   const td = { padding: '7px 10px', fontSize: 12.5, border: '1px solid var(--border)', whiteSpace: 'nowrap', color: 'var(--text)' };
   const tdOk = { ...td, background: 'rgba(14,90,82,.1)' };
@@ -16,6 +21,7 @@ export default function ProduksiTable({ rows, loading }) {
       <table style={{ borderCollapse: 'collapse', width: '100%', background: 'var(--s1)' }}>
         <thead>
           <tr>
+            {editable && <th style={{ ...th, position: 'sticky', left: 0, zIndex: 1 }}>Aksi</th>}
             {['Nama Parts', 'No Lot', 'Proses', 'Mesin', 'MP', 'CT', 'Waktu Efektif (Jam)', 'Plan',
               'OK1', 'OK2', 'Rwk', 'Rjct', 'Total OK', 'Total Proses',
               'Breakdown MC', 'Lost Time', 'Keterangan',
@@ -27,6 +33,14 @@ export default function ProduksiTable({ rows, loading }) {
         <tbody>
           {rows.map((r) => (
             <tr key={r.id}>
+              {editable && (
+                <td style={{ ...td, position: 'sticky', left: 0, background: 'var(--s1)' }}>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    <button onClick={() => onEdit(r)} title="Edit" style={actionBtn}><Pencil size={12} /></button>
+                    {onDelete && <button onClick={() => onDelete(r)} title="Hapus" style={{ ...actionBtn, color: 'var(--red)' }}><Trash2 size={12} /></button>}
+                  </div>
+                </td>
+              )}
               <td style={td}>{r.partName}</td>
               <td style={td}>{r.noLot || '—'}</td>
               <td style={td}>{r.proses}</td>
@@ -54,7 +68,7 @@ export default function ProduksiTable({ rows, loading }) {
         </tbody>
         <tfoot>
           <tr>
-            <td style={{ ...td, fontWeight: 700, background: '#f5c542', color: '#3d4b4b' }} colSpan={17}>PENCAPAIAN RATA-RATA</td>
+            <td style={{ ...td, fontWeight: 700, background: '#f5c542', color: '#3d4b4b' }} colSpan={editable ? 18 : 17}>PENCAPAIAN RATA-RATA</td>
             <td style={{ ...td, fontWeight: 700, background: '#f5c542', color: '#3d4b4b', textAlign: 'center' }}>{avg('ar')}%</td>
             <td style={{ ...td, fontWeight: 700, background: '#f5c542', color: '#3d4b4b', textAlign: 'center' }}>{avg('avb')}%</td>
             <td style={{ ...td, fontWeight: 700, background: '#f5c542', color: '#3d4b4b', textAlign: 'center' }}>{avg('perf')}%</td>
@@ -66,3 +80,5 @@ export default function ProduksiTable({ rows, loading }) {
     </div>
   );
 }
+
+const actionBtn = { background: 'var(--s2)', border: '1px solid var(--border)', borderRadius: 5, padding: '4px 6px', cursor: 'pointer', color: 'var(--text)', display: 'inline-flex' };

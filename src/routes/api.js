@@ -78,11 +78,42 @@ router.get('/master', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// ── Master Data CRUD (login-gated) ─────────────────────
-// Dipakai oleh menu "Master Data" di dashboard. Path flat (id di body),
-// bukan /:id — Vercel edge routing 404 untuk path bertingkat.
+// ── GET /api/legacy-lookups ─────────────────────────────
+// Login-gated — daftar nama mentah dari tabel lama "MP", "Mesin", "Proses",
+// "Nama Parts" yang dibuat manual di Supabase sebelum Master Data
+// relasional ada. Tabel-tabel itu cuma daftar nama datar tanpa relasi
+// (tidak tahu Part mana pakai Proses/Mesin/MP mana), jadi tidak bisa
+// auto-migrate ke MasterPartName/MasterProses. Dipakai sebagai saran
+// autocomplete (datalist) saja di menu Master Data supaya penamaan
+// konsisten dengan histori, sambil relasinya diisi manual sekali oleh
+// admin (yang tahu kombinasi aslinya di lapangan).
+router.get('/legacy-lookups', requireAuth, async (req, res, next) => {
+  try {
+    const [mp, mesin, proses, partNames] = await Promise.all([
+      prisma.$queryRaw`SELECT "MP" AS name FROM "MP" ORDER BY "MP"`,
+      prisma.$queryRaw`SELECT "Mesin" AS name FROM "Mesin" ORDER BY "Mesin"`,
+      prisma.$queryRaw`SELECT "Proses" AS name FROM "Proses" ORDER BY "Proses"`,
+      prisma.$queryRaw`SELECT "Nama Parts" AS name FROM "Nama Parts" ORDER BY "Nama Parts"`,
+    ]);
+    res.json({
+      manPower: mp.map((r) => r.name?.trim()).filter(Boolean),
+      mesin: mesin.map((r) => r.name?.trim()).filter(Boolean),
+      proses: proses.map((r) => r.name?.trim()).filter(Boolean),
+      partNames: partNames.map((r) => r.name?.trim()).filter(Boolean),
+    });
+  } catch (err) { next(err); }
+});
 
-router.post('/master/group-head', requireAuth, async (req, res, next) => {
+// ── Master Data CRUD (login-gated) ─────────────────────
+// Dipakai oleh menu "Master Data" di dashboard. Path benar-benar flat —
+// SATU segmen saja setelah /api/ (contoh: /master-group-head, bukan
+// /master/group-head). Vercel edge routing (fungsi catch-all
+// api/[...path].js) 404 untuk path apa pun yang punya lebih dari satu
+// segmen literal setelah /api/, meski bukan dynamic /:id. Ini pernah
+// bikin seluruh menu Master Data + Dashboard ringkasan + halaman AR
+// gagal total di production walau lolos test di localhost.
+
+router.post('/master-group-head', requireAuth, async (req, res, next) => {
   try {
     const { name, cluster } = req.body;
     if (!name || !cluster) return res.status(400).json({ error: 'name dan cluster wajib diisi' });
@@ -92,7 +123,7 @@ router.post('/master/group-head', requireAuth, async (req, res, next) => {
     res.status(201).json(record);
   } catch (err) { next(err); }
 });
-router.post('/master/group-head-update', requireAuth, async (req, res, next) => {
+router.post('/master-group-head-update', requireAuth, async (req, res, next) => {
   try {
     const id = Number(req.body.id);
     if (!id) return res.status(400).json({ error: 'Invalid id' });
@@ -104,7 +135,7 @@ router.post('/master/group-head-update', requireAuth, async (req, res, next) => 
     res.json(record);
   } catch (err) { next(err); }
 });
-router.post('/master/group-head-delete', requireAuth, async (req, res, next) => {
+router.post('/master-group-head-delete', requireAuth, async (req, res, next) => {
   try {
     const id = Number(req.body.id);
     if (!id) return res.status(400).json({ error: 'Invalid id' });
@@ -113,7 +144,7 @@ router.post('/master/group-head-delete', requireAuth, async (req, res, next) => 
   } catch (err) { next(err); }
 });
 
-router.post('/master/part-name', requireAuth, async (req, res, next) => {
+router.post('/master-part-name', requireAuth, async (req, res, next) => {
   try {
     const { part_name, cluster, cycle_time } = req.body;
     if (!part_name || !cluster) return res.status(400).json({ error: 'part_name dan cluster wajib diisi' });
@@ -125,7 +156,7 @@ router.post('/master/part-name', requireAuth, async (req, res, next) => {
     res.status(201).json(record);
   } catch (err) { next(err); }
 });
-router.post('/master/part-name-update', requireAuth, async (req, res, next) => {
+router.post('/master-part-name-update', requireAuth, async (req, res, next) => {
   try {
     const id = Number(req.body.id);
     if (!id) return res.status(400).json({ error: 'Invalid id' });
@@ -138,7 +169,7 @@ router.post('/master/part-name-update', requireAuth, async (req, res, next) => {
     res.json(record);
   } catch (err) { next(err); }
 });
-router.post('/master/part-name-delete', requireAuth, async (req, res, next) => {
+router.post('/master-part-name-delete', requireAuth, async (req, res, next) => {
   try {
     const id = Number(req.body.id);
     if (!id) return res.status(400).json({ error: 'Invalid id' });
@@ -147,7 +178,7 @@ router.post('/master/part-name-delete', requireAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.post('/master/proses', requireAuth, async (req, res, next) => {
+router.post('/master-proses', requireAuth, async (req, res, next) => {
   try {
     const { proses, part_name, line, mesin, man_power } = req.body;
     if (!proses || !part_name || !line || !mesin) {
@@ -161,7 +192,7 @@ router.post('/master/proses', requireAuth, async (req, res, next) => {
     res.status(201).json(record);
   } catch (err) { next(err); }
 });
-router.post('/master/proses-update', requireAuth, async (req, res, next) => {
+router.post('/master-proses-update', requireAuth, async (req, res, next) => {
   try {
     const id = Number(req.body.id);
     if (!id) return res.status(400).json({ error: 'Invalid id' });
@@ -176,7 +207,7 @@ router.post('/master/proses-update', requireAuth, async (req, res, next) => {
     res.json(record);
   } catch (err) { next(err); }
 });
-router.post('/master/proses-delete', requireAuth, async (req, res, next) => {
+router.post('/master-proses-delete', requireAuth, async (req, res, next) => {
   try {
     const id = Number(req.body.id);
     if (!id) return res.status(400).json({ error: 'Invalid id' });
@@ -189,7 +220,7 @@ router.post('/master/proses-delete', requireAuth, async (req, res, next) => {
 // Login-gated — import CSV massal: Group Head, Cluster, Part Name,
 // Cycle Time, Proses, Line Produksi, Mesin, Man Power. Tiap baris mengisi
 // ketiga tabel master (upsert, aman dijalankan berulang).
-router.post('/master/import', requireAuth, upload.single('file'), async (req, res, next) => {
+router.post('/master-import', requireAuth, upload.single('file'), async (req, res, next) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
     const rows = parseCsv(req.file.buffer.toString('utf-8'));
@@ -288,6 +319,61 @@ router.post('/produksi-harian', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// ── POST /api/produksi-harian-update ───────────────────
+// Login-gated — admin mengedit baris Resume Control Harian Produksi yang
+// sudah tersimpan (mis. salah input Plan/OK/Reject). Path flat, id di
+// body (lihat catatan di atas soal Vercel routing).
+router.post('/produksi-harian-update', requireAuth, async (req, res, next) => {
+  try {
+    const id = Number(req.body.id);
+    if (!id) return res.status(400).json({ error: 'Invalid id' });
+    const {
+      tanggal, waktu, shift, cluster, line, grup_head,
+      no_lot, part_name, part_number, proses, mesin, man_power, cycle_time,
+      waktu_efektif, plan, ok1, ok2, rwk, rjct,
+      breakdown_mesin, lost_time, keterangan,
+    } = req.body;
+
+    const data = {};
+    if (tanggal !== undefined) data.tanggal = new Date(tanggal);
+    if (waktu !== undefined) data.waktu = waktu || null;
+    if (shift !== undefined) data.shift = shift;
+    if (cluster !== undefined) data.cluster = cluster;
+    if (line !== undefined) data.line = line;
+    if (grup_head !== undefined) data.grupHead = grup_head || null;
+    if (no_lot !== undefined) data.noLot = no_lot || null;
+    if (part_name !== undefined) data.partName = part_name;
+    if (part_number !== undefined) data.partNumber = part_number || null;
+    if (proses !== undefined) data.proses = proses;
+    if (mesin !== undefined) data.mesin = mesin;
+    if (man_power !== undefined) data.manPower = man_power || null;
+    if (cycle_time !== undefined) data.cycleTime = Number(cycle_time) || 0;
+    if (waktu_efektif !== undefined) data.waktuEfektif = Number(waktu_efektif) || 0;
+    if (plan !== undefined) data.plan = Number(plan) || 0;
+    if (ok1 !== undefined) data.ok1 = Number(ok1) || 0;
+    if (ok2 !== undefined) data.ok2 = Number(ok2) || 0;
+    if (rwk !== undefined) data.rework = Number(rwk) || 0;
+    if (rjct !== undefined) data.reject = Number(rjct) || 0;
+    if (breakdown_mesin !== undefined) data.breakdownMesin = Number(breakdown_mesin) || 0;
+    if (lost_time !== undefined) data.lostTime = Number(lost_time) || 0;
+    if (keterangan !== undefined) data.keterangan = keterangan || null;
+
+    const record = await prisma.produksiHarian.update({ where: { id }, data });
+    res.json({ id: record.id, ...rowMetrics(record) });
+  } catch (err) { next(err); }
+});
+
+// ── POST /api/produksi-harian-delete ───────────────────
+// Login-gated — admin menghapus baris yang salah input total.
+router.post('/produksi-harian-delete', requireAuth, async (req, res, next) => {
+  try {
+    const id = Number(req.body.id);
+    if (!id) return res.status(400).json({ error: 'Invalid id' });
+    await prisma.produksiHarian.delete({ where: { id } });
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
 // Per-row AR/AVB/PERF/YIELD/OEE — sama persis dengan rumus di format Excel.
 // Total OK = OK1 + OK2. Total Proses = OK1 + OK2 + Rework + Reject.
 function rowMetrics(r) {
@@ -315,7 +401,7 @@ function rowMetrics(r) {
 // ── GET /api/produksi-harian/summary ──────────────────
 // Ringkasan OEE (Availability, Performance, Yield, AR, OEE) diagregasi dari
 // semua baris Resume Control Harian Produksi dalam periode terpilih.
-router.get('/produksi-harian/summary', requireAuth, async (req, res, next) => {
+router.get('/produksi-harian-summary', requireAuth, async (req, res, next) => {
   try {
     const { start, end } = getPeriodRange(req.query.period, req.query.date, req.query.start, req.query.end);
     const rows = await prisma.produksiHarian.findMany({
@@ -355,7 +441,7 @@ router.get('/produksi-harian/summary', requireAuth, async (req, res, next) => {
 // ── GET /api/produksi-harian/ar-by-cluster ─────────────
 // AR rata-rata per Cluster (AD/BC/EF/FI) dalam periode terpilih — untuk pie
 // chart drill-down AR di dashboard.
-router.get('/produksi-harian/ar-by-cluster', requireAuth, async (req, res, next) => {
+router.get('/ar-by-cluster', requireAuth, async (req, res, next) => {
   try {
     const { start, end } = getPeriodRange(req.query.period, req.query.date, req.query.start, req.query.end);
     const rows = await prisma.produksiHarian.findMany({
@@ -381,7 +467,7 @@ router.get('/produksi-harian/ar-by-cluster', requireAuth, async (req, res, next)
 // ── GET /api/produksi-harian/ar-by-line ────────────────
 // AR rata-rata per Line Produksi dalam periode terpilih — untuk ranking
 // 5 Line AR tertinggi/terendah di halaman detail AR.
-router.get('/produksi-harian/ar-by-line', requireAuth, async (req, res, next) => {
+router.get('/ar-by-line', requireAuth, async (req, res, next) => {
   try {
     const { start, end } = getPeriodRange(req.query.period, req.query.date, req.query.start, req.query.end);
     const rows = await prisma.produksiHarian.findMany({
@@ -411,7 +497,7 @@ router.get('/produksi-harian/ar-by-line', requireAuth, async (req, res, next) =>
 //                   tidak menyimpan jam
 //   period=month -> per hari dalam bulan dari ?date
 //   period=year  -> per bulan dalam tahun dari ?date
-router.get('/produksi-harian/ar-trend', requireAuth, async (req, res, next) => {
+router.get('/ar-trend', requireAuth, async (req, res, next) => {
   try {
     const period = req.query.period || 'month';
     const ref = req.query.date ? new Date(req.query.date) : new Date();

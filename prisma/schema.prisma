@@ -17,58 +17,6 @@ model Admin {
   createdAt    DateTime @default(now())
 }
 
-model Machine {
-  id             Int            @id @default(autoincrement())
-  name           String         @unique @map("machine")            // Nama Mesin
-  assetNumber    String         @default("") @map("id_asset_machine") // Nomor Asset
-  type           String         @default("") @map("type_machine")   // Type mesin
-  brand          String         @default("") @map("brand_machine")  // Merk
-  yearMachine    String?        @map("year_machine")                // Tahun mesin
-  power          String         @default("") @map("power_machine")  // Daya
-  cluster        String         @default("")
-  line           String         @default("")
-  shift          String         @default("")                         // Shift kerja
-  plannedHours   Float          @default(16) @map("worktime_machine") // Jam Waktu Kerja harian
-  active         Boolean        @default(false)                        // Hanya mesin aktif yang dihitung di KPI
-  createdAt      DateTime       @default(now())
-  breakdowns     Breakdown[]
-  analytics      Analytic[]
-
-  @@map("Machine")
-}
-
-
-// Hasil kalkulasi analitik per mesin per periode.
-// Diisi otomatis via endpoint POST /api/analytics/compute.
-model Analytic {
-  id              Int      @id @default(autoincrement())
-  machineId       Int
-  machine         Machine  @relation(fields: [machineId], references: [id], onDelete: Cascade)
-  periodStart     DateTime
-  periodEnd       DateTime
-  periodType      String   // 'daily' | 'weekly' | 'monthly' | 'custom'
-  availability    Float    // % (0-100)
-  mtbf            Float    // jam (Mean Time Between Failure)
-  mttr            Float    // jam (Mean Time To Repair)
-  totalDowntime   Float    // total jam downtime dalam periode
-  totalBreakdowns Int      // jumlah breakdown dalam periode
-  plannedHours    Float    // jam kerja yang direncanakan dalam periode
-  notes           String?  // catatan tambahan, untuk kebutuhan analisis di masa depan
-  calculatedAt    DateTime @default(now())
-}
-
-// Hari kerja per bulan untuk kalkulasi MTBF/MTTR yang akurat.
-// Diisi via menu Analitik → Kalender Kerja.
-model WorkingCalendar {
-  id          Int @id @default(autoincrement())
-  year        Int
-  month       Int // 1-12
-  workingDays Int @default(22)
-
-  @@unique([year, month])
-  @@map("WorkingCalendar")
-}
-
 // Master data relasional — dikelola lewat menu "Master Data" di dashboard
 // (bukan lagi lewat Supabase Table Editor langsung, supaya relasinya utuh).
 // Alur: Group Head → Cluster → Part Name (+ Cycle Time) → Proses
@@ -165,43 +113,9 @@ model ProblemLog {
   permanentAction   String?   @map("permanent_action")
   dueDate           DateTime? @map("due_date")
   status            String    @default("open") // open | in_progress | closed
-  closeComment      String?   @map("close_comment")
+  notes             String?
   closedAt          DateTime? @map("closed_at")
   createdAt         DateTime  @default(now()) @map("created_at")
 
   @@map("ProblemLog")
-}
-
-model Breakdown {
-  id          Int       @id @default(autoincrement())
-  machineId   Int       @map("machine_id")
-  machine     Machine   @relation(fields: [machineId], references: [id], onDelete: Cascade)
-
-  // ── Laporan ───────────────────────────────────────
-  cause       String    @map("problem")              // Identifikasi Problem
-  category    String    @default("Mechanical") @map("jenis_problem")
-  severity    String    @default("warning")           // critical | warning | info
-  status      String    @default("open")              // open | resolved
-  date        DateTime  @map("tanggal_lapor")         // Tanggal Lapor
-  startTime   String?   @map("waktu_lapor")           // Waktu Lapor
-
-  // ── Repair ────────────────────────────────────────
-  repairDate  DateTime? @map("tanggal_mulai")         // Tanggal Mulai perbaikan
-  repairTime  String?   @map("waktu_mulai")           // Waktu Mulai perbaikan
-  endDate     DateTime? @map("tanggal_selesai")       // Tanggal Selesai
-  endTime     String?   @map("waktu_selesai")         // Waktu Selesai
-
-  // ── Durasi ────────────────────────────────────────
-  durationHrs Float     @default(0) @map("downtime")  // Downtime (jam)
-
-  // ── Orang ─────────────────────────────────────────
-  picGh       String?   @map("grup_head")             // Grup Head Produksi
-  picMtn      String?   @map("pic_mtn")               // PIC MTN
-
-  // ── Tindakan ──────────────────────────────────────
-  resolution  String?   @map("penyelesaian")
-  action      String?   @map("tindakan")
-  notes       String?   @map("catatan")
-
-  createdAt   DateTime  @default(now()) @map("created_at")
 }

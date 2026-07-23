@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Menu, Sun, Moon, ClipboardList, Bell, LogOut, Maximize2, Minimize2, PanelLeft } from 'lucide-react';
+import { Menu, Sun, Moon, ClipboardList, Bell, LogOut, Maximize2, Minimize2 } from 'lucide-react';
 import { useUI } from '../UIContext.jsx';
 import { useApp } from '../AppContext.jsx';
 import { useAuth } from '../AuthContext.jsx';
@@ -16,11 +16,11 @@ const NAV_ITEMS = [
   { page: 'dataproduksi',  label: 'Data Produksi' },
   { page: 'problemlog',    label: 'Problem & Root Cause' },
   { page: 'masterdata',    label: 'Master Data' },
-  { href: '/rmo',          label: 'RESUME CONTROL HARIAN PRODUKSI' },
+  { href: '/lhp',          label: 'Resume Control Harian Produksi' },
 ];
 
 export default function Topbar() {
-  const { page, navigate, toggleDrawer, toggleNotif, toggleTodo, toggleSidebar } = useUI();
+  const { page, navigate, toggleDrawer, toggleNotif, toggleTodo } = useUI();
   const { connected, notifications, breakdowns, isLoading } = useApp();
   const { username, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
@@ -78,9 +78,6 @@ export default function Topbar() {
     <header className="topbar">
       <div className={`top-load-bar${isLoading ? ' active' : ''}`} />
       <button className="hamburger" onClick={toggleDrawer} aria-label="Menu"><Menu size={20} /></button>
-      <button className="btn-icon sidebar-toggle" onClick={toggleSidebar} title="Toggle sidebar">
-        <PanelLeft size={16} />
-      </button>
       <div className="brand-nav">
         <div className="logo" onClick={() => navigate('dashboard')} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
           Produksi<span> - DPA</span>

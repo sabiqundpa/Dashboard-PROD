@@ -4,7 +4,6 @@ const UIContext = createContext(null);
 
 export function UIProvider({ children }) {
   const [page, setPage] = useState('dashboard');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [presentMode, setPresentMode] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -29,7 +28,6 @@ export function UIProvider({ children }) {
     setDrawerOpen(false);
   }, []);
 
-  const toggleSidebar = useCallback(() => setSidebarOpen((v) => !v), []);
   const togglePresentMode = useCallback(() => setPresentMode((v) => !v), []);
   const toggleDrawer = useCallback(() => setDrawerOpen((v) => !v), []);
   const toggleNotif = useCallback(() => { setNotifOpen((v) => !v); setTodoOpen(false); }, []);
@@ -61,7 +59,6 @@ export function UIProvider({ children }) {
   return (
     <UIContext.Provider value={{
       page, navigate,
-      sidebarOpen, toggleSidebar,
       presentMode, togglePresentMode,
       drawerOpen, toggleDrawer, setDrawerOpen,
       notifOpen, toggleNotif, setNotifOpen,

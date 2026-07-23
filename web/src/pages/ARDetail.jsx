@@ -67,7 +67,6 @@ export default function ARDetail() {
           </button>
           <div>
             <div className="page-title">Detail AR — Achievement Rate</div>
-            <div className="page-sub">Rincian pencapaian AR per Cluster, per Line, dan tren</div>
           </div>
         </div>
       </div>

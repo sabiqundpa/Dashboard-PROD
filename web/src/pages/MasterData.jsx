@@ -85,7 +85,6 @@ export default function MasterData() {
       <div className="page-header">
         <div>
           <div className="page-title">Master Data</div>
-          <div className="page-sub">Kelola Grup Head, Part Name, dan Proses beserta relasinya — dipakai sebagai dropdown di form Resume Control Harian Produksi. Ketikan Part Name/Proses/Mesin/Man Power akan menyarankan nama dari data lama (tabel MP/Mesin/Proses/Nama Parts) supaya penamaan tetap konsisten.</div>
         </div>
         <div className="header-actions">
           <button className="btn" onClick={() => fileInputRef.current?.click()}>
@@ -128,10 +127,6 @@ function RingkasanTab({ rows, loading }) {
     <div className="card">
       <div className="card-header">
         <div className="card-title">Ringkasan Relasi Master Data</div>
-      </div>
-      <div className="card-sub" style={{ marginBottom: 12 }}>
-        Tampilan gabungan Grup Head → Cluster → Part Name → Cycle Time → Proses → Line Produksi → Mesin → Man Power.
-        Ini cuma tampilan baca — untuk ubah datanya, pakai tab Grup Head / Part Name / Proses supaya perubahan cukup di satu tempat.
       </div>
       <div style={{ overflow: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>

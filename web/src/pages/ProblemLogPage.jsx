@@ -1,12 +1,12 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Plus, XCircle, Trash2 } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Plus, Trash2, Pencil, Check, X } from 'lucide-react';
 import { useAuth } from '../AuthContext.jsx';
 import { apiFetch, apiSend } from '../api.js';
 import { useToast } from '../ToastContext.jsx';
 
-const STATUS_OPTS = ['open', 'in_progress', 'closed'];
 const STATUS_LABEL = { open: 'Open', in_progress: 'In Progress', closed: 'Closed' };
 const STATUS_COLOR = { open: 'var(--red)', in_progress: 'var(--yellow)', closed: 'var(--green)' };
+const STATUS_OPTS = ['open', 'in_progress', 'closed'];
 
 const EMPTY = { tanggal: '', line: '', partName: '', problem: '', rootCause: '', temporaryAction: '', permanentAction: '', dueDate: '', status: 'open' };
 
@@ -24,9 +24,9 @@ export default function ProblemLogPage() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(EMPTY);
   const [busy, setBusy] = useState(false);
-  const [closingId, setClosingId] = useState(null);
-  const [closeComment, setCloseComment] = useState('');
   const [filter, setFilter] = useState('all');
+  const [editingNotesId, setEditingNotesId] = useState(null);
+  const [notesDraft, setNotesDraft] = useState('');
 
   const load = useCallback(() => {
     setLoading(true);
@@ -58,31 +58,46 @@ export default function ProblemLogPage() {
     setBusy(false);
   }
 
-  async function confirmClose(id) {
-    if (!closeComment.trim()) { showToast('Komentar penutupan wajib diisi', 'red'); return; }
-    setBusy(true);
+  // Status Open/Closed adalah toggle sendiri -- tidak bergantung dan tidak
+  // mempengaruhi isi Notes.
+  async function toggleStatus(r) {
+    const next = r.status === 'closed' ? 'open' : 'closed';
     try {
-      await apiSend('/problem-log-update', 'POST', { id, status: 'closed', close_comment: closeComment }, logout);
-      setClosingId(null);
-      setCloseComment('');
+      await apiSend('/problem-log-update', 'POST', { id: r.id, status: next }, logout);
       load();
     } catch (e) { showToast(e.message, 'red'); }
-    setBusy(false);
+  }
+
+  function startEditNotes(r) {
+    setEditingNotesId(r.id);
+    setNotesDraft(r.notes || '');
+  }
+  async function saveNotes(id) {
+    try {
+      await apiSend('/problem-log-update', 'POST', { id, notes: notesDraft }, logout);
+      setEditingNotesId(null);
+      load();
+    } catch (e) { showToast(e.message, 'red'); }
   }
 
   async function remove(id) {
+    if (!window.confirm('Hapus catatan problem ini?')) return;
     try { await apiSend('/problem-log-delete', 'POST', { id }, logout); load(); }
     catch (e) { showToast(e.message, 'red'); }
   }
 
-  const shown = filter === 'all' ? rows : rows.filter((r) => r.status === filter);
+  const shown = useMemo(() => {
+    const filtered = filter === 'all' ? rows : rows.filter((r) => r.status === filter);
+    // Open (dan In Progress) di atas, Closed di bawah; terbaru di atas dalam masing-masing kelompok.
+    const rank = (s) => (s === 'closed' ? 1 : 0);
+    return [...filtered].sort((a, b) => rank(a.status) - rank(b.status) || b.id - a.id);
+  }, [rows, filter]);
 
   return (
     <div className="page-view active">
       <div className="page-header">
         <div>
           <div className="page-title">Problem & Root Cause Log</div>
-          <div className="page-sub">Semua catatan problem produksi, terbaru di atas — siapa saja yang login bisa menutup problem</div>
         </div>
         <div className="header-actions" style={{ display: 'flex', gap: 8 }}>
           <select style={{ ...inp, width: 150 }} value={filter} onChange={(e) => setFilter(e.target.value)}>
@@ -130,76 +145,61 @@ export default function ProblemLogPage() {
           <table style={{ borderCollapse: 'collapse', width: '100%' }}>
             <thead>
               <tr>
-                {['No', 'Tanggal', 'Line Produksi', 'Part Name', 'Problem', 'Root Cause', 'Temporary Action', 'Permanent Action', 'Due Date', 'Status', 'Ditutup', ''].map((h) => (
+                {['No', 'Tanggal', 'Line Produksi', 'Part Name', 'Problem', 'Root Cause', 'Temporary Action', 'Permanent Action', 'Due Date', 'Status', 'Notes', 'Ditutup', 'Aksi'].map((h) => (
                   <th key={h} style={{ padding: '8px 10px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--muted)', borderBottom: '2px solid var(--border)', textAlign: 'left', whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={12} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>Memuat…</td></tr>
+                <tr><td colSpan={13} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>Memuat…</td></tr>
               ) : shown.length === 0 ? (
-                <tr><td colSpan={12} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>Belum ada data.</td></tr>
+                <tr><td colSpan={13} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>Belum ada data.</td></tr>
               ) : shown.map((r, i) => (
-                <>
-                  <tr key={r.id}>
-                    <td style={td}>{i + 1}</td>
-                    <td style={td}>{r.tanggal || '—'}</td>
-                    <td style={td}>{r.line || '—'}</td>
-                    <td style={td}>{r.partName || '—'}</td>
-                    <td style={td}>{r.problem}</td>
-                    <td style={td}>{r.rootCause || '—'}</td>
-                    <td style={td}>{r.temporaryAction || '—'}</td>
-                    <td style={td}>{r.permanentAction || '—'}</td>
-                    <td style={td}>{r.dueDate || '—'}</td>
-                    <td style={td}>
-                      <span style={{ color: STATUS_COLOR[r.status] || 'var(--muted)', fontWeight: 700 }}>{STATUS_LABEL[r.status] || r.status}</span>
-                    </td>
-                    <td style={{ ...td, fontSize: 11.5, color: 'var(--muted)' }}>
-                      {r.status === 'closed' ? (r.closedAt ? new Date(r.closedAt).toLocaleString('id-ID') : '—') : '—'}
-                    </td>
-                    <td style={td}>
-                      {r.status !== 'closed' ? (
-                        <button onClick={() => { setClosingId(r.id); setCloseComment(''); }} style={iconBtn} title="Tutup problem">
-                          <XCircle size={14} /> Tutup
-                        </button>
-                      ) : (
-                        <button onClick={() => remove(r.id)} style={{ ...iconBtn, color: 'var(--red)' }} title="Hapus">
-                          <Trash2 size={13} />
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                  {closingId === r.id && (
-                    <tr>
-                      <td colSpan={12} style={{ padding: '10px', background: 'var(--s2)', borderBottom: '1px solid var(--border)' }}>
-                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                          <input
-                            autoFocus
-                            placeholder="Komentar penutupan (wajib) *"
-                            style={{ ...inp, flex: 1 }}
-                            value={closeComment}
-                            onChange={(e) => setCloseComment(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && confirmClose(r.id)}
-                          />
-                          <button disabled={busy} onClick={() => confirmClose(r.id)} style={{ padding: '8px 16px', fontSize: 12.5, borderRadius: 7, background: 'var(--green)', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 700, whiteSpace: 'nowrap' }}>
-                            Konfirmasi Tutup
-                          </button>
-                          <button onClick={() => setClosingId(null)} style={{ padding: '8px 14px', fontSize: 12.5, borderRadius: 7, background: 'var(--s3)', border: '1px solid var(--border)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                            Batal
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                  {r.status === 'closed' && r.closeComment && (
-                    <tr>
-                      <td colSpan={12} style={{ padding: '6px 10px 12px 10px', fontSize: 12, color: 'var(--muted)', borderBottom: '1px solid var(--border)', fontStyle: 'italic' }}>
-                        Komentar penutupan: {r.closeComment}
-                      </td>
-                    </tr>
-                  )}
-                </>
+                <tr key={r.id}>
+                  <td style={td}>{i + 1}</td>
+                  <td style={td}>{r.tanggal || '—'}</td>
+                  <td style={td}>{r.line || '—'}</td>
+                  <td style={td}>{r.partName || '—'}</td>
+                  <td style={td}>{r.problem}</td>
+                  <td style={td}>{r.rootCause || '—'}</td>
+                  <td style={td}>{r.temporaryAction || '—'}</td>
+                  <td style={td}>{r.permanentAction || '—'}</td>
+                  <td style={td}>{r.dueDate || '—'}</td>
+                  <td style={td}>
+                    <button onClick={() => toggleStatus(r)} style={{ ...statusBtn, color: STATUS_COLOR[r.status] || 'var(--muted)', borderColor: STATUS_COLOR[r.status] || 'var(--border)' }} title="Ganti status">
+                      {STATUS_LABEL[r.status] || r.status}
+                    </button>
+                  </td>
+                  <td style={{ ...td, minWidth: 200 }}>
+                    {editingNotesId === r.id ? (
+                      <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                        <input
+                          autoFocus
+                          style={{ ...inp, padding: '5px 8px', fontSize: 12.5 }}
+                          value={notesDraft}
+                          onChange={(e) => setNotesDraft(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && saveNotes(r.id)}
+                        />
+                        <button onClick={() => saveNotes(r.id)} style={iconBtn} title="Simpan"><Check size={13} /></button>
+                        <button onClick={() => setEditingNotesId(null)} style={iconBtn} title="Batal"><X size={13} /></button>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        <span style={{ color: r.notes ? 'var(--text)' : 'var(--muted)' }}>{r.notes || '—'}</span>
+                        <button onClick={() => startEditNotes(r)} style={iconBtn} title="Edit Notes"><Pencil size={12} /></button>
+                      </div>
+                    )}
+                  </td>
+                  <td style={{ ...td, fontSize: 11.5, color: 'var(--muted)' }}>
+                    {r.status === 'closed' ? (r.closedAt ? new Date(r.closedAt).toLocaleString('id-ID') : '—') : '—'}
+                  </td>
+                  <td style={td}>
+                    <button onClick={() => remove(r.id)} style={{ ...iconBtn, color: 'var(--red)' }} title="Hapus">
+                      <Trash2 size={13} />
+                    </button>
+                  </td>
+                </tr>
               ))}
             </tbody>
           </table>
@@ -210,4 +210,5 @@ export default function ProblemLogPage() {
 }
 
 const td = { padding: '8px 10px', fontSize: 12.5, borderBottom: '1px solid var(--border)', color: 'var(--text)' };
-const iconBtn = { display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 9px', fontSize: 12, cursor: 'pointer', color: 'var(--text)', whiteSpace: 'nowrap' };
+const iconBtn = { display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 7px', fontSize: 12, cursor: 'pointer', color: 'var(--text)', whiteSpace: 'nowrap', flexShrink: 0 };
+const statusBtn = { background: 'none', border: '1px solid', borderRadius: 6, padding: '4px 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' };

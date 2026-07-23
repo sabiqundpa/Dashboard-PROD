@@ -27,7 +27,7 @@ import '@fontsource/dm-mono/latin-ext-500.css';
 
 import './index.css';
 
-const isRMOPage = window.location.pathname === '/rmo';
+const isRMOPage = window.location.pathname === '/lhp';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

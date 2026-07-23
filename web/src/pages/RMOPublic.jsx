@@ -334,7 +334,7 @@ export default function RMOPublic() {
             <Table2 size={14} /> Data Tabel
           </button>
         </div>
-        <div style={{ fontSize: 20, fontWeight: 700, color: '#fff', letterSpacing: '.05em', textTransform: 'uppercase', textAlign: 'center' }}>
+        <div style={{ fontSize: 20, fontWeight: 700, color: '#fff', letterSpacing: '.01em', textAlign: 'center' }}>
           Resume Control Harian Produksi
         </div>
         <div style={{ width: 32 }} />

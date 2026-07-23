@@ -148,7 +148,6 @@ export default function DataProduksi() {
       <div className="page-header">
         <div>
           <div className="page-title">Data Produksi</div>
-          <div className="page-sub">Riwayat input Resume Control Harian Produksi per Cluster</div>
         </div>
       </div>
 

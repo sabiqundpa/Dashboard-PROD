@@ -15,7 +15,6 @@ import Reports from './pages/Reports.jsx';
 import MasterData from './pages/MasterData.jsx';
 import ProblemLogPage from './pages/ProblemLogPage.jsx';
 import Topbar from './components/Topbar.jsx';
-import AppSidebar from './components/AppSidebar.jsx';
 import MobileDrawer from './components/MobileDrawer.jsx';
 import BottomNav from './components/BottomNav.jsx';
 import NotifPanel from './components/NotifPanel.jsx';
@@ -27,7 +26,7 @@ import ModalRoot from './components/ModalRoot.jsx';
 const PAGES = { dashboard: Dashboard, dataproduksi: DataProduksi, ardetail: ARDetail, reports: Reports, masterdata: MasterData, problemlog: ProblemLogPage };
 
 function Shell() {
-  const { page, closeModal, setNotifOpen, closeDetail, closeWODetail, sidebarOpen, presentMode, togglePresentMode, detailWO } = useUI();
+  const { page, closeModal, setNotifOpen, closeDetail, closeWODetail, presentMode, togglePresentMode, detailWO } = useUI();
   const { loadAll } = useApp();
   const PageComponent = PAGES[page] || Dashboard;
 
@@ -46,9 +45,8 @@ function Shell() {
 
   return (
     <>
-      <div className={`shell${sidebarOpen && !presentMode ? ' sidebar-open' : ''}${presentMode ? ' pres-mode' : ''}${detailWO ? ' wo-open' : ''}`}>
+      <div className={`shell${presentMode ? ' pres-mode' : ''}${detailWO ? ' wo-open' : ''}`}>
         <Topbar />
-        <AppSidebar />
         <main className="content">
           <PageComponent />
         </main>

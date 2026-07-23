@@ -23,7 +23,7 @@ export default function BottomNav() {
         <span className="bn-icon"><Database size={20} /></span>
         <span className="bn-label">Master Data</span>
       </div>
-      <div className="bn-item" onClick={() => window.open('/rmo', '_blank')}>
+      <div className="bn-item" onClick={() => window.open('/lhp', '_blank')}>
         <span className="bn-icon"><ClipboardList size={20} /></span>
         <span className="bn-label">RC Produksi</span>
       </div>

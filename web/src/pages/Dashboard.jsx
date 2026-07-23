@@ -19,7 +19,6 @@ export default function Dashboard() {
 
   const [period, setPeriod]               = useState('month');
   const [refDate, setRefDate]             = useState(todayStr());
-  const [dashLastUpdate, setDashLastUpdate] = useState('—');
   const reqIdRef = useRef(0);
 
   const [summary, setSummary] = useState(EMPTY_SUMMARY);
@@ -27,16 +26,13 @@ export default function Dashboard() {
   const loadDashboard = useCallback(() => {
     const myId = ++reqIdRef.current;
     setIsLoading(true);
-    setDashLastUpdate('Updating…');
     const qs = period === 'all' ? 'period=all' : `period=${period}&date=${refDate}`;
     apiFetch(`/produksi-harian-summary?${qs}`, EMPTY_SUMMARY, logout).then((s) => {
       if (myId !== reqIdRef.current) return;
       setSummary(s);
-      setDashLastUpdate('Updated ' + new Date().toLocaleTimeString());
       setIsLoading(false);
     }).catch(() => {
       if (myId !== reqIdRef.current) return;
-      setDashLastUpdate('—');
       setIsLoading(false);
     });
   }, [period, refDate, logout, setIsLoading]);
@@ -50,7 +46,6 @@ export default function Dashboard() {
       <div className="page-header">
         <div>
           <div className="page-title">Monitoring</div>
-          <div className="page-sub">Performa real-time · {dashLastUpdate}</div>
         </div>
       </div>
 

@@ -105,7 +105,7 @@ export default function ARDetail() {
             unit="%"
             hourly={trendPeriod === 'today'}
             showMovingAvg
-            movingAvgColor="var(--red)"
+            movingAvgColor="var(--blue)"
             targetColor="var(--red)"
           />
         </div>

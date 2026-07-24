@@ -176,7 +176,7 @@ function ChartCanvas({
       });
     }
 
-    // Moving average line
+    // Moving average line — polos tanpa dot marker di tiap titik
     if (showMovingAvg && vals.length >= 2) {
       const mavg = calcMovingAvg(vals.map((v) => (typeof v === 'number' ? v : 0)));
       ctx.beginPath(); ctx.lineWidth = 2; ctx.strokeStyle = resolvedMovingAvgColor;
@@ -185,10 +185,6 @@ function ChartCanvas({
         if (i === 0) ctx.moveTo(cxOf(0), yOf(v)); else ctx.lineTo(cxOf(i), yOf(v));
       });
       ctx.stroke();
-      mavg.forEach((v, i) => {
-        ctx.beginPath(); ctx.arc(cxOf(i), yOf(v), 2.5, 0, Math.PI * 2);
-        ctx.fillStyle = resolvedMovingAvgColor; ctx.fill();
-      });
     }
 
     // X-axis labels

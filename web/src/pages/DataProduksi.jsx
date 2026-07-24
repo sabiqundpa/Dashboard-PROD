@@ -187,7 +187,7 @@ export default function DataProduksi() {
               unit="%"
               hourly={period === 'today'}
               showMovingAvg
-              movingAvgColor="var(--red)"
+              movingAvgColor="var(--blue)"
               targetColor="var(--red)"
             />
           </div>

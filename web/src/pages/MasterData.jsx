@@ -3,6 +3,7 @@ import { Plus, Trash2, Upload, Pencil, Check, X, Search } from 'lucide-react';
 import { useAuth } from '../AuthContext.jsx';
 import { apiFetch, apiSend, apiSendForm } from '../api.js';
 import { useToast } from '../ToastContext.jsx';
+import useHorizontalWheelScroll from '../useHorizontalWheelScroll.js';
 
 const CLUSTERS = ['AD', 'BC', 'EF', 'FI'];
 
@@ -148,6 +149,7 @@ export default function MasterData() {
 // tidak perlu ubah banyak baris kalau ada perubahan).
 function RingkasanTab({ rows, loading }) {
   const [query, setQuery] = useState('');
+  const scrollRef = useHorizontalWheelScroll();
   const shown = useMemo(
     () => rows.filter((r) => matches(query, r.groupHead, r.cluster, r.partName, r.proses, r.line, r.mesin, r.manPower)),
     [rows, query],
@@ -158,7 +160,7 @@ function RingkasanTab({ rows, loading }) {
         <div className="card-title">Ringkasan Relasi Master Data</div>
       </div>
       <SearchBox value={query} onChange={setQuery} placeholder="Cari Grup Head / Part Name / Proses / Mesin / Man Power…" />
-      <div style={{ overflow: 'auto' }}>
+      <div ref={scrollRef} style={{ overflow: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
@@ -310,6 +312,7 @@ function PartProsesTab({ proses, partNames, loading, onChanged, logout, legacy =
   const [editingId, setEditingId] = useState(null);
   const [ed, setEd] = useState({ partName: '', cluster: '', proses: '', line: '', mesin: '', manPower: '', cycleTime: '' });
   const [query, setQuery] = useState('');
+  const scrollRef = useHorizontalWheelScroll();
 
   function set(k, v) { setForm((f) => ({ ...f, [k]: v })); }
 
@@ -417,7 +420,7 @@ function PartProsesTab({ proses, partNames, loading, onChanged, logout, legacy =
 
       <SearchBox value={query} onChange={setQuery} placeholder="Cari Part Name / Proses / Line / Mesin / Man Power…" />
 
-      <div style={{ overflow: 'auto' }}>
+      <div ref={scrollRef} style={{ overflow: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>

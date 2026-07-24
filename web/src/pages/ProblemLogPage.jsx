@@ -3,6 +3,7 @@ import { Plus, Trash2, Pencil, Check, X } from 'lucide-react';
 import { useAuth } from '../AuthContext.jsx';
 import { apiFetch, apiSend } from '../api.js';
 import { useToast } from '../ToastContext.jsx';
+import useHorizontalWheelScroll from '../useHorizontalWheelScroll.js';
 
 const STATUS_LABEL = { open: 'Open', in_progress: 'In Progress', closed: 'Closed' };
 const STATUS_COLOR = { open: 'var(--red)', in_progress: 'var(--yellow)', closed: 'var(--green)' };
@@ -27,6 +28,7 @@ export default function ProblemLogPage() {
   const [filter, setFilter] = useState('all');
   const [editingNotesId, setEditingNotesId] = useState(null);
   const [notesDraft, setNotesDraft] = useState('');
+  const scrollRef = useHorizontalWheelScroll();
 
   const load = useCallback(() => {
     setLoading(true);
@@ -141,7 +143,7 @@ export default function ProblemLogPage() {
       )}
 
       <div className="card">
-        <div style={{ overflow: 'auto' }}>
+        <div ref={scrollRef} style={{ overflow: 'auto' }}>
           <table style={{ borderCollapse: 'collapse', width: '100%' }}>
             <thead>
               <tr>

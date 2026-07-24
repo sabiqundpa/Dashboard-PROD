@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Pencil, Trash2 } from 'lucide-react';
+import useHorizontalWheelScroll from '../useHorizontalWheelScroll.js';
 
 // Warna latar berselang-seling per kelompok Part Name -- baris ganjil vs
 // genap tiap kali Part Name berganti, bukan per baris, supaya semua
@@ -11,6 +12,7 @@ const GROUP_BG = ['transparent', 'var(--s2)'];
 // utama. Kolom "Aksi" (edit/hapus) hanya muncul kalau onEdit diberikan —
 // dipakai di Data Produksi (login-gated), tidak di /rmo publik.
 export default function ProduksiTable({ rows, loading, onEdit, onDelete }) {
+  const scrollRef = useHorizontalWheelScroll();
   const editable = !!onEdit;
   const th = { padding: '8px 10px', fontSize: 10.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.03em', color: '#3d4b4b', background: '#f5c542', border: '1px solid #d9b93a', whiteSpace: 'nowrap', position: 'sticky', top: 0 };
   const td = { padding: '7px 10px', fontSize: 12.5, border: '1px solid var(--border)', whiteSpace: 'nowrap', color: 'var(--text)' };
@@ -33,7 +35,7 @@ export default function ProduksiTable({ rows, loading, onEdit, onDelete }) {
   let prevPartName = null;
 
   return (
-    <div style={{ overflow: 'auto' }}>
+    <div ref={scrollRef} style={{ overflow: 'auto' }}>
       <table style={{ borderCollapse: 'collapse', width: '100%', background: 'var(--s1)' }}>
         <thead>
           <tr>

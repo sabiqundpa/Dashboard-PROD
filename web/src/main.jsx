@@ -2,6 +2,8 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import RMOPublic from './pages/RMOPublic.jsx';
+import MaintenanceMode from './pages/MaintenanceMode.jsx';
+import { MAINTENANCE_MODE } from './maintenanceFlag.js';
 
 // Self-hosted fonts (bundled at build time, no runtime call to Google's
 // font CDN). Inter is used for both body text and display/numeric values
@@ -31,6 +33,6 @@ const isRMOPage = window.location.pathname === '/lhp';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    {isRMOPage ? <RMOPublic /> : <App />}
+    {MAINTENANCE_MODE ? <MaintenanceMode /> : isRMOPage ? <RMOPublic /> : <App />}
   </React.StrictMode>
 );

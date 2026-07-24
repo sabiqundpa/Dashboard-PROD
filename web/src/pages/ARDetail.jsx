@@ -22,9 +22,13 @@ export default function ARDetail() {
   const { navigate } = useUI();
   const { logout } = useAuth();
 
-  const [refDate] = useState(todayStr());
-  const [trendPeriod, setTrendPeriod] = useState('month');
-  const [trendDate, setTrendDate]     = useState(todayStr());
+  // Satu filter periode dipakai bersama oleh AR Cluster, Tren AR, dan
+  // Top5/Bottom5 Line -- sebelumnya Tren AR punya PeriodPicker sendiri
+  // sementara AR Cluster & Top5/Bottom5 diam-diam terkunci ke bulan
+  // berjalan, jadi filter di Tren AR kelihatan tidak berpengaruh ke
+  // widget lain.
+  const [period, setPeriod] = useState('month');
+  const [refDate, setRefDate] = useState(todayStr());
 
   const [byCluster, setByCluster] = useState([]);
   const [byLine, setByLine]       = useState([]);
@@ -34,24 +38,22 @@ export default function ARDetail() {
 
   const load = useCallback(() => {
     setLoading(true);
+    const qs = `period=${period}&date=${refDate}`;
     Promise.all([
-      apiFetch(`/ar-by-cluster?period=month&date=${refDate}`, [], logout),
-      apiFetch(`/ar-by-line?period=month&date=${refDate}`, [], logout),
+      apiFetch(`/ar-by-cluster?${qs}`, [], logout),
+      apiFetch(`/ar-by-line?${qs}`, [], logout),
+      apiFetch(`/ar-trend?${qs}`, [], logout),
       apiFetch('/problem-log', [], logout),
-    ]).then(([c, l, p]) => {
+    ]).then(([c, l, t, p]) => {
       setByCluster(c);
       setByLine(l);
+      setTrend(t);
       setProblems(p);
       setLoading(false);
     }).catch(() => setLoading(false));
-  }, [refDate, logout]);
+  }, [period, refDate, logout]);
 
   useEffect(() => { load(); }, [load]);
-
-  const loadTrend = useCallback(() => {
-    apiFetch(`/ar-trend?period=${trendPeriod}&date=${trendDate}`, [], logout).then(setTrend).catch(() => {});
-  }, [trendPeriod, trendDate, logout]);
-  useEffect(() => { loadTrend(); }, [loadTrend]);
 
   const avgAr = byCluster.length ? Number((byCluster.reduce((s, c) => s + c.ar, 0) / byCluster.length).toFixed(1)) : 0;
   const trendWithTarget = useMemo(() => trend.map((d) => ({ ...d, target: 100 })), [trend]);
@@ -70,6 +72,7 @@ export default function ARDetail() {
             <div className="page-title">Detail AR — Achievement Rate</div>
           </div>
         </div>
+        <PeriodPicker pill period={period} setPeriod={setPeriod} refDate={refDate} setRefDate={setRefDate} />
       </div>
 
       <div className="row4" style={{ gridTemplateColumns: '1fr 1.3fr', marginBottom: 16 }}>
@@ -94,7 +97,6 @@ export default function ARDetail() {
         <div className="card">
           <div className="card-header">
             <div className="card-title">Tren AR</div>
-            <PeriodPicker pill period={trendPeriod} setPeriod={setTrendPeriod} refDate={trendDate} setRefDate={setTrendDate} />
           </div>
           <LineTrendChart
             title=""
@@ -103,7 +105,7 @@ export default function ARDetail() {
             targetKey="target"
             color="#0e5a52"
             unit="%"
-            hourly={trendPeriod === 'today'}
+            hourly={period === 'today'}
             showMovingAvg
             movingAvgColor="var(--blue)"
             targetColor="var(--red)"

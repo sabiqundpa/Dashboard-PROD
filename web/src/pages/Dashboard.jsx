@@ -17,7 +17,7 @@ export default function Dashboard() {
   const { presentMode, togglePresentMode, navigate } = useUI();
   const { logout } = useAuth();
 
-  const [period, setPeriod]               = useState('month');
+  const [period, setPeriod]               = useState('today');
   const [refDate, setRefDate]             = useState(todayStr());
   const reqIdRef = useRef(0);
 

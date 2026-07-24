@@ -27,7 +27,7 @@ export default function ARDetail() {
   // sementara AR Cluster & Top5/Bottom5 diam-diam terkunci ke bulan
   // berjalan, jadi filter di Tren AR kelihatan tidak berpengaruh ke
   // widget lain.
-  const [period, setPeriod] = useState('month');
+  const [period, setPeriod] = useState('today');
   const [refDate, setRefDate] = useState(todayStr());
 
   const [byCluster, setByCluster] = useState([]);

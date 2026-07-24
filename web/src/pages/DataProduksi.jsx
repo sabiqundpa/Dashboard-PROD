@@ -90,7 +90,7 @@ function EditProduksiModal({ row, onClose, onSaved }) {
 export default function DataProduksi() {
   const { logout } = useAuth();
   const showToast = useToast();
-  const [period, setPeriod]   = useState('month');
+  const [period, setPeriod]   = useState('today');
   const [refDate, setRefDate] = useState(todayStr());
   const [query, setQuery]     = useState('');
   const [rows, setRows]       = useState([]);

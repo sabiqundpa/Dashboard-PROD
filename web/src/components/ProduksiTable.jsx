@@ -1,4 +1,10 @@
+import { useMemo } from 'react';
 import { Pencil, Trash2 } from 'lucide-react';
+
+// Warna latar berselang-seling per kelompok Part Name -- baris ganjil vs
+// genap tiap kali Part Name berganti, bukan per baris, supaya semua
+// Proses milik satu Part Name kelihatan sebagai satu kelompok.
+const GROUP_BG = ['transparent', 'var(--s2)'];
 
 // Tabel hasil input Resume Control Harian Produksi — dipakai bersama oleh
 // halaman /rmo (tab "Data Tabel") dan menu "Data Produksi" di dashboard
@@ -11,10 +17,20 @@ export default function ProduksiTable({ rows, loading, onEdit, onDelete }) {
   const tdOk = { ...td, background: 'rgba(14,90,82,.1)' };
   const tdPct = (v, target) => ({ ...td, background: v >= target ? 'rgba(15,140,63,.14)' : 'rgba(200,30,58,.1)', fontWeight: 700, textAlign: 'center' });
 
+  // Urutkan berdasarkan Part Name supaya semua Proses milik part yang
+  // sama berurutan (sort stabil -- urutan asli tiap part tetap terjaga).
+  const sortedRows = useMemo(
+    () => [...rows].sort((a, b) => a.partName.localeCompare(b.partName)),
+    [rows],
+  );
+
   const avg = (key) => rows.length ? (rows.reduce((s, r) => s + (r[key] || 0), 0) / rows.length).toFixed(1) : '0.0';
 
   if (loading) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>Memuat…</div>;
   if (rows.length === 0) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>Belum ada data.</div>;
+
+  let groupIdx = -1;
+  let prevPartName = null;
 
   return (
     <div style={{ overflow: 'auto' }}>
@@ -31,40 +47,44 @@ export default function ProduksiTable({ rows, loading, onEdit, onDelete }) {
           </tr>
         </thead>
         <tbody>
-          {rows.map((r) => (
-            <tr key={r.id}>
-              {editable && (
-                <td style={{ ...td, position: 'sticky', left: 0, background: 'var(--s1)' }}>
-                  <div style={{ display: 'flex', gap: 4 }}>
-                    <button onClick={() => onEdit(r)} title="Edit" style={actionBtn}><Pencil size={12} /></button>
-                    {onDelete && <button onClick={() => onDelete(r)} title="Hapus" style={{ ...actionBtn, color: 'var(--red)' }}><Trash2 size={12} /></button>}
-                  </div>
-                </td>
-              )}
-              <td style={td}>{r.partName}</td>
-              <td style={td}>{r.noLot || '—'}</td>
-              <td style={td}>{r.proses}</td>
-              <td style={td}>{r.mesin}</td>
-              <td style={td}>{r.manPower || '—'}</td>
-              <td style={td}>{r.cycleTime}</td>
-              <td style={td}>{r.waktuEfektif}</td>
-              <td style={td}>{r.plan.toLocaleString()}</td>
-              <td style={td}>{r.ok1.toLocaleString()}</td>
-              <td style={td}>{r.ok2.toLocaleString()}</td>
-              <td style={td}>{r.rework || ''}</td>
-              <td style={td}>{r.reject || ''}</td>
-              <td style={tdOk}>{r.totalOk.toLocaleString()}</td>
-              <td style={tdOk}>{r.totalProses.toLocaleString()}</td>
-              <td style={td}>{r.breakdownMesin || ''}</td>
-              <td style={td}>{r.lostTime || ''}</td>
-              <td style={{ ...td, whiteSpace: 'normal', minWidth: 160 }}>{r.keterangan || ''}</td>
-              <td style={tdPct(r.ar, 100)}>{r.ar}%</td>
-              <td style={tdPct(r.avb, 90)}>{r.avb}%</td>
-              <td style={tdPct(r.perf, 95)}>{r.perf}%</td>
-              <td style={tdPct(r.yield, 100)}>{r.yield}%</td>
-              <td style={tdPct(r.oee, 85)}>{r.oee}%</td>
-            </tr>
-          ))}
+          {sortedRows.map((r) => {
+            if (r.partName !== prevPartName) { groupIdx++; prevPartName = r.partName; }
+            const groupBg = GROUP_BG[groupIdx % GROUP_BG.length];
+            return (
+              <tr key={r.id} style={{ background: groupBg }}>
+                {editable && (
+                  <td style={{ ...td, position: 'sticky', left: 0, background: groupBg === 'transparent' ? 'var(--s1)' : groupBg }}>
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      <button onClick={() => onEdit(r)} title="Edit" style={actionBtn}><Pencil size={12} /></button>
+                      {onDelete && <button onClick={() => onDelete(r)} title="Hapus" style={{ ...actionBtn, color: 'var(--red)' }}><Trash2 size={12} /></button>}
+                    </div>
+                  </td>
+                )}
+                <td style={td}>{r.partName}</td>
+                <td style={td}>{r.noLot || '—'}</td>
+                <td style={td}>{r.proses}</td>
+                <td style={td}>{r.mesin}</td>
+                <td style={td}>{r.manPower || '—'}</td>
+                <td style={td}>{r.cycleTime}</td>
+                <td style={td}>{r.waktuEfektif}</td>
+                <td style={td}>{r.plan.toLocaleString()}</td>
+                <td style={td}>{r.ok1.toLocaleString()}</td>
+                <td style={td}>{r.ok2.toLocaleString()}</td>
+                <td style={td}>{r.rework || ''}</td>
+                <td style={td}>{r.reject || ''}</td>
+                <td style={tdOk}>{r.totalOk.toLocaleString()}</td>
+                <td style={tdOk}>{r.totalProses.toLocaleString()}</td>
+                <td style={td}>{r.breakdownMesin || ''}</td>
+                <td style={td}>{r.lostTime || ''}</td>
+                <td style={{ ...td, whiteSpace: 'normal', minWidth: 160 }}>{r.keterangan || ''}</td>
+                <td style={tdPct(r.ar, 100)}>{r.ar}%</td>
+                <td style={tdPct(r.avb, 90)}>{r.avb}%</td>
+                <td style={tdPct(r.perf, 95)}>{r.perf}%</td>
+                <td style={tdPct(r.yield, 100)}>{r.yield}%</td>
+                <td style={tdPct(r.oee, 85)}>{r.oee}%</td>
+              </tr>
+            );
+          })}
         </tbody>
         <tfoot>
           <tr>

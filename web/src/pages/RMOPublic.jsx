@@ -213,8 +213,9 @@ export default function RMOPublic() {
   const totalOk = useMemo(() => num(form.qtyOk), [form.qtyOk]);
   const totalProses = useMemo(() => totalOk + num(form.rwk) + num(form.rjct), [totalOk, form.rwk, form.rjct]);
 
-  /* Cascading: Grup Head -> Cluster -> Part Name (+Cycle Time) -> Proses
-     (+Line Produksi, Mesin, Man Power). */
+  /* Cascading: Grup Head -> Cluster -> Part Name -> Proses (+Cycle Time,
+     Line Produksi, Mesin, Man Power). Cycle Time ikut Proses, bukan Part
+     Name -- satu Part Name bisa punya beberapa Proses beda Cycle Time. */
   const partNameOptions = useMemo(
     () => master.partNames.filter((p) => p.cluster === form.cluster),
     [master.partNames, form.cluster],
@@ -232,16 +233,15 @@ export default function RMOPublic() {
     }));
   }
   function pickPartName(partName) {
-    const match = master.partNames.find((p) => p.partName === partName);
     setForm((f) => ({
-      ...f, partName, cycleTime: match?.cycleTime ?? '',
+      ...f, partName, cycleTime: '',
       proses: '', line: '', mesin: '', manPower: '',
     }));
   }
   function pickProses(prosesName) {
     const match = master.proses.find((p) => p.proses === prosesName && p.partName === form.partName);
     setForm((f) => ({
-      ...f, proses: prosesName,
+      ...f, proses: prosesName, cycleTime: match?.cycleTime ?? '',
       line: match?.line || '', mesin: match?.mesin || '', manPower: match?.manPower || '',
     }));
   }

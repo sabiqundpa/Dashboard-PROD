@@ -19,8 +19,11 @@ model Admin {
 
 // Master data relasional — dikelola lewat menu "Master Data" di dashboard
 // (bukan lagi lewat Supabase Table Editor langsung, supaya relasinya utuh).
-// Alur: Group Head → Cluster → Part Name (+ Cycle Time) → Proses
-// (+ Line Produksi, Mesin, Man Power). Waktu Efektif tetap input manual.
+// Alur: Group Head → Cluster → Part Name → Proses (+ Cycle Time, Line
+// Produksi, Mesin, Man Power). Cycle Time ikut Proses, bukan Part Name --
+// satu Part Name bisa punya beberapa Proses dengan Cycle Time berbeda
+// (contoh: Evaporator 2230 punya 2 proses beda cycle time). Waktu Efektif
+// tetap input manual.
 model MasterCluster {
   id      Int    @id @default(autoincrement())
   cluster String @map("CLUSTER")
@@ -38,19 +41,18 @@ model MasterGroupHead {
   @@map("MasterGroupHead")
 }
 
-// 1 Cluster → banyak Part Name. Tiap Part Name punya 1 Cycle Time standar.
+// 1 Cluster → banyak Part Name.
 model MasterPartName {
   id        Int      @id @default(autoincrement())
   partName  String   @unique @map("part_name")
   cluster   String
-  cycleTime Float    @default(0) @map("cycle_time")
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("MasterPartName")
 }
 
-// 1 Part Name → banyak Proses. Tiap Proses terhubung ke 1 Line Produksi,
-// 1 Mesin, dan 1 Man Power.
+// 1 Part Name → banyak Proses. Tiap Proses punya Cycle Time sendiri, dan
+// terhubung ke 1 Line Produksi, 1 Mesin, dan 1 Man Power.
 model MasterProses {
   id        Int      @id @default(autoincrement())
   proses    String
@@ -58,6 +60,7 @@ model MasterProses {
   line      String   @map("line_produksi")
   mesin     String
   manPower  String   @map("man_power")
+  cycleTime Float    @default(0) @map("cycle_time")
   createdAt DateTime @default(now()) @map("created_at")
 
   @@unique([proses, partName])

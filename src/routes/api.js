@@ -41,8 +41,8 @@ router.post('/login', async (req, res, next) => {
 
 // ── GET /api/master ────────────────────────────────────
 // Public — master data relasional lengkap untuk dropdown bertingkat di
-// form /rmo: Group Head → Cluster → Part Name (+Cycle Time) → Proses
-// (+Line Produksi, Mesin, Man Power).
+// form /rmo: Group Head → Cluster → Part Name → Proses (+Cycle Time,
+// Line Produksi, Mesin, Man Power).
 router.get('/master', async (req, res, next) => {
   try {
     const [clusters, groupHeads, partNames, proses] = await Promise.all([
@@ -54,8 +54,8 @@ router.get('/master', async (req, res, next) => {
     res.json({
       clusters: clusters.map((r) => r.cluster).filter(Boolean),
       groupHeads: groupHeads.map((r) => ({ id: r.id, name: r.name, cluster: r.cluster })),
-      partNames: partNames.map((r) => ({ id: r.id, partName: r.partName, cluster: r.cluster, cycleTime: r.cycleTime })),
-      proses: proses.map((r) => ({ id: r.id, proses: r.proses, partName: r.partName, line: r.line, mesin: r.mesin, manPower: r.manPower })),
+      partNames: partNames.map((r) => ({ id: r.id, partName: r.partName, cluster: r.cluster })),
+      proses: proses.map((r) => ({ id: r.id, proses: r.proses, partName: r.partName, line: r.line, mesin: r.mesin, manPower: r.manPower, cycleTime: r.cycleTime })),
     });
   } catch (err) { next(err); }
 });
@@ -128,12 +128,12 @@ router.post('/master-group-head-delete', requireAuth, async (req, res, next) => 
 
 router.post('/master-part-name', requireAuth, async (req, res, next) => {
   try {
-    const { part_name, cluster, cycle_time } = req.body;
+    const { part_name, cluster } = req.body;
     if (!part_name || !cluster) return res.status(400).json({ error: 'part_name dan cluster wajib diisi' });
     const record = await prisma.masterPartName.upsert({
       where: { partName: part_name },
-      update: { cluster, cycleTime: cycle_time ? Number(cycle_time) : 0 },
-      create: { partName: part_name, cluster, cycleTime: cycle_time ? Number(cycle_time) : 0 },
+      update: { cluster },
+      create: { partName: part_name, cluster },
     });
     res.status(201).json(record);
   } catch (err) { next(err); }
@@ -142,13 +142,12 @@ router.post('/master-part-name-update', requireAuth, async (req, res, next) => {
   try {
     const id = Number(req.body.id);
     if (!id) return res.status(400).json({ error: 'Invalid id' });
-    const { part_name, cluster, cycle_time } = req.body;
+    const { part_name, cluster } = req.body;
     const existing = await prisma.masterPartName.findUnique({ where: { id } });
     if (!existing) return res.status(404).json({ error: 'Not found' });
     const data = {};
     if (part_name !== undefined) data.partName = part_name;
     if (cluster !== undefined) data.cluster = cluster;
-    if (cycle_time !== undefined) data.cycleTime = Number(cycle_time) || 0;
     // partName di MasterProses cuma string biasa (bukan foreign key), jadi
     // kalau nama Part Name diganti harus ikut diupdate di semua Proses
     // turunannya supaya tidak jadi yatim (tidak muncul lagi di dropdown).
@@ -170,14 +169,15 @@ router.post('/master-part-name-delete', requireAuth, async (req, res, next) => {
 
 router.post('/master-proses', requireAuth, async (req, res, next) => {
   try {
-    const { proses, part_name, line, mesin, man_power } = req.body;
+    const { proses, part_name, line, mesin, man_power, cycle_time } = req.body;
     if (!proses || !part_name || !line || !mesin) {
       return res.status(400).json({ error: 'proses, part_name, line, dan mesin wajib diisi' });
     }
+    const cycleTime = cycle_time ? Number(cycle_time) : 0;
     const record = await prisma.masterProses.upsert({
       where: { proses_partName: { proses, partName: part_name } },
-      update: { line, mesin, manPower: man_power || '' },
-      create: { proses, partName: part_name, line, mesin, manPower: man_power || '' },
+      update: { line, mesin, manPower: man_power || '', cycleTime },
+      create: { proses, partName: part_name, line, mesin, manPower: man_power || '', cycleTime },
     });
     res.status(201).json(record);
   } catch (err) { next(err); }
@@ -186,13 +186,14 @@ router.post('/master-proses-update', requireAuth, async (req, res, next) => {
   try {
     const id = Number(req.body.id);
     if (!id) return res.status(400).json({ error: 'Invalid id' });
-    const { proses, part_name, line, mesin, man_power } = req.body;
+    const { proses, part_name, line, mesin, man_power, cycle_time } = req.body;
     const data = {};
     if (proses !== undefined) data.proses = proses;
     if (part_name !== undefined) data.partName = part_name;
     if (line !== undefined) data.line = line;
     if (mesin !== undefined) data.mesin = mesin;
     if (man_power !== undefined) data.manPower = man_power;
+    if (cycle_time !== undefined) data.cycleTime = Number(cycle_time) || 0;
     const record = await prisma.masterProses.update({ where: { id }, data });
     res.json(record);
   } catch (err) { next(err); }
@@ -247,14 +248,14 @@ router.post('/master-import', requireAuth, upload.single('file'), async (req, re
       }
       if (partName) {
         await prisma.masterPartName.upsert({
-          where: { partName }, update: { cluster, cycleTime }, create: { partName, cluster, cycleTime },
+          where: { partName }, update: { cluster }, create: { partName, cluster },
         });
         partNames++;
         if (proses && line && mesin) {
           await prisma.masterProses.upsert({
             where: { proses_partName: { proses, partName } },
-            update: { line, mesin, manPower },
-            create: { proses, partName, line, mesin, manPower },
+            update: { line, mesin, manPower, cycleTime },
+            create: { proses, partName, line, mesin, manPower, cycleTime },
           });
           prosesRows++;
         }

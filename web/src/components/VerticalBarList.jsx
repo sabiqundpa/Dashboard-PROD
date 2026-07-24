@@ -13,18 +13,23 @@ export default function VerticalBarList({ data, showLegend = true, mode = null }
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 14, height: 180, padding: '0 4px' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, padding: '0 4px' }}>
         {data.map((d, i) => {
           const clusterColor = CLUSTER_COLORS[d.cluster] || 'var(--accent)';
           const color = barColor || clusterColor;
           const hPct = (d.ar / max) * 100;
           return (
-            <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end', minWidth: 0 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>{d.ar}%</div>
-              <div style={{ width: '100%', maxWidth: 34, height: `${hPct}%`, minHeight: 2, background: color, borderRadius: '5px 5px 0 0', transition: 'height .6s ease' }}></div>
+            <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 0 }}>
+              {/* Tinggi tetap khusus buat nilai+bar supaya semua batang tetap
+                  sejajar di baseline yang sama; label & kode cluster mengalir
+                  bebas di bawahnya (bukan absolute) supaya nama Line yang
+                  panjang bisa wrap tanpa kepotong. */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', height: 180, width: '100%' }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>{d.ar}%</div>
+                <div style={{ width: '100%', maxWidth: 34, height: `${hPct}%`, minHeight: 2, background: color, borderRadius: '5px 5px 0 0', transition: 'height .6s ease' }}></div>
+              </div>
               <div
-                style={{ width: '100%', fontSize: 11, fontWeight: 600, color: 'var(--text)', marginTop: 6, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                title={d.line}
+                style={{ width: '100%', fontSize: 11, fontWeight: 600, color: 'var(--text)', marginTop: 6, textAlign: 'center', lineHeight: 1.25, wordBreak: 'break-word', whiteSpace: 'normal' }}
               >{d.line}</div>
               <span style={{ fontSize: 10, fontWeight: 700, color: clusterColor, marginTop: 2 }}>{d.cluster}</span>
             </div>

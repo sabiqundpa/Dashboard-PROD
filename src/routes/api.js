@@ -373,11 +373,14 @@ function rowMetrics(r) {
   const totalProses = r.ok1 + r.ok2 + r.rework + r.reject;
   const waktuEfektifMin = r.waktuEfektif * 60;
 
-  const avb  = pct((waktuEfektifMin * 0.9) - r.breakdownMesin, waktuEfektifMin);
-  const perf = pct((r.cycleTime * totalOk * 1.05) / 60, waktuEfektifMin - r.lostTime);
+  // Maksimal yang ditampilkan (bukan target/threshold warna) -- AR & YIELD
+  // tetap 0-100 lewat pct(), AVB/PERF/OEE dipatok ke plafon masing-masing
+  // sesuai standar yang dipakai.
+  const avb  = Math.min(pct((waktuEfektifMin * 0.9) - r.breakdownMesin, waktuEfektifMin), 90);
+  const perf = Math.min(pct((r.cycleTime * totalOk * 1.05) / 60, waktuEfektifMin - r.lostTime), 95);
   const yld  = pct(totalOk, totalProses);
   const ar   = pct(totalProses, r.plan);
-  const oee  = avb * perf * yld / 10000;
+  const oee  = Math.min(avb * perf * yld / 10000, 85);
 
   return {
     totalOk, totalProses,
@@ -410,12 +413,14 @@ router.get('/produksi-harian-summary', requireAuth, async (req, res, next) => {
 
     const pct = (n, d) => d > 0 ? Math.max(0, Math.min(100, (n / d) * 100)) : 0;
 
-    const availability = pct((sumWaktuEfektifMin * 0.9) - sumBreakdownMesin, sumWaktuEfektifMin);
-    const performance   = pct((sumCycleTimeOk * 1.05) / 60, sumWaktuEfektifMin - sumLostTime);
+    // Maksimal yang ditampilkan (bukan target/threshold warna) -- sama
+    // seperti di rowMetrics(): AVB plafon 90, PERF plafon 95, OEE plafon 85.
+    const availability = Math.min(pct((sumWaktuEfektifMin * 0.9) - sumBreakdownMesin, sumWaktuEfektifMin), 90);
+    const performance   = Math.min(pct((sumCycleTimeOk * 1.05) / 60, sumWaktuEfektifMin - sumLostTime), 95);
     const yieldPct       = pct(sumTotalOk, sumTotalProses);
     const ar             = pct(sumTotalProses, sumPlan);
     const rejection       = pct(sumReject, sumTotalProses);
-    const oee             = availability * performance * yieldPct / 10000;
+    const oee             = Math.min(availability * performance * yieldPct / 10000, 85);
 
     res.json({
       availability: Number(availability.toFixed(1)),
